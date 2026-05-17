@@ -361,7 +361,7 @@ if (bot) {
                     { parse_mode: "Markdown", disable_web_page_preview: true }
                 );
                 break;
-
+            }
 
             case "menu_withdraw_affiliate": {
                 if (!user.isAffiliate) return bot.sendMessage(chatId, "❌ Anda belum menjadi Affiliate.");
