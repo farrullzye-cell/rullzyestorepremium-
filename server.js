@@ -191,6 +191,34 @@ app.get('/api/admin/database/stats', async (req, res) => {
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
+// ================= ADMIN: SYSTEM CONFIGURATION =================
+app.get('/api/admin/config', (req, res) => {
+    res.json(getConfig());
+});
+
+app.post('/api/admin/config', async (req, res) => {
+    try {
+        const currentCfg = getConfig();
+        const newCfg = { ...currentCfg, ...req.body };
+        // Simpan ke config.json lokal
+        saveConfig(newCfg);
+        
+        // Simpan permanen ke Firebase Database
+        await axios.put(`${FIREBASE_URL}/system_config.json`, newCfg);
+        
+        // Kirim respon sukses lalu restart server secara otomatis (jika di host di Render)
+        res.json({ success: true, message: 'Berhasil disimpan. Server akan otomatis restart untuk menerapkan perubahan.' });
+        
+        setTimeout(() => {
+            console.log("🔄 Konfigurasi berubah. Memuat ulang server...");
+            process.exit(1); // Ini akan memicu Render/PM2 untuk merestart aplikasi
+        }, 1500);
+        
+    } catch(e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
 // ================= ADMIN: EXPORT DATABASE =================
 app.get('/api/admin/database/export/:type', async (req, res) => {
     try {
