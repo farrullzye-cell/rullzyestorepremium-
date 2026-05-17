@@ -258,8 +258,9 @@ async function saveConfig() {
         smmApiKey: document.getElementById('cfg-smm-key').value,
         smmSecretKey: document.getElementById('cfg-smm-sec').value,
     };
-    await fetch('/api/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-    alert('Konfigurasi disimpan!');
+    const res = await fetch('/api/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+    const json = await res.json();
+    alert(json.message || 'Konfigurasi disimpan!');
 }
 
 async function saveAffConfig() {
