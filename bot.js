@@ -234,7 +234,11 @@ if (bot) {
                 if (uplineIdx !== -1) {
                     users[uplineIdx].downlineCount = (users[uplineIdx].downlineCount || 0) + 1;
                     await saveUsers(users);
-                    await notifyD            let welcomeMsg = `🎉 *PENDAFTARAN BERHASIL!*\n\nSelamat datang di *${cfg.storeName || 'Rullzye Store'}*, kak *${user.firstName}*! 🥳\n\n` +
+                    await notifyDownlineJoined(users[uplineIdx].chatId, user.firstName || 'Someone');
+                }
+            }
+
+            let welcomeMsg = `🎉 *PENDAFTARAN BERHASIL!*\n\nSelamat datang di *${cfg.storeName || 'Rullzye Store'}*, kak *${user.firstName}*! 🥳\n\n` +
                              `🔑 *Random ID Anda:* \`${randomId}\`\n\n` +
                              `*Random ID* ini digunakan untuk mengidentifikasi akun Anda saat melakukan pesanan di website kami. Simpan baik-baik ya!\n\n` +
                              `💡 *Ingin dapat penghasilan tambahan?*\nDaftar menjadi *Affiliate* dan dapatkan komisi dari setiap transaksi teman yang Anda ajak.\n\n👇 Pilih menu di bawah ini untuk memulai:`;
