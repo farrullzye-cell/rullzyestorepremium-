@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pembayaran QRIS – RullzyeStore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #faf9ff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-violet-50 to-white">
+
+    <div class="bg-white rounded-[32px] shadow-2xl max-w-md w-full p-8 text-center border border-violet-100">
+        <div class="mb-6">
+            <div class="bg-violet-100 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-3">
+                <i class="fa-solid fa-qrcode text-violet-600 text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-black text-slate-800">Scan QRIS</h1>
+            <p class="text-slate-500 text-sm mt-1">Bayar sebelum transaksi diproses</p>
+        </div>
+
+        <!-- QR Code -->
+        <div class="bg-slate-50 p-6 rounded-3xl mb-6 flex justify-center">
+            <img id="qr-image" src="" alt="QR Code" class="w-48 h-48 rounded-xl border-4 border-white shadow" onerror="this.onerror=null; this.parentNode.innerHTML='<p class=\'text-slate-400\'>QR tidak tersedia</p>';">
+        </div>
+
+        <!-- Total Tagihan -->
+        <p class="text-xs font-bold text-slate-400 uppercase mb-1">Total Tagihan</p>
+        <h2 id="amount-display" class="text-4xl font-black text-violet-600 mb-6">Rp 0</h2>
+
+        <!-- Instruksi -->
+        <div class="text-left bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-xs text-amber-800 space-y-2">
+            <p><i class="fa-solid fa-circle-info mr-1"></i> <strong>Penting:</strong> Jangan tutup halaman ini setelah scan.</p>
+            <p><i class="fa-solid fa-check-circle mr-1"></i> Setelah pembayaran terverifikasi, layanan akan otomatis diproses.</p>
+            <p><i class="fa-brands fa-telegram mr-1"></i> Notifikasi akan dikirim ke Telegram Anda.</p>
+        </div>
+
+        <!-- Tombol Aksi -->
+        <div class="space-y-3">
+            <a id="bot-link" href="#" target="_blank" class="block w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 rounded-2xl shadow-lg transition">
+                <i class="fa-brands fa-telegram mr-2"></i> Konfirmasi via Bot
+            </a>
+            <button onclick="window.location.href='/ppob.html'" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-2xl transition">
+                Pilih Layanan Lain
+            </button>
+        </div>
+
+        <p class="text-[10px] text-slate-400 mt-6">Order ID: <span id="order-id" class="font-mono font-bold text-slate-600"></span></p>
+    </div>
+
+    <script>
+        // Ambil parameter dari URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('orderId') || 'Tidak diketahui';
+        const amount = urlParams.get('amount') || '0';
+        const qrUrl = decodeURIComponent(urlParams.get('qr_url') || '');
+        const botLink = decodeURIComponent(urlParams.get('botLink') || '');
+
+        // Tampilkan data
+        document.getElementById('order-id').innerText = orderId;
+        document.getElementById('amount-display').innerText = 'Rp ' + Number(amount).toLocaleString('id-ID');
+
+        const qrImg = document.getElementById('qr-image');
+        if (qrUrl) {
+            qrImg.src = qrUrl;
+        } else {
+            qrImg.parentNode.innerHTML = '<p class="text-slate-400">QR Code tidak tersedia, silakan gunakan link Bot untuk konfirmasi.</p>';
+        }
+
+        const botLinkEl = document.getElementById('bot-link');
+        if (botLink) {
+            botLinkEl.href = botLink;
+        } else {
+            botLinkEl.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

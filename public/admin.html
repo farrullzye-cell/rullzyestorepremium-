@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel — RullzyeStore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#03050f;color:#e2e8f0;min-height:100vh}
+        .sidebar{background:rgba(15,23,42,0.95);backdrop-filter:blur(12px);border-right:1px solid rgba(255,255,255,0.05);min-height:100vh;position:fixed;left:0;top:0;bottom:0;z-index:40;width:220px}
+        .content{margin-left:220px;min-height:100vh;padding:24px}
+        .menu-item{transition:all 0.2s;cursor:pointer;border-radius:12px;color:#94a3b8}
+        .menu-item:hover{background:rgba(255,255,255,0.05);color:#e2e8f0}
+        .menu-item.active{background:rgba(124,58,237,0.15);color:#c084fc;font-weight:700}
+        .card{background:rgba(15,23,42,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:20px}
+        .stat-card{transition:all 0.3s}.stat-card:hover{border-color:rgba(124,58,237,0.3);transform:translateY(-2px)}
+        .badge-ok{background:rgba(16,185,129,0.15);color:#34d399;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+        .badge-warn{background:rgba(245,158,11,0.15);color:#fbbf24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+        .badge-err{background:rgba(239,68,68,0.15);color:#f87171;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+        .input-dark{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 14px;color:white;font-size:13px;outline:none;width:100%}
+        .input-dark:focus{border-color:rgba(124,58,237,0.5)}
+        .btn-primary{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;font-weight:700;padding:10px 20px;border-radius:12px;font-size:13px;transition:all 0.2s}
+        .btn-primary:hover{box-shadow:0 8px 20px -6px rgba(124,58,237,0.4)}
+        @media(max-width:768px){.sidebar{width:60px}.sidebar .menu-text{display:none}.sidebar .logo-text{display:none}.content{margin-left:60px}}
+    </style>
+</head>
+<body>
+<div id="pinOverlay" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+    <div class="card p-8 max-w-sm w-full text-center">
+        <div class="w-14 h-14 bg-gradient-to-br from-violet-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-shield-halved text-white text-xl"></i></div>
+        <h2 class="text-xl font-black text-white mb-1">Admin Panel</h2>
+        <p class="text-xs text-slate-400 mb-4">Masukkan PIN untuk akses</p>
+        <input type="password" id="pinInput" placeholder="PIN" class="input-dark text-center mb-3" onkeydown="if(event.key==='Enter')checkPin()">
+        <button onclick="checkPin()" class="btn-primary w-full">Masuk</button>
+    </div>
+</div>
+<aside class="sidebar p-3 flex flex-col gap-1" id="sidebar" style="display:none">
+    <div class="px-3 py-4 flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-gradient-to-br from-violet-600 to-purple-600 rounded-xl flex items-center justify-center"><i class="fa-solid fa-gem text-white text-xs"></i></div><span class="font-black text-sm text-white logo-text">Admin</span></div>
+    <nav class="flex flex-col gap-0.5" id="sidebarNav">
+        <div class="menu-item active px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="dashboard"><i class="fa-solid fa-chart-pie w-4 text-center"></i><span class="menu-text">Dashboard</span></div>
+        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="users"><i class="fa-solid fa-users w-4 text-center"></i><span class="menu-text">Users</span></div>
+        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="orders"><i class="fa-solid fa-list-check w-4 text-center"></i><span class="menu-text">Orders</span></div>
+        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="affiliate"><i class="fa-solid fa-handshake w-4 text-center"></i><span class="menu-text">Affiliate</span></div>
+        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="affconfig"><i class="fa-solid fa-sliders w-4 text-center"></i><span class="menu-text">Aff Settings</span></div>
+        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="withdraw"><i class="fa-solid fa-money-bill-transfer w-4 text-center"></i><span class="menu-text">Withdraw</span></div>
+        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="config"><i class="fa-solid fa-cog w-4 text-center"></i><span class="menu-text">Config API</span></div>
+        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="banner"><i class="fa-solid fa-images w-4 text-center"></i><span class="menu-text">Banner</span></div>
+        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="database"><i class="fa-solid fa-database w-4 text-center"></i><span class="menu-text">Database</span></div>
+        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="system"><i class="fa-solid fa-server w-4 text-center"></i><span class="menu-text">System</span></div>
+        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="broadcast"><i class="fa-solid fa-bullhorn w-4 text-center"></i><span class="menu-text">Broadcast</span></div>
+    </nav>
+</aside>
+<main class="content" id="mainContent" style="display:none"><div id="tab-content"></div></main>
+<script src="/js/admin.js"></script>
+</body>
+</html>

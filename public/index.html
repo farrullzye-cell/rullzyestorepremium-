@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="id-ID" class="scroll-smooth dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>RullzyeStore — Akun Premium, Pulsa & Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #03050f;
+            color: #e2e8f0;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.03) 0%, transparent 70%);
+        }
+        /* ========== HEADER GLASS EFFECT ========== */
+        .header-glass {
+            background: rgba(10, 15, 35, 0.8);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        /* ========== GLOW PULSE DI LOGO ========== */
+        .logo-glow {
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.5), 0 0 50px rgba(139, 92, 246, 0.2);
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 0 25px rgba(139, 92, 246, 0.5), 0 0 50px rgba(139, 92, 246, 0.2); }
+            50% { box-shadow: 0 0 35px rgba(139, 92, 246, 0.7), 0 0 70px rgba(139, 92, 246, 0.3); }
+        }
+        /* ========== LIVE COUNTER ========== */
+        .live-badge {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            animation: liveBadgePulse 2s ease-in-out infinite;
+        }
+        @keyframes liveBadgePulse {
+            0%, 100% { border-color: rgba(16, 185, 129, 0.3); }
+            50% { border-color: rgba(16, 185, 129, 0.6); }
+        }
+        /* ========== SLIDER ========== */
+        .slider-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+        .slider-track {
+            display: flex;
+            transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+        }
+        .slider-slide {
+            min-width: 100%;
+            height: 200px;
+            cursor: pointer;
+            object-fit: cover;
+        }
+        @media (min-width: 640px) { .slider-slide { height: 280px; } }
+        @media (min-width: 1024px) { .slider-slide { height: 360px; } }
+        .slider-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s;
+            opacity: 0.7;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .slider-btn:hover { opacity: 1; background: rgba(255,255,255,0.2); }
+        .slider-btn.left { left: 10px; }
+        .slider-btn.right { right: 10px; }
+        .slider-dots {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+        .slider-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.4);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .slider-dot.active { background: white; width: 24px; border-radius: 10px; }
+        /* ========== PRODUCT CARD ========== */
+        .product-card {
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px -15px rgba(139, 92, 246, 0.4);
+            border-color: rgba(139, 92, 246, 0.5);
+            background: rgba(20, 30, 55, 0.9);
+        }
+        /* ========== MODAL ========== */
+        .modal-pop { animation: pop 0.3s ease; }
+        @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        /* ========== GRADIENT TEXT ========== */
+        .gradient-text {
+            background: linear-gradient(135deg, #c084fc, #a78bfa, #818cf8, #c084fc);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 4s ease infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ==================== HEADER (RAME) ==================== -->
+    <header class="fixed top-0 w-full z-50 header-glass">
+        <!-- Top bar kecil & Marquee -->
+        <div class="bg-gradient-to-r from-violet-600/80 via-purple-600/80 to-indigo-600/80 text-white text-[10px] font-bold py-1.5 px-4 flex">
+            <div class="flex-shrink-0 flex items-center gap-1 z-10 pr-2 bg-gradient-to-r from-violet-600/80 to-transparent"><i class="fa-solid fa-bolt text-amber-300"></i> Info:</div>
+            <marquee class="flex-grow text-white/90" id="store-marquee">Selamat datang di RullzyeStore! Temukan berbagai kebutuhan digital dengan harga terbaik. Flash Sale 24 Jam Nonstop!</marquee>
+        </div>
+        <div class="max-w-7xl mx-auto px-6 h-14 flex justify-between items-center">
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="bg-gradient-to-br from-violet-600 to-purple-600 p-2.5 rounded-xl logo-glow group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-gem text-white text-sm"></i>
+                </div>
+                <span id="nav-store-name" class="font-black text-xl text-white tracking-tight">Rullzye<span class="text-violet-400">Store</span></span>
+            </a>
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 live-badge px-3 py-1.5 rounded-full text-[10px] font-bold text-emerald-400">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    </span>
+                    <span id="live-counter">47 online</span>
+                </div>
+                <a href="https://wa.me/6285848651208" class="text-xs font-bold text-slate-300 hover:text-violet-300 bg-white/5 backdrop-blur px-4 py-2 rounded-full border border-white/10 transition hover:border-violet-400/50">
+                    <i class="fa-solid fa-headset mr-1"></i>CS
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== HERO + SLIDER ==================== -->
+    <section class="pt-24 pb-4 px-4 relative z-10">
+        <div class="max-w-5xl mx-auto">
+            <div class="slider-container shadow-2xl shadow-violet-500/10" id="banner-slider">
+                <div class="slider-track" id="slider-track"></div>
+                <button class="slider-btn left" onclick="slideBanner(-1)"><i class="fa-solid fa-chevron-left text-white text-xs"></i></button>
+                <button class="slider-btn right" onclick="slideBanner(1)"><i class="fa-solid fa-chevron-right text-white text-xs"></i></button>
+                <div class="slider-dots" id="slider-dots"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== FLASH SALE (DUMMY/ANIMATED) ==================== -->
+    <div class="max-w-7xl mx-auto px-4 pb-6 relative z-10 mt-[-10px]">
+        <div class="bg-gradient-to-r from-rose-600/90 to-red-600/90 rounded-2xl p-4 flex flex-col md:flex-row items-center gap-4 justify-between border border-rose-500/30 shadow-lg shadow-rose-500/20">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-bolt text-3xl text-yellow-300 animate-pulse"></i>
+                <div>
+                    <h3 class="text-white font-black italic text-lg leading-tight">FLASH SALE</h3>
+                    <p class="text-rose-200 text-[10px] font-bold">Berakhir dalam: <span id="fs-timer" class="bg-black/20 px-2 py-0.5 rounded text-white ml-1">02:14:59</span></p>
+                </div>
+            </div>
+            <div class="flex gap-3 overflow-x-auto w-full md:w-auto pb-1 hide-scrollbar">
+                <div class="bg-white/10 p-2 rounded-xl border border-white/20 min-w-[120px] flex items-center gap-2 backdrop-blur-sm cursor-pointer hover:bg-white/20 transition">
+                    <img src="https://placehold.co/100x100/1e293b/white?text=MLBB" class="w-10 h-10 rounded-lg">
+                    <div><p class="text-[10px] text-white font-bold truncate w-16">86 Diamonds</p><p class="text-xs font-black text-yellow-300">Rp 19.500</p></div>
+                </div>
+                <div class="bg-white/10 p-2 rounded-xl border border-white/20 min-w-[120px] flex items-center gap-2 backdrop-blur-sm cursor-pointer hover:bg-white/20 transition">
+                    <img src="https://placehold.co/100x100/1e293b/white?text=FF" class="w-10 h-10 rounded-lg">
+                    <div><p class="text-[10px] text-white font-bold truncate w-16">140 Diamonds</p><p class="text-xs font-black text-yellow-300">Rp 18.000</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        setInterval(()=>{
+            let t=document.getElementById('fs-timer');
+            if(t){let p=t.innerText.split(':');let s=parseInt(p[2])-1;let m=parseInt(p[1]);let h=parseInt(p[0]);if(s<0){s=59;m-=1;}if(m<0){m=59;h-=1;}if(h<0){h=2;m=59;s=59;}t.innerText=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;}
+        },1000);
+    </script>
+
+    <!-- ==================== TOMBOL NAVIGASI CEPAT ==================== -->
+    <div class="flex justify-center gap-3 px-4 pb-8 relative z-10 flex-wrap">
+        <a href="/topup.html" class="inline-flex items-center justify-center flex-col gap-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold w-24 h-24 rounded-2xl text-[10px] shadow-lg transition hover:-translate-y-1">
+            <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center mb-1"><i class="fa-solid fa-gamepad text-emerald-400 text-lg"></i></div>Top Up
+        </a>
+        <a href="/smmpanel.html" class="inline-flex items-center justify-center flex-col gap-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold w-24 h-24 rounded-2xl text-[10px] shadow-lg transition hover:-translate-y-1">
+            <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center mb-1"><i class="fa-solid fa-users text-indigo-400 text-lg"></i></div>Sosmed
+        </a>
+        <a href="/ppob.html" class="inline-flex items-center justify-center flex-col gap-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold w-24 h-24 rounded-2xl text-[10px] shadow-lg transition hover:-translate-y-1">
+            <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center mb-1"><i class="fa-solid fa-bolt text-amber-400 text-lg"></i></div>PPOB
+        </a>
+        <a href="/affiliate.html" class="inline-flex items-center justify-center flex-col gap-1 bg-gradient-to-br from-violet-600/80 to-purple-600/80 hover:from-violet-500 hover:to-purple-500 border border-violet-500/30 text-white font-bold w-24 h-24 rounded-2xl text-[10px] shadow-lg shadow-violet-500/20 transition hover:-translate-y-1">
+            <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mb-1"><i class="fa-solid fa-handshake text-white text-lg"></i></div>Affiliate
+        </a>
+    </div>
+
+    <!-- ==================== KATEGORI BADGE ==================== -->
+    <div class="max-w-7xl mx-auto px-4 pb-16 relative z-10 space-y-10" id="badge-sections">
+        <!-- Diisi oleh JS -->
+    </div>
+
+    <!-- ==================== AFFILIATE CTA ==================== -->
+    <section class="relative z-10 py-16 px-4">
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-gradient-to-br from-violet-600/20 via-purple-600/10 to-indigo-600/20 border border-violet-500/20 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-40 h-40 bg-violet-500/10 rounded-full blur-3xl"></div>
+                <div class="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl"></div>
+                <div class="relative z-10">
+                    <div class="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-amber-500/20">
+                        <i class="fa-solid fa-handshake text-white text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-black text-white mb-3">Gabung Program Affiliate</h2>
+                    <p class="text-sm text-slate-400 max-w-lg mx-auto mb-6">Dapatkan <strong class="text-amber-400">20% komisi</strong> dari setiap transaksi downline Anda. Gratis mendaftar, tanpa modal!</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-xl mx-auto mb-8">
+                        <div class="bg-white/5 rounded-xl p-3 border border-white/5">
+                            <i class="fa-solid fa-link text-violet-400 mb-1"></i>
+                            <p class="text-[11px] font-bold text-white">Link Unik</p>
+                            <p class="text-[10px] text-slate-400">Landing page toko sendiri</p>
+                        </div>
+                        <div class="bg-white/5 rounded-xl p-3 border border-white/5">
+                            <i class="fa-solid fa-coins text-amber-400 mb-1"></i>
+                            <p class="text-[11px] font-bold text-white">Komisi Otomatis</p>
+                            <p class="text-[10px] text-slate-400">Masuk saldo setiap transaksi</p>
+                        </div>
+                        <div class="bg-white/5 rounded-xl p-3 border border-white/5">
+                            <i class="fa-solid fa-money-bill-transfer text-emerald-400 mb-1"></i>
+                            <p class="text-[11px] font-bold text-white">Withdraw Mudah</p>
+                            <p class="text-[10px] text-slate-400">Transfer ke bank/e-wallet</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button onclick="applyAffiliate()" class="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-8 py-3.5 rounded-full text-sm shadow-lg shadow-amber-500/20 hover:scale-105 transition">
+                            <i class="fa-solid fa-rocket mr-2"></i>Daftar Affiliate Gratis
+                        </button>
+                        <a href="/affiliate.html" class="bg-white/5 border border-white/10 text-white font-bold px-8 py-3.5 rounded-full text-sm hover:bg-white/10 transition">
+                            <i class="fa-solid fa-chart-line mr-2"></i>Dashboard Affiliate
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== FOOTER PROFESIONAL ==================== -->
+    <footer class="relative z-10 bg-slate-900 text-slate-300 mt-auto border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div>
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="bg-violet-600 p-2 rounded-lg"><i class="fa-solid fa-gem text-white text-sm"></i></div>
+                    <span class="font-black text-lg text-white">RullzyeStore</span>
+                </div>
+                <p class="text-sm text-slate-400">Tempat terpercaya untuk akun premium, pulsa, kuota, top up game, dan layanan digital lainnya.</p>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-3">Layanan</h4>
+                <ul class="space-y-2 text-sm">
+                    <li><a href="/topup.html" class="hover:text-violet-400 transition">Top Up Game</a></li>
+                    <li><a href="/ppob.html" class="hover:text-violet-400 transition">Pulsa & Paket Data</a></li>
+                    <li><a href="/smmpanel.html" class="hover:text-violet-400 transition">Followers & Sosmed</a></li>
+                    <li><a href="/akundigital.html" class="hover:text-violet-400 transition">Akun Premium</a></li>
+                    <li><a href="/affiliate.html" class="hover:text-violet-400 transition">Program Affiliate</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-3">Bantuan</h4>
+                <ul class="space-y-2 text-sm">
+                    <li><a href="https://wa.me/6285848651208" class="hover:text-violet-400 transition">Hubungi CS</a></li>
+                    <li><a href="https://t.me/RullzyeBot" class="hover:text-violet-400 transition">Bot Telegram</a></li>
+                    <li><a href="#" class="hover:text-violet-400 transition">Syarat & Ketentuan</a></li>
+                    <li><a href="#" class="hover:text-violet-400 transition">Kebijakan Privasi</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-3">Jam Operasional</h4>
+                <p class="text-sm text-slate-400">Senin - Minggu: 24 Jam</p>
+                <p class="text-sm text-slate-400 mt-1">Transaksi Otomatis</p>
+                <div class="flex gap-3 mt-4">
+                    <a href="https://wa.me/6285848651208" class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center hover:bg-violet-600 transition"><i class="fa-brands fa-whatsapp text-white text-sm"></i></a>
+                    <a href="https://t.me/RullzyeBot" class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center hover:bg-violet-600 transition"><i class="fa-brands fa-telegram text-white text-sm"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-slate-700 py-6 text-center text-xs text-slate-500">
+            &copy; 2026 RullzyeStore. All rights reserved. Powered by <a href="https://premku.com" class="hover:text-violet-400">Premku</a> & <a href="https://flowix.web.id" class="hover:text-violet-400">Flowix</a>
+        </div>
+    </footer>
+
+    <!-- ==================== FOMO ==================== -->
+    <div id="fomo-notif" class="fixed bottom-6 left-6 z-[90] transform translate-y-40 opacity-0 bg-slate-900/90 backdrop-blur-xl shadow-2xl p-4 rounded-2xl flex items-center gap-3 max-w-[280px] border border-white/10">
+        <div class="bg-gradient-to-br from-violet-500 to-purple-500 p-2.5 rounded-full shadow-lg">
+            <i class="fa-solid fa-cart-shopping text-white text-xs"></i>
+        </div>
+        <div>
+            <p id="fomo-user" class="text-[9px] text-slate-400 font-black uppercase">Baru saja</p>
+            <p id="fomo-text" class="text-[11px] font-bold text-slate-200">Membeli Produk</p>
+        </div>
+    </div>
+
+    <script src="/js/index.js"></script>
+</body>
+</html>

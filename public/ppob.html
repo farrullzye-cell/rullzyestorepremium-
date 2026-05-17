@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="id-ID" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Pulsa, Paket Data & Voucher — RullzyeStore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            color: #1e293b;
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        .provider-card {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+            background: white;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+        }
+        .provider-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.15);
+            border-color: #c7d2fe;
+        }
+        .nominal-btn {
+            transition: all 0.2s;
+            background: white;
+            border: 1px solid #e2e8f0;
+        }
+        .nominal-btn.active {
+            background: #6366f1;
+            color: white;
+            border-color: #6366f1;
+        }
+        .modal-pop {
+            animation: pop 0.3s ease;
+        }
+        @keyframes pop {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="fixed top-0 w-full z-50 glass border-b border-white/60">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+            <a href="/" class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-500 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20">
+                    <i class="fa-solid fa-bolt text-white text-sm"></i>
+                </div>
+                <span class="font-black text-xl text-slate-800">RullzyeStore</span>
+            </a>
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 text-[10px] font-bold text-emerald-700">
+                    <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                    <span id="live-counter">47 online</span>
+                </div>
+                <a href="/" class="text-xs font-bold text-slate-500 hover:text-indigo-600 bg-white/80 backdrop-blur px-4 py-2 rounded-full shadow-sm"><i class="fa-solid fa-arrow-left mr-1"></i>Beranda</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== VIEW 1: PROVIDER LIST ==================== -->
+    <div id="view-list">
+        <!-- Hero -->
+        <section class="relative pt-24 pb-10 px-6 text-center z-10 overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-indigo-50 via-purple-50 to-sky-50 opacity-70 -z-10"></div>
+            <div class="max-w-4xl mx-auto relative">
+                <div class="inline-flex items-center gap-2 bg-indigo-100 border border-indigo-200 px-5 py-2 rounded-full mb-6 text-[10px] font-black text-indigo-600 uppercase tracking-widest shadow-sm">
+                    ⚡ Pulsa, Kuota, & Voucher
+                </div>
+                <h1 class="text-4xl sm:text-5xl font-black text-slate-800 mb-4 leading-tight">
+                    Isi Ulang <span class="text-indigo-600">Pulsa & Kuota</span> Termurah
+                </h1>
+                <p class="text-slate-500 text-sm sm:text-base font-medium mb-8">
+                    Pilih provider, masukkan nomor, bayar QRIS — otomatis terisi!
+                </p>
+                <!-- Search -->
+                <div class="max-w-xl mx-auto relative mb-8">
+                    <input type="text" id="searchProvider" placeholder="Cari provider (contoh: Telkomsel, DANA, Axis)..." class="w-full py-4 pl-12 pr-5 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur text-slate-800 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent shadow-sm">
+                    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Provider Grid -->
+        <main class="flex-grow max-w-6xl mx-auto px-6 pb-16">
+            <h2 class="text-sm font-black text-slate-500 uppercase tracking-widest mb-5">📱 Pilih Provider</h2>
+            <div id="provider-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+            <p id="no-provider" class="text-center text-slate-400 py-10 hidden">Provider tidak ditemukan.</p>
+        </main>
+    </div>
+
+    <!-- ==================== VIEW 2: PROVIDER DETAIL + ORDER ==================== -->
+    <div id="view-detail" class="hidden">
+        <main class="flex-grow max-w-3xl mx-auto px-6 pt-24 pb-16">
+            <!-- Back -->
+            <button onclick="backToList()" class="text-sm font-bold text-indigo-600 hover:text-indigo-800 mb-4"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali ke daftar provider</button>
+
+            <!-- Provider Info -->
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6">
+                <div class="flex items-center gap-4 mb-4">
+                    <div id="detail-icon" class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"></div>
+                    <div>
+                        <h2 id="detail-title" class="text-xl font-black text-slate-800"></h2>
+                        <p class="text-xs text-slate-500">Pilih nominal & isi data</p>
+                    </div>
+                </div>
+
+                <!-- Input Nomor -->
+                <div class="mb-4">
+                    <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Nomor Tujuan / ID Pelanggan <span class="text-red-500">*</span></label>
+                    <input type="text" id="input-target" placeholder="0812xxxxxx" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                </div>
+                <!-- Random ID -->
+                <div class="mb-4">
+                    <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Random ID Telegram <span class="text-red-500">*</span></label>
+                    <input type="text" id="input-randomid" placeholder="ID-ABC123" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-sm uppercase focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <p class="text-[10px] text-slate-400 mt-1"><i class="fa-solid fa-circle-info"></i> Belum punya? Ketik <b>/daftar</b> di <a href="https://t.me/RullzyeBot" target="_blank" class="text-indigo-600 font-bold underline">Bot Telegram</a></p>
+                </div>
+            </div>
+
+            <!-- Nominal Grid -->
+            <h3 class="text-sm font-black text-slate-700 mb-3">💰 Pilih Nominal</h3>
+            <div id="nominal-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6"></div>
+
+            <!-- Search Nominal -->
+            <div class="relative mb-6">
+                <input type="text" id="searchNominal" placeholder="Cari nominal..." class="w-full py-3 pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            </div>
+
+            <!-- Buy Button -->
+            <button id="btn-buy" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/25 text-sm transition" onclick="submitOrder()">
+                Beli Sekarang
+            </button>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="relative z-10 border-t border-slate-200/60 bg-white/50 backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-6 py-6 flex flex-col items-center text-center gap-3">
+            <div class="flex items-center gap-2 text-sm font-bold text-slate-600">
+                <span>&copy; 2025 RullzyeStore</span>
+                <span class="text-red-400">❤️</span>
+                <span>by <span class="text-indigo-700 font-extrabold">Arul Faathir</span></span>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-[10px] font-medium text-slate-400">
+                <span>Powered by <a href="https://flowix.web.id" target="_blank" class="underline hover:text-indigo-500">Flowix</a></span>
+                <span class="hidden sm:inline">|</span>
+                <span><i class="fa-solid fa-lock text-emerald-400 mr-1"></i> Transaksi Aman &bull; <i class="fa-solid fa-clock text-amber-400 mr-1"></i> 24/7 Otomatis</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- FOMO Notification -->
+    <div id="fomo-notif" class="fixed bottom-6 left-6 z-[90] transform translate-y-40 opacity-0 glass shadow-2xl p-4 rounded-2xl flex items-center gap-3 max-w-[280px]">
+        <div class="bg-gradient-to-br from-indigo-500 to-purple-500 p-2.5 rounded-full shadow-lg">
+            <i class="fa-solid fa-cart-shopping text-white text-xs"></i>
+        </div>
+        <div>
+            <p id="fomo-user" class="text-[9px] text-slate-400 font-black uppercase">Baru saja</p>
+            <p id="fomo-text" class="text-[11px] font-bold text-slate-700">Membeli Produk</p>
+        </div>
+    </div>
+
+    <!-- Modal Pembayaran -->
+    <div id="modal-pay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4" style="display:none;">
+        <div class="bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl relative modal-pop border border-white/50">
+            <button onclick="closePayModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition"><i class="fa-solid fa-xmark text-slate-400 text-sm"></i></button>
+            <div id="pay-loader" class="text-center py-10">
+                <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-indigo-500 border-t-transparent mb-4"></div>
+                <p class="font-bold text-slate-800">Memproses Pesanan...</p>
+            </div>
+            <div id="pay-result" class="hidden text-center"></div>
+        </div>
+    </div>
+
+    <script>
+        let allProducts = [];
+        let selectedProvider = null;
+        let selectedProduct = null;
+
+        // Ambil produk PPOB dari Flowix
+        fetch('/api/ppob-products')
+            .then(r => r.json())
+            .then(res => {
+                if (res.success && res.products) {
+                    allProducts = res.products;
+                    renderProviderList();
+                } else {
+                    document.getElementById('provider-grid').innerHTML = '<p class="col-span-full text-center text-slate-400 py-10">Gagal memuat provider.</p>';
+                }
+            });
+
+        // ==================== VIEW 1: PROVIDER LIST ====================
+        function renderProviderList() {
+            const providers = [...new Set(allProducts.map(p => p.brand).filter(Boolean))].sort();
+            const grid = document.getElementById('provider-grid');
+            grid.innerHTML = providers.map(p => {
+                const icon = getProviderIcon(p);
+                const count = allProducts.filter(x => x.brand === p).length;
+                return `<div class="provider-card rounded-3xl p-5 text-center" onclick="openProvider('${p.replace(/'/g,"\\'")}')">
+                    <div class="w-14 h-14 ${icon.bg} rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
+                        <i class="fa-solid ${icon.icon} ${icon.text} text-xl"></i>
+                    </div>
+                    <h3 class="font-black text-slate-800 text-sm mb-1">${p}</h3>
+                    <p class="text-[10px] text-slate-400">${count} produk</p>
+                </div>`;
+            }).join('');
+        }
+
+        function getProviderIcon(brand) {
+            const b = brand.toLowerCase();
+            if (b.includes('telkomsel')) return { icon: 'fa-sim-card', bg: 'bg-red-100', text: 'text-red-600' };
+            if (b.includes('axis')) return { icon: 'fa-sim-card', bg: 'bg-emerald-100', text: 'text-emerald-600' };
+            if (b.includes('xl')) return { icon: 'fa-sim-card', bg: 'bg-blue-100', text: 'text-blue-600' };
+            if (b.includes('tri')) return { icon: 'fa-sim-card', bg: 'bg-amber-100', text: 'text-amber-600' };
+            if (b.includes('indosat')) return { icon: 'fa-sim-card', bg: 'bg-rose-100', text: 'text-rose-600' };
+            if (b.includes('smartfren')) return { icon: 'fa-sim-card', bg: 'bg-sky-100', text: 'text-sky-600' };
+            if (b.includes('by.u')) return { icon: 'fa-sim-card', bg: 'bg-teal-100', text: 'text-teal-600' };
+            if (b.includes('dana')) return { icon: 'fa-wallet', bg: 'bg-emerald-100', text: 'text-emerald-600' };
+            if (b.includes('brizzi')) return { icon: 'fa-credit-card', bg: 'bg-yellow-100', text: 'text-yellow-600' };
+            return { icon: 'fa-sim-card', bg: 'bg-indigo-100', text: 'text-indigo-600' };
+        }
+
+        // Search provider
+        document.getElementById('searchProvider').addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            const cards = document.querySelectorAll('.provider-card');
+            let found = false;
+            cards.forEach(c => {
+                const name = c.querySelector('h3').innerText.toLowerCase();
+                if (q === '' || name.includes(q)) { c.style.display = ''; found = true; }
+                else c.style.display = 'none';
+            });
+            document.getElementById('no-provider').classList.toggle('hidden', found);
+        });
+
+        // ==================== VIEW 2: PROVIDER DETAIL ====================
+        function openProvider(brand) {
+            selectedProvider = brand;
+            document.getElementById('view-list').classList.add('hidden');
+            document.getElementById('view-detail').classList.remove('hidden');
+
+            const icon = getProviderIcon(brand);
+            document.getElementById('detail-icon').className = `w-14 h-14 rounded-2xl flex items-center justify-center text-2xl ${icon.bg} ${icon.text}`;
+            document.getElementById('detail-icon').innerHTML = `<i class="fa-solid ${icon.icon}"></i>`;
+            document.getElementById('detail-title').innerText = brand;
+
+            const products = allProducts.filter(p => p.brand === brand);
+            document.getElementById('nominal-grid').innerHTML = products.map(p => `
+                <button class="nominal-btn rounded-xl p-3 text-left" onclick="selectNominal(this, '${p.id}','${p.name.replace(/'/g,"\\'")}',${p.price})">
+                    <p class="font-bold text-slate-800 text-xs line-clamp-2">${p.name}</p>
+                    <p class="text-sm font-extrabold text-indigo-600 mt-1">Rp ${p.price.toLocaleString('id-ID')}</p>
+                </button>
+            `).join('');
+
+            document.getElementById('input-target').value = '';
+            document.getElementById('input-randomid').value = '';
+            document.getElementById('searchNominal').value = '';
+            selectedProduct = null;
+            window.scrollTo(0,0);
+        }
+
+        function selectNominal(btn, id, name, price) {
+            document.querySelectorAll('.nominal-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedProduct = { id, name, price };
+        }
+
+        // Search nominal
+        document.getElementById('searchNominal').addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('.nominal-btn').forEach(b => {
+                const name = (b.querySelector('p').innerText || '').toLowerCase();
+                b.style.display = (q === '' || name.includes(q)) ? '' : 'none';
+            });
+        });
+
+        function backToList() {
+            document.getElementById('view-detail').classList.add('hidden');
+            document.getElementById('view-list').classList.remove('hidden');
+            selectedProvider = null;
+            selectedProduct = null;
+        }
+
+        // ==================== ORDER ====================
+        function submitOrder() {
+            if (!selectedProduct) return alert('Pilih nominal dulu!');
+            const target = document.getElementById('input-target').value.trim();
+            const randomId = document.getElementById('input-randomid').value.trim().toUpperCase();
+
+            if (!target) return alert('Masukkan nomor tujuan!');
+            if (!randomId) return alert('Masukkan Random ID Telegram!');
+
+            document.getElementById('modal-pay').style.display = 'flex';
+            document.getElementById('pay-loader').classList.remove('hidden');
+            document.getElementById('pay-result').classList.add('hidden');
+
+            fetch('/api/ppob-order', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    productId: selectedProduct.id,
+                    target: target,
+                    productName: selectedProduct.name,
+                    displayPrice: selectedProduct.price,
+                    randomId: randomId
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                document.getElementById('pay-loader').classList.add('hidden');
+                const r = document.getElementById('pay-result');
+                r.classList.remove('hidden');
+
+                if (res.status) {
+                    r.innerHTML = `
+                        <div class="text-emerald-500 text-3xl mb-3">✅</div>
+                        <h3 class="text-lg font-black text-slate-800 mb-2">QRIS Siap!</h3>
+                        <p class="text-sm text-slate-500 mb-4">Total: <b>Rp ${res.invoice.amount.toLocaleString('id-ID')}</b></p>
+                        <img src="${res.invoice.qr_url}" class="w-40 h-40 mx-auto rounded-xl border-4 border-white shadow mb-4">
+                        <a href="${res.invoice.botLink}" target="_blank" class="block w-full bg-indigo-600 text-white font-bold py-3 rounded-xl text-sm mb-2"><i class="fa-brands fa-telegram mr-2"></i> Konfirmasi via Bot</a>
+                        <button onclick="closePayModal()" class="text-slate-400 text-xs font-bold uppercase">Tutup</button>
+                    `;
+                } else {
+                    r.innerHTML = `
+                        <div class="text-red-500 text-3xl mb-3">❌</div>
+                        <h3 class="text-lg font-black text-slate-800 mb-2">Gagal</h3>
+                        <p class="text-sm text-slate-500 mb-4">${res.message || 'Gagal membuat pesanan'}</p>
+                        <button onclick="closePayModal()" class="text-slate-400 text-xs font-bold uppercase">Tutup</button>
+                    `;
+                }
+            })
+            .catch(() => {
+                document.getElementById('pay-loader').classList.add('hidden');
+                const r = document.getElementById('pay-result');
+                r.classList.remove('hidden');
+                r.innerHTML = '<p class="text-slate-800 font-bold">Jaringan bermasalah.</p><button onclick="closePayModal()" class="text-slate-400 text-xs font-bold uppercase mt-3">Tutup</button>';
+            });
+        }
+
+        function closePayModal() { document.getElementById('modal-pay').style.display = 'none'; }
+        document.getElementById('modal-pay').addEventListener('click', function(e) { if (e.target === this) closePayModal(); });
+
+        // FOMO
+        const fomoData = [
+            { u: 'Rizky***92', t: 'baru isi pulsa Telkomsel 50rb' },
+            { u: 'Siti***17', t: 'baru beli paket data Axis 5GB' },
+            { u: 'Dewi***88', t: 'baru isi pulsa XL 25rb' },
+            { u: 'Budi***55', t: 'baru isi pulsa Tri 10rb' },
+            { u: 'Fajar***44', t: 'baru beli paket Indosat 3GB' },
+            { u: 'Ninda***23', t: 'baru isi DANA 50rb' },
+            { u: 'Ayu***09', t: 'baru isi pulsa By.U 20rb' },
+            { u: 'Tono***31', t: 'baru beli paket data Telkomsel 10GB' }
+        ];
+        let fi = 0;
+        function showFomo() {
+            const el = document.getElementById('fomo-notif'), m = fomoData[fi % fomoData.length];
+            document.getElementById('fomo-user').innerText = m.u;
+            document.getElementById('fomo-text').innerText = m.t;
+            fi++;
+            el.style.transform = 'translateY(0)';
+            el.style.opacity = '1';
+            setTimeout(() => { el.style.transform = 'translateY(120px)'; el.style.opacity = '0'; }, 3000);
+        }
+        setTimeout(() => { showFomo(); setInterval(() => showFomo(), 7000 + Math.floor(Math.random() * 4000)); }, 2500);
+        setInterval(() => { document.getElementById('live-counter').innerText = (35 + Math.floor(Math.random() * 25)) + ' online'; }, 5000);
+    </script>
+</body>
+</html>

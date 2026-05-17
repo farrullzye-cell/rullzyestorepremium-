@@ -1,0 +1,15 @@
+{
+  "name": "rullzye-store-premium",
+  "version": "1.0.0",
+  "description": "Bot and Web for Rullzye Store",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-telegram-bot-api": "latest",
+    "cors": "^2.8.5",
+    "axios": "latest"
+  }
+}

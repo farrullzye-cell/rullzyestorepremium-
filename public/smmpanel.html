@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="id-ID" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>SMM Panel - Followers & Likes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; color: #334155; }
+        .smm-card { transition: all 0.3s ease; border: 2px solid transparent; }
+        .smm-card:hover { transform: translateY(-5px); border-color: #6366f1; box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.15); }
+        .modal-pop { animation: pop 0.3s ease; }
+        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col pb-20">
+
+    <header class="fixed top-0 w-full z-50 backdrop-blur-xl bg-white/80 border-b border-indigo-100 shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 h-16 flex justify-between items-center">
+            <a href="/" class="flex items-center gap-2.5">
+                <div class="bg-gradient-to-br from-indigo-500 to-blue-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-users text-white text-sm"></i>
+                </div>
+                <span class="font-black text-xl text-slate-800">SMM <span class="text-indigo-600">Panel</span></span>
+            </a>
+            <a href="/" class="text-xs font-bold text-slate-500 hover:text-indigo-600 bg-slate-50 px-4 py-2 rounded-full border border-slate-200 transition">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Utama
+            </a>
+        </div>
+    </header>
+
+    <section class="pt-28 pb-6 px-4 text-center max-w-3xl mx-auto">
+        <div class="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-4 py-1.5 rounded-full mb-4 text-[10px] font-black text-indigo-600 uppercase tracking-widest">
+            🚀 Proses Otomatis 24 Jam
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-black text-slate-800 mb-3">Suntik <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-blue-500">Sosial Media</span></h1>
+        <p class="text-slate-500 text-sm font-medium">Pilih Kategori Layanan di Bawah.</p>
+    </section>
+
+    <main class="flex-grow px-4 max-w-5xl mx-auto w-full mt-4">
+        
+        <div class="flex overflow-x-auto gap-3 mb-8 pb-2 no-scrollbar" id="category-tabs">
+            <p class="text-sm font-bold text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Memuat kategori API...</p>
+        </div>
+
+        <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+
+    </main>
+
+    <div id="modal-smm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-[32px] w-full max-w-md p-6 sm:p-8 shadow-2xl relative modal-pop max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fa-solid fa-xmark text-slate-400 text-sm"></i></button>
+            
+            <div id="step-form">
+                <h3 class="text-xl font-black text-slate-800 mb-1">Detail Pesanan</h3>
+                <p id="modal-service-name" class="text-[11px] font-bold text-indigo-600 mb-5 bg-indigo-50 inline-block px-3 py-1 rounded-lg"></p>
+                
+                <div class="mb-4">
+                    <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Target (Link / Username)</label>
+                    <input type="text" id="targetData" placeholder="Contoh: @username / https://..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-indigo-500 transition">
+                    <p class="text-[10px] text-rose-500 mt-1 font-bold">*Pastikan akun tidak di-private (Gembok).</p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Jumlah Pesanan</label>
+                    <input type="number" id="qtyData" oninput="hitungTotal()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-indigo-500 transition">
+                    <p id="minmax-info" class="text-[10px] text-slate-400 mt-1 font-bold"></p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Random ID Telegram</label>
+                    <input type="text" id="randomId" placeholder="Contoh: ID-A1B2C3" class="w-full bg-slate-50 border border-indigo-200 rounded-xl px-4 py-3 font-bold text-sm uppercase focus:outline-none focus:border-indigo-500 transition">
+                    <p class="text-[10px] text-indigo-500 mt-1 font-bold">*Ketik /daftar di Bot untuk mendapatkan ID.</p>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6 flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Total Harga</span>
+                    <span id="modal-price" class="text-lg font-black text-indigo-600">Rp 0</span>
+                </div>
+
+                <button onclick="prosesPesanan()" id="btn-pay" class="w-full bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/30 text-sm transform transition hover:scale-[1.02]">Bayar Pakai QRIS</button>
+            </div>
+
+            <div id="step-qris" class="hidden text-center">
+                <div id="modal-loader" class="py-10">
+                    <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-indigo-500 border-t-transparent mb-4"></div>
+                    <p class="font-bold text-slate-800">Menyiapkan QRIS...</p>
+                </div>
+                <div id="modal-final-content" class="hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allSmmData = [];
+        let categories = [];
+        let selectedService = null;
+        let finalPrice = 0;
+
+        function getSosmedIcon(name) {
+            const n = name.toLowerCase();
+            if(n.includes('instagram')) return { icon: 'fa-instagram', color: 'text-pink-500', bg: 'bg-pink-50' };
+            if(n.includes('tiktok')) return { icon: 'fa-tiktok', color: 'text-slate-800', bg: 'bg-slate-100' };
+            if(n.includes('youtube')) return { icon: 'fa-youtube', color: 'text-red-500', bg: 'bg-red-50' };
+            if(n.includes('twitter') || n.includes('x')) return { icon: 'fa-twitter', color: 'text-blue-400', bg: 'bg-blue-50' };
+            if(n.includes('facebook')) return { icon: 'fa-facebook', color: 'text-blue-600', bg: 'bg-blue-50' };
+            if(n.includes('telegram')) return { icon: 'fa-telegram', color: 'text-sky-500', bg: 'bg-sky-50' };
+            return { icon: 'fa-star', color: 'text-indigo-500', bg: 'bg-indigo-50' };
+        }
+
+        // AMBIL DATA DARI API BACKEND
+        fetch('/api/smm-products').then(r => r.json()).then(res => {
+            const tabContainer = document.getElementById('category-tabs');
+            if (res.success && res.data.length > 0) {
+                allSmmData = res.data;
+                
+                // Ambil daftar kategori unik dari API
+                allSmmData.forEach(item => {
+                    if(!categories.includes(item.category)) categories.push(item.category);
+                });
+
+                // Buat Tombol Tab Kategori
+                tabContainer.innerHTML = '';
+                categories.forEach(cat => {
+                    tabContainer.innerHTML += `<button onclick="filterSosmed('${cat.replace(/'/g,"\\'")}')" class="sosmed-btn bg-white border-slate-200 text-slate-600 border-2 px-5 py-2 rounded-full font-bold text-xs whitespace-nowrap hover:border-indigo-300 transition">${cat}</button>`;
+                });
+
+                if(categories.length > 0) filterSosmed(categories[0]);
+
+            } else {
+                tabContainer.innerHTML = '<p class="text-rose-500 font-bold text-sm">Gagal menghubungkan ke API SMM. Pastikan API_ID dan API_KEY di Admin panel / config sudah benar.</p>';
+            }
+        });
+
+        function filterSosmed(category) {
+            document.querySelectorAll('.sosmed-btn').forEach(btn => {
+                if (btn.innerText.trim() === category.trim()) {
+                    btn.classList.add('bg-indigo-50', 'border-indigo-500', 'text-indigo-600');
+                    btn.classList.remove('bg-white', 'border-slate-200', 'text-slate-600');
+                } else {
+                    btn.classList.remove('bg-indigo-50', 'border-indigo-500', 'text-indigo-600');
+                    btn.classList.add('bg-white', 'border-slate-200', 'text-slate-600');
+                }
+            });
+
+            const grid = document.getElementById('services-grid');
+            grid.innerHTML = '';
+            
+            const filtered = allSmmData.filter(item => item.category === category);
+            
+            filtered.forEach((item, index) => {
+                // Harga mark up: + Rp 2000 per 1000 Pcs
+                const markupPrice = item.price + 2000; 
+                const s = getSosmedIcon(item.category);
+
+                grid.innerHTML += `
+                    <div class="smm-card bg-white rounded-3xl p-4 border border-slate-100 cursor-pointer relative" style="animation: pop 0.4s ease forwards; animation-delay: ${(index%20) * 0.03}s; opacity:0;" onclick="openModal('${item.id}', '${item.name.replace(/'/g,"\\'")}', ${markupPrice}, ${item.min}, ${item.max})">
+                        <div class="flex items-start gap-3">
+                            <div class="${s.bg} w-10 h-10 rounded-xl flex items-center justify-center shrink-0"><i class="fa-brands ${s.icon} ${s.color} text-xl"></i></div>
+                            <div>
+                                <h3 class="font-black text-slate-800 text-[11px] leading-tight mb-2">${item.name}</h3>
+                                <div class="flex flex-wrap items-center gap-1">
+                                    <span class="bg-indigo-50 text-indigo-600 text-[9px] font-bold px-1.5 py-0.5 rounded border border-indigo-100">Rp ${markupPrice.toLocaleString('id-ID')}/1K</span>
+                                    <span class="bg-slate-50 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded border border-slate-200">Min: ${item.min}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function openModal(id, name, pricePer1K, min, max) {
+            selectedService = { id, name, pricePer1K, min, max };
+            document.getElementById('modal-service-name').innerText = name;
+            document.getElementById('targetData').value = '';
+            document.getElementById('qtyData').value = min;
+            
+            // Set value input Random ID menjadi kosong saat modal dibuka
+            document.getElementById('randomId').value = ''; 
+            
+            document.getElementById('minmax-info').innerText = `*Pesan minimal ${min} - maksimal ${max}`;
+            
+            hitungTotal();
+            
+            document.getElementById('step-form').classList.remove('hidden');
+            document.getElementById('step-qris').classList.add('hidden');
+            document.getElementById('modal-smm').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('modal-smm').style.display = 'none'; }
+
+        function hitungTotal() {
+            let qty = parseInt(document.getElementById('qtyData').value) || 0;
+            finalPrice = Math.ceil((selectedService.pricePer1K / 1000) * qty);
+            document.getElementById('modal-price').innerText = `Rp ${finalPrice.toLocaleString('id-ID')}`;
+        }
+
+        function prosesPesanan() {
+            const target = document.getElementById('targetData').value;
+            const qty = parseInt(document.getElementById('qtyData').value) || 0;
+            const randomId = document.getElementById('randomId').value.trim(); // Ambil value Random ID
+
+            if (!target) return alert('Silakan masukkan Link/Username target!');
+            if (qty < selectedService.min || qty > selectedService.max) return alert(`Jumlah pesanan harus antara ${selectedService.min} dan ${selectedService.max}!`);
+            if (!randomId) return alert('Harap masukkan Random ID dari Bot Telegram Anda!'); // Validasi Random ID
+
+            document.getElementById('step-form').classList.add('hidden');
+            document.getElementById('step-qris').classList.remove('hidden');
+            document.getElementById('modal-loader').classList.remove('hidden');
+            document.getElementById('modal-final-content').classList.add('hidden');
+
+            fetch('/api/smm-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    service: selectedService.id, 
+                    productName: selectedService.name,
+                    displayPrice: finalPrice, 
+                    qty: qty,
+                    target: target,
+                    randomId: randomId // Kirim Random ID ke server
+                })
+            }).then(r => r.json()).then(res => {
+                document.getElementById('modal-loader').classList.add('hidden');
+                const f = document.getElementById('modal-final-content');
+                f.classList.remove('hidden');
+                
+                if (res.status) {
+                    f.innerHTML = `
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Tagihan SMM</p>
+                        <h2 class="text-3xl font-black text-indigo-600 mb-4">Rp ${res.invoice.amount.toLocaleString('id-ID')}</h2>
+                        <div class="bg-slate-50 p-4 rounded-3xl mb-4 flex justify-center"><img src="${res.invoice.qr_url}" class="w-40 h-40 rounded-xl border-4 border-white shadow"></div>
+                        <a href="${res.invoice.botLink}" target="_blank" class="block w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow mb-2"><i class="fa-brands fa-telegram mr-2"></i> Lanjut ke Telegram</a>
+                        <button onclick="closeModal()" class="text-slate-400 text-xs font-bold uppercase">Tutup</button>`;
+                } else {
+                    f.innerHTML = `<p class="text-rose-500 font-bold mb-3">${res.message || 'Gagal membuat QRIS.'}</p><button onclick="closeModal()" class="text-slate-400 text-xs font-bold uppercase">Tutup</button>`;
+                }
+            }).catch(() => {
+                document.getElementById('modal-loader').classList.add('hidden');
+                document.getElementById('modal-final-content').classList.remove('hidden');
+                document.getElementById('modal-final-content').innerHTML = '<p class="text-slate-800 font-bold mb-3">Jaringan bermasalah.</p><button onclick="closeModal()" class="text-slate-400 text-xs font-bold uppercase">Tutup</button>';
+            });
+        }
+    </script>
+</body>
+</html>

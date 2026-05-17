@@ -1,0 +1,113 @@
+[
+  {
+    "orderId": "INV147920260507000822772",
+    "date": "7/5/2026, 00.08.23",
+    "productId": "8",
+    "productName": "Viu Premium Lifetime",
+    "target": "085848651208",
+    "amount": 2704,
+    "status": "SUKSES",
+    "accountDetails": "\n📧 *Email:* xzknld@myviu.upi.my.id\n🔑 *Password/Akses:* masuk12345 : Lifetime\n📖 *Cara Penggunaan:* Login menggunakan email dan password di atas. Jika pada bagian password berupa link (akses), silakan salin link tersebut dan buka di browser Chrome/Safari.\n",
+    "premkuInvoice": "API-20260507001000-0de7"
+  },
+  {
+    "orderId": "INV147920260507003642526",
+    "date": "7/5/2026, 00.36.42",
+    "productId": "5",
+    "productName": "Spotify 1 Bulan FMPLAN",
+    "target": "085848651208",
+    "amount": 19548,
+    "status": "PENDING",
+    "accountDetails": "-"
+  },
+  {
+    "idDeposit": "INV147920260507013546127",
+    "idOrder": null,
+    "productId": "2",
+    "productName": "AM Exp April 2027",
+    "target": "085848651208",
+    "status": "MENUNGGU_BAYAR",
+    "accountDetails": "-",
+    "telegramChatId": 7128038268
+  },
+  {
+    "idDeposit": "INV147920260507013940740",
+    "idOrder": "API-20260507014149-0158",
+    "productId": "2",
+    "productName": "AM Exp April 2027",
+    "target": "085848651208",
+    "status": "SUKSES",
+    "accountDetails": "\n📧 Email: polyuhinanatalya@davidtrix.biz\n🔑 Pass: akses: https://generator.email/polyuhinanatalya@davidtrix.biz\n",
+    "telegramChatId": 7128038268
+  },
+  {
+    "idDeposit": "INV147920260507014548569",
+    "idOrder": "API-20260507014625-9f74",
+    "productId": "2",
+    "productName": "AM Exp April 2027",
+    "target": "085848651208",
+    "status": "SUKSES",
+    "accountDetails": "\n📧 Email: babichya@arthiq.life\n🔑 Pass: akses: https://generator.email/babichya@arthiq.life\n",
+    "telegramChatId": 7128038268
+  },
+  {
+    "idDeposit": "INV147920260507021532586",
+    "idOrder": null,
+    "productId": "9",
+    "productName": "Capcut Pro 1 Minggu",
+    "target": "Pelanggan",
+    "status": "MENUNGGU_BAYAR",
+    "accountDetails": "-",
+    "telegramChatId": null
+  },
+  {
+    "idDeposit": "INV147920260507022024596",
+    "idOrder": "API-20260507022035-f66c",
+    "productId": "2",
+    "productName": "AM Exp April 2027",
+    "target": "Pelanggan",
+    "status": "SUKSES",
+    "accountDetails": "\n📧 Email: finallyjet@meser.cc\n🔑 Pass: akses: https://generator.email/finallyjet@meser.cc\n",
+    "telegramChatId": 7128038268
+  },
+  {
+    "idDeposit": "INV147920260507033314610",
+    "idOrder": null,
+    "productId": "11",
+    "productName": "Spotify 2 Bulan FMPLAN",
+    "target": "081119323606",
+    "status": "MENUNGGU_BAYAR",
+    "accountDetails": "-",
+    "telegramChatId": null
+  },
+  {
+    "idDeposit": "INV147920260507044809768",
+    "idOrder": null,
+    "productId": "5",
+    "productName": "Spotify 1 Bulan FMPLAN",
+    "target": "085848651208",
+    "status": "MENUNGGU_BAYAR",
+    "accountDetails": "-",
+    "telegramChatId": null
+  },
+  {
+    "idDeposit": "INV147920260507045026564",
+    "idOrder": "API-20260507045230-173c",
+    "productId": "2",
+    "productName": "AM Exp April 2027",
+    "target": "085848651208",
+    "status": "SUKSES",
+    "accountDetails": "\n📧 Email: dbksick@monijoa.com\n🔑 Pass: akses: https://generator.email/dbksick@monijoa.com\n",
+    "telegramChatId": 7128038268
+  },
+  {
+    "idDeposit": "INV147920260508024206128",
+    "idOrder": null,
+    "productId": "2",
+    "productName": "AM Exp April 2027",
+    "target": "085848651208",
+    "status": "MENUNGGU_BAYAR",
+    "accountDetails": "-",
+    "telegramChatId": null
+  }
+]

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toko Affiliate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #03050f; color: #e2e8f0; min-height: 100vh;
+            background-image: radial-gradient(circle at 50% 0%, var(--theme, rgba(124,58,237,0.12)) 0%, transparent 50%); }
+        .glass { background: rgba(15,23,42,0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.06); }
+        .product-card { transition: all 0.3s cubic-bezier(0.25,0.8,0.25,1.2); background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; cursor: pointer; overflow: hidden; }
+        .product-card:hover { transform: translateY(-4px); box-shadow: 0 16px 32px -12px var(--glow, rgba(124,58,237,0.3)); border-color: var(--border, rgba(124,58,237,0.4)); }
+        .social-btn { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
+        .social-btn:hover { transform: scale(1.1); background: rgba(255,255,255,0.1); }
+        .avatar-ring { padding: 3px; background: linear-gradient(135deg, var(--accent, #7c3aed), #ec4899); border-radius: 50%; }
+        .search-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+        .search-box:focus-within { border-color: var(--border, rgba(124,58,237,0.5)); }
+        .cat-pill { transition: all 0.2s; }
+        .cat-pill.active { background: var(--accent, #7c3aed); color: white; border-color: transparent; }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        .fade-up { animation: fadeUp 0.5s ease forwards; }
+        .modal-bg { animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        #loading { position: fixed; inset: 0; background: #03050f; z-index: 999; display: flex; align-items: center; justify-content: center; }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent, #7c3aed); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div></div>
+
+<!-- Profile Section -->
+<div id="app" class="max-w-lg mx-auto px-4 py-8 hidden">
+
+    <!-- Avatar + Name -->
+    <div class="text-center mb-6 fade-up">
+        <div class="avatar-ring w-24 h-24 mx-auto mb-4">
+            <div id="avatarImg" class="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
+                <i class="fa-solid fa-store text-3xl text-slate-500"></i>
+            </div>
+        </div>
+        <h1 id="shopName" class="text-2xl font-black text-white"></h1>
+        <p id="shopBio" class="text-sm text-slate-400 mt-1 max-w-xs mx-auto"></p>
+        <p class="text-[10px] text-slate-500 mt-2">Powered by <a href="/" class="text-violet-400 hover:underline" id="poweredBy">RullzyeStore</a></p>
+    </div>
+
+    <!-- Social Links -->
+    <div id="socialBar" class="flex justify-center gap-3 mb-6 fade-up" style="animation-delay:0.1s"></div>
+
+    <!-- CTA Button -->
+    <div class="mb-6 fade-up" style="animation-delay:0.15s">
+        <a id="ctaTelegram" href="#" target="_blank" class="block w-full text-center py-3.5 rounded-2xl font-bold text-sm text-white transition hover:scale-[1.02] hover:shadow-lg" style="background:var(--accent,#7c3aed)">
+            <i class="fa-brands fa-telegram mr-2"></i>Gabung via Telegram
+        </a>
+    </div>
+
+    <!-- Search + Filter -->
+    <div class="mb-4 fade-up" style="animation-delay:0.2s">
+        <div class="search-box rounded-2xl flex items-center px-4 py-3 gap-2">
+            <i class="fa-solid fa-search text-slate-500 text-sm"></i>
+            <input type="text" id="searchInput" placeholder="Cari produk..." class="bg-transparent outline-none text-sm text-white flex-grow placeholder-slate-500">
+        </div>
+    </div>
+    <div id="categoryBar" class="flex gap-2 overflow-x-auto pb-3 mb-4 fade-up" style="animation-delay:0.25s"></div>
+
+    <!-- Product Count -->
+    <div class="flex justify-between items-center mb-3">
+        <p id="productCount" class="text-xs text-slate-400 font-bold"></p>
+        <div class="flex gap-2">
+            <button onclick="setView('grid')" id="btnGrid" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-grid-2"></i></button>
+            <button onclick="setView('list')" id="btnList" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-list"></i></button>
+        </div>
+    </div>
+
+    <!-- Products -->
+    <div id="productGrid" class="grid grid-cols-2 gap-3 mb-8"></div>
+
+    <!-- Footer -->
+    <div class="text-center py-4 border-t border-white/5">
+        <p class="text-[10px] text-slate-600">&copy; 2026 <span id="footerName"></span> &middot; <a href="/" class="text-violet-400 hover:underline">RullzyeStore</a></p>
+    </div>
+</div>
+
+<!-- Order Modal -->
+<div id="orderModal" class="fixed inset-0 z-50 hidden"></div>
+
+<script>
+const refCode = window.location.pathname.split('/toko/')[1] || '';
+let profile = {};
+let allProducts = [];
+let filteredProducts = [];
+let currentCategory = 'all';
+let viewMode = 'grid';
+
+async function init() {
+    if (!refCode) return showError('Link toko tidak valid.');
+    try {
+        const res = await fetch(`/api/toko/${refCode}`);
+        const data = await res.json();
+        if (!data.success) return showError(data.message || 'Toko tidak ditemukan.');
+        profile = data.profile;
+        allProducts = data.products || [];
+        filteredProducts = [...allProducts];
+        applyTheme();
+        renderProfile();
+        renderSocials();
+        renderCategories();
+        renderProducts();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('app').classList.remove('hidden');
+        document.title = `${profile.name} — Toko Digital`;
+    } catch(e) { showError('Gagal memuat toko.'); }
+}
+
+function showError(msg) {
+    document.getElementById('loading').innerHTML = `<div class="text-center"><i class="fa-solid fa-store-slash text-4xl text-slate-600 mb-4"></i><p class="text-slate-400 text-sm">${msg}</p><a href="/" class="text-violet-400 text-xs mt-2 inline-block hover:underline">Kembali ke Beranda</a></div>`;
+}
+
+function applyTheme() {
+    const c = profile.themeColor || '#7c3aed';
+    document.documentElement.style.setProperty('--accent', c);
+    document.documentElement.style.setProperty('--theme', c + '1f');
+    document.documentElement.style.setProperty('--glow', c + '4d');
+    document.documentElement.style.setProperty('--border', c + '66');
+}
+
+function renderProfile() {
+    document.getElementById('shopName').innerText = profile.name;
+    document.getElementById('shopBio').innerText = profile.bio || 'Toko digital terpercaya';
+    document.getElementById('footerName').innerText = profile.name;
+    document.getElementById('poweredBy').innerText = profile.storeName;
+    document.getElementById('ctaTelegram').href = `https://t.me/${profile.botUsername}?start=${profile.refCode}`;
+    if (profile.avatar) {
+        document.getElementById('avatarImg').innerHTML = `<img src="${profile.avatar}" alt="${profile.name}" class="w-full h-full object-cover rounded-full">`;
+    } else {
+        const initials = profile.name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+        document.getElementById('avatarImg').innerHTML = `<span class="text-2xl font-black text-white">${initials}</span>`;
+        document.getElementById('avatarImg').style.background = profile.themeColor || '#7c3aed';
+    }
+}
+
+function renderSocials() {
+    const sl = profile.socialLinks || {};
+    const icons = {
+        instagram: { icon: 'fa-brands fa-instagram', color: 'text-pink-400', url: v => `https://instagram.com/${v}` },
+        tiktok: { icon: 'fa-brands fa-tiktok', color: 'text-white', url: v => `https://tiktok.com/@${v}` },
+        whatsapp: { icon: 'fa-brands fa-whatsapp', color: 'text-emerald-400', url: v => `https://wa.me/${v}` },
+        youtube: { icon: 'fa-brands fa-youtube', color: 'text-red-400', url: v => `https://youtube.com/@${v}` },
+        telegram: { icon: 'fa-brands fa-telegram', color: 'text-sky-400', url: v => `https://t.me/${v}` },
+        shopee: { icon: 'fa-solid fa-bag-shopping', color: 'text-orange-400', url: v => v },
+        website: { icon: 'fa-solid fa-globe', color: 'text-violet-400', url: v => v.startsWith('http') ? v : 'https://'+v }
+    };
+    const bar = document.getElementById('socialBar');
+    let html = '';
+    Object.entries(sl).forEach(([key, val]) => {
+        if (!val || !icons[key]) return;
+        const i = icons[key];
+        html += `<a href="${i.url(val)}" target="_blank" class="social-btn"><i class="${i.icon} ${i.color}"></i></a>`;
+    });
+    bar.innerHTML = html;
+    if (!html) bar.style.display = 'none';
+}
+
+function renderCategories() {
+    const cats = new Set();
+    allProducts.forEach(p => cats.add(p.category || p.source || 'Lainnya'));
+    const bar = document.getElementById('categoryBar');
+    let html = `<button onclick="filterCat('all')" class="cat-pill active text-[11px] font-bold px-4 py-1.5 rounded-full border border-white/10 whitespace-nowrap">Semua</button>`;
+    cats.forEach(c => {
+        html += `<button onclick="filterCat('${c}')" class="cat-pill text-[11px] font-bold px-4 py-1.5 rounded-full border border-white/10 text-slate-400 whitespace-nowrap">${c}</button>`;
+    });
+    bar.innerHTML = html;
+}
+
+function filterCat(cat) {
+    currentCategory = cat;
+    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    applyFilters();
+}
+
+document.getElementById('searchInput')?.addEventListener('input', applyFilters);
+
+function applyFilters() {
+    const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+    filteredProducts = allProducts.filter(p => {
+        const matchCat = currentCategory === 'all' || (p.category || p.source || 'Lainnya') === currentCategory;
+        const matchSearch = !q || p.name.toLowerCase().includes(q);
+        return matchCat && matchSearch;
+    });
+    renderProducts();
+}
+
+function setView(mode) {
+    viewMode = mode;
+    document.getElementById('btnGrid').classList.toggle('text-white', mode === 'grid');
+    document.getElementById('btnList').classList.toggle('text-white', mode === 'list');
+    renderProducts();
+}
+
+function getIcon(name) {
+    const n = name.toLowerCase();
+    if (n.includes('pulsa')||n.includes('telkomsel')) return '<i class="fa-solid fa-signal text-amber-400"></i>';
+    if (n.includes('data')||n.includes('gb')||n.includes('kuota')) return '<i class="fa-solid fa-wifi text-sky-400"></i>';
+    if (n.includes('game')||n.includes('ml')||n.includes('free fire')) return '<i class="fa-solid fa-gamepad text-emerald-400"></i>';
+    if (n.includes('netflix')) return '<i class="fa-solid fa-play text-rose-400"></i>';
+    if (n.includes('spotify')) return '<i class="fa-solid fa-music text-emerald-400"></i>';
+    return '<i class="fa-solid fa-gem text-violet-400"></i>';
+}
+
+function renderProducts() {
+    const grid = document.getElementById('productGrid');
+    document.getElementById('productCount').innerText = `${filteredProducts.length} produk`;
+    if (filteredProducts.length === 0) {
+        grid.innerHTML = `<div class="col-span-2 text-center py-12"><i class="fa-solid fa-box-open text-3xl text-slate-600 mb-3"></i><p class="text-slate-500 text-sm">Tidak ada produk ditemukan</p></div>`;
+        return;
+    }
+    grid.className = viewMode === 'grid' ? 'grid grid-cols-2 gap-3 mb-8' : 'flex flex-col gap-2 mb-8';
+
+    grid.innerHTML = filteredProducts.map(p => {
+        if (viewMode === 'list') {
+            return `<div class="product-card p-3 flex items-center gap-3" onclick="openOrder('${p.id}','${p.name.replace(/'/g,"\\'")}',${p.price},'${p.source}')">
+                <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">${getIcon(p.name)}</div>
+                <div class="flex-grow min-w-0"><h3 class="font-bold text-white text-xs truncate">${p.name}</h3><p class="text-[10px] text-slate-500">${p.category||p.source||''}</p></div>
+                <p class="text-xs font-black whitespace-nowrap" style="color:var(--accent)">Rp ${p.price.toLocaleString('id-ID')}</p>
+            </div>`;
+        }
+        return `<div class="product-card p-4" onclick="openOrder('${p.id}','${p.name.replace(/'/g,"\\'")}',${p.price},'${p.source}')">
+            <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-3">${getIcon(p.name)}</div>
+            <h3 class="font-bold text-white text-[11px] leading-tight line-clamp-2 mb-2">${p.name}</h3>
+            ${p.stock <= 0 ? '<span class="text-[9px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold">Habis</span>' : ''}
+            <p class="text-xs font-black mt-1" style="color:var(--accent)">Rp ${p.price.toLocaleString('id-ID')}</p>
+        </div>`;
+    }).join('');
+}
+
+function openOrder(id, name, price, source) {
+    const modal = document.getElementById('orderModal');
+    const needTarget = source === 'ppob' || source === 'topup' || source === 'game';
+    modal.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-bg';
+    modal.style.background = 'rgba(0,0,0,0.7)';
+    modal.innerHTML = `
+        <div class="glass rounded-3xl w-full max-w-md p-6 fade-up">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-black text-white">Pesan Produk</h3>
+                <button onclick="document.getElementById('orderModal').className='fixed inset-0 z-50 hidden'" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="bg-white/5 rounded-xl p-3 mb-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:var(--accent,#7c3aed)">${getIcon(name)}</div>
+                <div><p class="font-bold text-white text-sm">${name}</p><p class="text-xs font-black" style="color:var(--accent)">Rp ${price.toLocaleString('id-ID')}</p></div>
+            </div>
+            <div class="space-y-3">
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Random ID Telegram</label>
+                <input type="text" id="m-rid" placeholder="ID-ABC123" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm uppercase font-bold text-white mt-1 outline-none focus:border-violet-500"></div>
+                ${needTarget ? `<div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nomor / UID Tujuan</label>
+                <input type="text" id="m-target" placeholder="08xxx / 12345" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white mt-1 outline-none focus:border-violet-500"></div>` : ''}
+            </div>
+            <button onclick="submitOrder('${id}','${name.replace(/'/g,"\\'")}',${price},'${source}')" class="w-full mt-4 py-3.5 rounded-2xl font-bold text-sm text-white transition hover:shadow-lg" style="background:var(--accent,#7c3aed)">
+                <i class="fa-solid fa-lock mr-1"></i> Bayar Sekarang
+            </button>
+        </div>`;
+}
+
+async function submitOrder(id, name, price, source) {
+    const rid = document.getElementById('m-rid')?.value.trim().toUpperCase();
+    const target = document.getElementById('m-target')?.value.trim();
+    if (!rid) return alert('Masukkan Random ID!');
+    if ((source==='ppob'||source==='topup'||source==='game') && !target) return alert('Masukkan nomor tujuan!');
+
+    let endpoint = '/api/order', body = { service: id.replace(/^(PREMKU|PPOB|TOPUP)-/,''), productName:name, displayPrice:price, randomId:rid, target:target||rid };
+    if (source==='ppob') { endpoint='/api/ppob-order'; body.productId=id.replace('PPOB-',''); body.target=target; }
+    else if (source==='topup') { endpoint='/api/topup-order'; body.service=id.replace('TOPUP-',''); body.target=target; }
+
+    try {
+        const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        const data = await res.json();
+        const modal = document.getElementById('orderModal');
+        if (data.status && data.invoice) {
+            modal.querySelector('.glass').innerHTML = `<div class="text-center fade-up">
+                <div class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style="background:var(--accent)"><i class="fa-solid fa-qrcode text-white text-xl"></i></div>
+                <h3 class="text-lg font-black text-white mb-1">Scan QRIS</h3>
+                <p class="text-xs text-slate-400 mb-4">Scan QR di bawah untuk membayar</p>
+                <img src="${data.invoice.qr_url}" class="w-44 h-44 mx-auto rounded-2xl border border-white/10 mb-3">
+                <p class="text-xl font-black text-white">Rp ${data.invoice.amount.toLocaleString('id-ID')}</p>
+                <a href="${data.invoice.botLink}" target="_blank" class="block mt-4 py-3 rounded-xl text-sm font-bold text-white" style="background:var(--accent)"><i class="fa-brands fa-telegram mr-1"></i>Konfirmasi via Bot</a>
+                <button onclick="document.getElementById('orderModal').className='fixed inset-0 z-50 hidden'" class="mt-3 text-xs text-slate-400 hover:text-white">Tutup</button>
+            </div>`;
+        } else {
+            alert(data.message || 'Gagal membuat pesanan');
+            modal.className = 'fixed inset-0 z-50 hidden';
+        }
+    } catch(e) { alert('Gagal terhubung ke server.'); }
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Reseller - Rullzye Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); transition: all 0.2s; }
+    </style>
+</head>
+<body class="min-h-screen p-4 flex flex-col items-center">
+
+    <!-- ======================== LOGIN SECTION ======================== -->
+    <div id="loginSection" class="w-full max-w-md glass p-8 rounded-3xl shadow-2xl mt-20">
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/50">
+                <i class="fa-solid fa-handshake text-2xl text-white"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white">Portal Reseller</h2>
+            <p class="text-gray-400 text-sm mt-1">Sistem Bisnis Rullzye Store</p>
+        </div>
+        <input type="text" id="inputRandomId" placeholder="Masukkan Random ID Anda" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white uppercase font-mono mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
+        <button onclick="loginReseller()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition">
+            Masuk Dashboard <i class="fa-solid fa-arrow-right ml-2"></i>
+        </button>
+        <p class="text-xs text-gray-500 mt-4 text-center">Belum punya Random ID? Daftar melalui <a href="https://t.me/rullzyestore_bot" target="_blank" class="text-blue-400 underline">Telegram Bot</a></p>
+    </div>
+
+    <!-- ======================== DASHBOARD SECTION ======================== -->
+    <div id="dashboardSection" class="w-full max-w-5xl hidden flex-col gap-6 mt-6 pb-20">
+        
+        <!-- HEADER -->
+        <div class="glass p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4 border-t-4 border-blue-500">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Halo, <span id="resellerName" class="text-blue-400">Reseller</span> 👋</h1>
+                <p class="text-sm text-gray-400">Random ID: <code id="resellerId" class="text-blue-300 bg-blue-900/30 px-2 py-1 rounded font-bold"></code></p>
+            </div>
+            <div class="bg-slate-800 border border-slate-600 px-6 py-4 rounded-2xl text-center md:text-right w-full md:w-auto">
+                <p class="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">Saldo Keuntungan</p>
+                <h2 id="saldoTotal" class="text-3xl font-black text-green-400">Rp 0</h2>
+            </div>
+        </div>
+
+        <!-- BUTTONS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button onclick="tarikDana()" class="card-hover bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center justify-center transition">
+                <i class="fa-solid fa-money-bill-transfer text-2xl mb-2"></i>
+                <span>Tarik Dana (WD)</span>
+            </button>
+            <button onclick="aturHarga()" class="card-hover bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center justify-center transition">
+                <i class="fa-solid fa-tags text-2xl mb-2"></i>
+                <span>Atur Harga Jual</span>
+            </button>
+            <a href="/api/reseller/download-sku" class="card-hover bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center justify-center transition text-center">
+                <i class="fa-solid fa-file-csv text-2xl mb-2"></i>
+                <span>Download List SKU</span>
+            </a>
+        </div>
+
+        <!-- STATISTIK -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="statsContainer">
+            <div class="glass p-5 rounded-2xl text-center">
+                <p class="text-xs text-gray-400 font-bold uppercase mb-1">Total Transaksi</p>
+                <h2 id="statTotal" class="text-3xl font-black text-white">0</h2>
+            </div>
+            <div class="glass p-5 rounded-2xl text-center">
+                <p class="text-xs text-gray-400 font-bold uppercase mb-1">Berhasil</p>
+                <h2 id="statSuccess" class="text-3xl font-black text-blue-400">0</h2>
+            </div>
+            <div class="glass p-5 rounded-2xl text-center">
+                <p class="text-xs text-gray-400 font-bold uppercase mb-1">Pending</p>
+                <h2 id="statPending" class="text-3xl font-black text-yellow-400">0</h2>
+            </div>
+            <div class="glass p-5 rounded-2xl text-center">
+                <p class="text-xs text-gray-400 font-bold uppercase mb-1">Gagal</p>
+                <h2 id="statFailed" class="text-3xl font-black text-red-400">0</h2>
+            </div>
+        </div>
+
+        <!-- LOGOUT BUTTON -->
+        <div class="flex justify-end">
+            <button onclick="logout()" class="text-red-400 hover:text-red-300 font-bold text-sm bg-red-400/10 px-4 py-2 rounded-xl transition">
+                <i class="fa-solid fa-power-off mr-2"></i> Keluar Akun
+            </button>
+        </div>
+
+        <!-- RIWAYAT TRANSAKSI -->
+        <div class="glass p-6 rounded-3xl overflow-hidden mt-2">
+            <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-list-check text-blue-500"></i> Riwayat Transaksi Anda</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-300">
+                    <thead class="bg-slate-800/80 text-gray-400 uppercase text-xs">
+                        <tr>
+                            <th class="px-4 py-3 rounded-l-lg">ID Pesanan</th>
+                            <th class="px-4 py-3">Produk & Target</th>
+                            <th class="px-4 py-3">Tipe</th>
+                            <th class="px-4 py-3">Untung</th>
+                            <th class="px-4 py-3 rounded-r-lg">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable" class="divide-y divide-slate-700/50">
+                        <!-- diisi oleh JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Format Rupiah
+        const formatRp = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+        
+        // Cek localStorage saat halaman dibuka
+        window.onload = () => {
+            const savedId = localStorage.getItem('resellerId');
+            if (savedId) fetchDashboard(savedId);
+        };
+
+        // ======================== LOGIN ========================
+        async function loginReseller() {
+            const rId = document.getElementById('inputRandomId').value.trim().toUpperCase();
+            if (!rId) return Swal.fire('Oops', 'Masukkan Random ID Anda!', 'warning');
+            
+            Swal.fire({ title: 'Mengecek Akses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            try {
+                const res = await fetch('/api/reseller/dashboard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ randomId: rId })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.close();
+                    localStorage.setItem('resellerId', rId);
+                    populateDashboard(data, rId);
+                } else {
+                    Swal.fire('Gagal Login', data.message || 'Akun Anda belum terdaftar sebagai Reseller.', 'error');
+                }
+            } catch (e) { Swal.fire('Error', 'Gagal terhubung ke server', 'error'); }
+        }
+
+        // ======================== AMBIL DATA DASHBOARD ========================
+        async function fetchDashboard(randomId) {
+            try {
+                const res = await fetch('/api/reseller/dashboard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ randomId: randomId })
+                });
+                const data = await res.json();
+                if (data.success) populateDashboard(data, randomId);
+                else { logout(); Swal.fire('Sesi Habis', 'Silakan login kembali.', 'error'); }
+            } catch (e) {
+                Swal.fire('Error', 'Gagal menghubungi server.', 'error');
+            }
+        }
+
+        // ======================== TAMPILKAN DASHBOARD ========================
+        function populateDashboard(data, rId) {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('flex');
+
+            document.getElementById('resellerName').innerText = data.data.name;
+            document.getElementById('resellerId').innerText = rId;
+            document.getElementById('saldoTotal').innerText = formatRp(data.data.balance || 0);
+            document.getElementById('statTotal').innerText = data.stats.total;
+            document.getElementById('statSuccess').innerText = data.stats.success;
+            document.getElementById('statPending').innerText = data.stats.pending || 0;
+            document.getElementById('statFailed').innerText = data.stats.failed || 0;
+
+            const tbody = document.getElementById('historyTable');
+            tbody.innerHTML = '';
+            if (!data.history || data.history.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-500">Belum ada transaksi. Ayo mulai jualan!</td></tr>';
+            } else {
+                data.history.forEach(o => {
+                    let statusColor = o.status === 'SUKSES' ? 'text-green-400 bg-green-400/10' : (o.status === 'GAGAL' ? 'text-red-400 bg-red-400/10' : 'text-yellow-400 bg-yellow-400/10');
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-800/30 transition">
+                            <td class="px-4 py-3 font-mono text-xs text-blue-300">${o.id || '-'}</td>
+                            <td class="px-4 py-3">
+                                <div class="font-bold text-white">${o.product}</div>
+                                <div class="text-xs text-gray-400">${o.target}</div>
+                            </td>
+                            <td class="px-4 py-3 text-xs text-gray-500">${o.type || 'PREMKU'}</td>
+                            <td class="px-4 py-3 font-bold text-green-400">+${formatRp(o.profit)}</td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${statusColor}">${o.status.replace('_', ' ')}</span></td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        // ======================== TARIK DANA (WITHDRAW) ========================
+        async function tarikDana() {
+            const rId = localStorage.getItem('resellerId');
+            const { value: formValues } = await Swal.fire({
+                title: 'Tarik Dana (Withdraw)',
+                html: `
+                    <p class="text-sm text-gray-500 mb-4">Minimal penarikan Rp 10.000</p>
+                    <input id="swal-amount" type="number" class="w-full bg-slate-100 border border-slate-300 rounded-lg px-4 py-3 mb-3 text-slate-800 font-bold" placeholder="Nominal (Contoh: 50000)">
+                    <input id="swal-bank" type="text" class="w-full bg-slate-100 border border-slate-300 rounded-lg px-4 py-3 text-slate-800" placeholder="E-Wallet/Bank (Contoh: DANA - 08123 - Budi)">
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Ajukan Penarikan',
+                cancelButtonText: 'Batal',
+                preConfirm: () => {
+                    const amount = document.getElementById('swal-amount').value;
+                    const bank = document.getElementById('swal-bank').value;
+                    if (!amount || !bank) Swal.showValidationMessage('Semua kolom wajib diisi!');
+                    return { amount: parseInt(amount), bankDetails: bank };
+                }
+            });
+
+            if (formValues) {
+                if (isNaN(formValues.amount) || formValues.amount < 10000) {
+                    return Swal.fire('Gagal', 'Minimal penarikan Rp 10.000!', 'error');
+                }
+                
+                Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
+                
+                try {
+                    const res = await fetch('/api/reseller/withdraw', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ randomId: rId, amount: formValues.amount, bankDetails: formValues.bankDetails })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        Swal.fire('Berhasil!', data.message, 'success').then(() => fetchDashboard(rId));
+                    } else {
+                        Swal.fire('Gagal', data.message, 'error');
+                    }
+                } catch (e) { Swal.fire('Error', 'Jaringan bermasalah', 'error'); }
+            }
+        }
+
+        // ======================== ATUR HARGA JUAL (MARKUP) ========================
+        async function aturHarga() {
+            const rId = localStorage.getItem('resellerId');
+            const { value: formValues } = await Swal.fire({
+                title: 'Atur Keuntungan Produk',
+                html: `
+                    <p class="text-xs text-gray-500 mb-4 text-left">Gunakan List SKU yang di-download untuk melihat ID Produk. Masukkan nominal untung bersih dari harga dasar.</p>
+                    <input id="swal-product" type="text" class="w-full bg-slate-100 border border-slate-300 rounded-lg px-4 py-3 mb-3 text-slate-800 font-bold" placeholder="ID Produk / SKU (Contoh: NF-1B)">
+                    <input id="swal-markup" type="number" class="w-full bg-slate-100 border border-slate-300 rounded-lg px-4 py-3 text-slate-800" placeholder="Nominal Keuntungan (Misal: 3000)">
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Simpan Harga',
+                cancelButtonText: 'Batal',
+                preConfirm: () => {
+                    const productId = document.getElementById('swal-product').value.trim();
+                    const markup = document.getElementById('swal-markup').value;
+                    if (!productId || !markup) Swal.showValidationMessage('Semua kolom wajib diisi!');
+                    return { productId, markup: parseInt(markup) };
+                }
+            });
+
+            if (formValues) {
+                Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
+
+                try {
+                    const res = await fetch('/api/reseller/set-markup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ randomId: rId, productId: formValues.productId, markupAmount: formValues.markup })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        Swal.fire('Berhasil', data.message, 'success');
+                    } else {
+                        Swal.fire('Gagal', data.message || 'Terjadi kesalahan sistem', 'error');
+                    }
+                } catch (e) { Swal.fire('Error', 'Jaringan bermasalah', 'error'); }
+            }
+        }
+
+        // ======================== LOGOUT ========================
+        function logout() {
+            localStorage.removeItem('resellerId');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('flex');
+            document.getElementById('inputRandomId').value = '';
+        }
+    </script>
+</body>
+</html>
