@@ -9,12 +9,14 @@ const getConfig = () => { try { return JSON.parse(fs.readFileSync('./config.json
 const cfg = getConfig();
 let bot = null;
 
-if (cfg.telegramToken) {
-    bot = new TelegramBot(cfg.telegramToken, { polling: false });
+const BOT_TOKEN = process.env.TELEGRAM_TOKEN || cfg.telegramToken;
+
+if (BOT_TOKEN) {
+    bot = new TelegramBot(BOT_TOKEN, { polling: false });
     bot.deleteWebHook()
-        .then(() => { bot.startPolling({ restart: true }); console.log("✅ BOT AKTIF (Affiliate Mode)"); })
+        .then(() => { bot.startPolling({ restart: true }); console.log("✅ BOT AKTIF (Menggunakan Token dari ENV)"); })
         .catch(err => console.error("❌ Bot:", err.message));
-} else { console.log("❌ Token bot tidak ada."); }
+} else { console.log("❌ Token bot belum disetel di Environment (TELEGRAM_TOKEN)."); }
 
 const getUsers = async () => { try { const r = await axios.get(`${FIREBASE_URL}/users.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const saveUsers = async (u) => { try { await axios.put(`${FIREBASE_URL}/users.json`, u); } catch(e) {} };
