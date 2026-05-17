@@ -246,21 +246,25 @@ async function loadTab(tab){
 }
 
 async function saveConfig() {
-    const d = {
-        telegramToken: document.getElementById('cfg-token').value,
-        botUsername: document.getElementById('cfg-bot').value,
-        apiKey: document.getElementById('cfg-premku').value,
-        profit: parseInt(document.getElementById('cfg-profit').value),
-        flowixMerchantId: document.getElementById('cfg-flow-id').value,
-        flowixApiKey: document.getElementById('cfg-flow-key').value,
-        celestialApiKey: document.getElementById('cfg-cel-key').value,
-        celestialSecret: document.getElementById('cfg-cel-sec').value,
-        smmApiKey: document.getElementById('cfg-smm-key').value,
-        smmSecretKey: document.getElementById('cfg-smm-sec').value,
-    };
-    const res = await fetch('/api/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-    const json = await res.json();
-    alert(json.message || 'Konfigurasi disimpan!');
+    try {
+        const d = {
+            telegramToken: document.getElementById('cfg-token').value,
+            botUsername: document.getElementById('cfg-bot').value,
+            apiKey: document.getElementById('cfg-premku').value,
+            profit: parseInt(document.getElementById('cfg-profit').value),
+            flowixMerchantId: document.getElementById('cfg-flow-id').value,
+            flowixApiKey: document.getElementById('cfg-flow-key').value,
+            celestialApiKey: document.getElementById('cfg-cel-key').value,
+            celestialSecret: document.getElementById('cfg-cel-sec').value,
+            smmApiKey: document.getElementById('cfg-smm-key').value,
+            smmSecretKey: document.getElementById('cfg-smm-sec').value,
+        };
+        const res = await fetch('/api/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+        const json = await res.json();
+        alert(json.message || 'Konfigurasi disimpan!');
+    } catch(e) {
+        alert("Gagal menghubungi server. Pastikan server aktif dan coba lagi. Detail: " + e.message);
+    }
 }
 
 async function saveAffConfig() {
