@@ -191,6 +191,16 @@ app.get('/api/admin/database/stats', async (req, res) => {
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
+// ================= ADMIN: CHECK OUTBOUND IP =================
+app.get('/api/admin/check-ip', async (req, res) => {
+    try {
+        const ipRes = await axios.get('https://api.ipify.org?format=json');
+        res.json({ success: true, ip: ipRes.data.ip, message: 'Ini adalah IP server Anda yang sebenarnya. Masukkan IP ini ke Whitelist API.' });
+    } catch(e) {
+        res.json({ success: false, message: 'Gagal mengecek IP server.' });
+    }
+});
+
 // ================= ADMIN: SYSTEM CONFIGURATION =================
 app.get('/api/admin/config', (req, res) => {
     res.json(getConfig());
