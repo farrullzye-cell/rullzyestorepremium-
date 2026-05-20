@@ -27,6 +27,9 @@ const saveUsers = async (users) => { try { await axios.put(`${FIREBASE_URL}/user
 const getWithdraws = async () => { try { const res = await axios.get(`${FIREBASE_URL}/withdraws.json`); return res.data ? (Array.isArray(res.data) ? res.data : Object.values(res.data)) : []; } catch (e) { return []; } };
 const saveWithdraws = async (wds) => { try { await axios.put(`${FIREBASE_URL}/withdraws.json`, wds); } catch (e) { } };
 
+const getWebUsers = async () => { try { const res = await axios.get(`${FIREBASE_URL}/webUsers.json`); return res.data ? (Array.isArray(res.data) ? res.data : Object.values(res.data)) : []; } catch (e) { return []; } };
+const saveWebUsers = async (users) => { try { await axios.put(`${FIREBASE_URL}/webUsers.json`, users); } catch (e) { } };
+
 const config = getConfig();
 let isProcessing = false;
 
@@ -61,6 +64,44 @@ app.post('/api/admin/withdraws/acc', async (req, res) => {
 app.post('/api/admin/broadcast', async (req, res) => {
     await sendBroadcast(req.body.message);
     res.json({ success: true });
+});
+
+app.post('/api/web-user/register', async (req, res) => {
+    try {
+        const { name, telegramUsername } = req.body;
+        if (!name || !name.trim()) return res.json({ success: false, message: 'Nama harus diisi.' });
+
+        const users = await getWebUsers();
+        let randomId;
+        do {
+            randomId = `WEB-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+        } while (users.some(u => u.randomId === randomId));
+
+        users.push({
+            name: name.trim(),
+            telegramUsername: telegramUsername ? telegramUsername.trim() : '',
+            randomId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            connectedToTelegram: false
+        });
+        await saveWebUsers(users);
+        res.json({ success: true, randomId, message: 'ID Web berhasil dibuat. Simpan ID kamu untuk pembayaran dan struk.' });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+app.post('/api/web-user/verify', async (req, res) => {
+    try {
+        const { randomId } = req.body;
+        const users = await getWebUsers();
+        const user = users.find(u => u.randomId === randomId);
+        if (!user) return res.json({ success: false, message: 'ID tidak ditemukan.' });
+        res.json({ success: true, user });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
 });
 
 app.get('/api/admin/orders', async (req, res) => {

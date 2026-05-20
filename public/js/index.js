@@ -3,6 +3,150 @@ let allProducts = [];
 let banners = [];
 let currentSlide = 0;
 let slideInterval;
+const webUserStorageKey = 'rullzye_web_user';
+const receiptCacheKey = 'rullzye_receipts';
+
+function getStoredWebUser() {
+    try {
+        const raw = localStorage.getItem(webUserStorageKey);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function saveWebUser(user) {
+    localStorage.setItem(webUserStorageKey, JSON.stringify(user));
+    updateWebUserButton();
+}
+
+function getReceiptCache() {
+    try {
+        const raw = localStorage.getItem(receiptCacheKey);
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function addReceiptToCache(invoice) {
+    const receipts = getReceiptCache();
+    receipts.unshift(invoice);
+    localStorage.setItem(receiptCacheKey, JSON.stringify(receipts.slice(0, 20)));
+}
+
+function updateWebUserButton() {
+    const user = getStoredWebUser();
+    const btn = document.getElementById('btnWebUser');
+    if (!btn) return;
+    if (user && user.randomId) {
+        btn.innerText = `ID: ${user.randomId}`;
+        btn.classList.remove('text-slate-300');
+        btn.classList.add('text-white');
+    } else {
+        btn.innerText = 'Daftar ID Web';
+        btn.classList.remove('text-white');
+        btn.classList.add('text-slate-300');
+    }
+}
+
+function openWebUserModal() {
+    const user = getStoredWebUser();
+    const existing = user ? `<div class="rounded-3xl bg-slate-900 border border-white/10 p-4 mb-4">
+            <p class="text-[11px] text-slate-400">ID Anda saat ini:</p>
+            <p class="font-black text-white text-xl">${user.randomId}</p>
+            <p class="text-xs text-slate-400 mt-2">Nama: ${user.name}</p>
+            ${user.telegramUsername ? `<p class="text-xs text-slate-400">Telegram: ${user.telegramUsername}</p>` : '<p class="text-xs text-slate-400">Telegram belum dihubungkan.</p>'}
+            <button onclick="localStorage.removeItem('${webUserStorageKey}'); updateWebUserButton(); document.getElementById('webUserModal')?.remove(); openWebUserModal();" class="mt-4 w-full bg-rose-600 text-white rounded-2xl py-3 text-sm font-bold">Reset ID</button>
+        </div>` : '';
+
+    const modal = document.createElement('div');
+    modal.id = 'webUserModal';
+    modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[110] flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-slate-950 rounded-3xl w-full max-w-lg p-6 shadow-2xl modal-pop relative border border-white/10">
+            <button onclick="document.getElementById('webUserModal').remove()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-xl font-black text-white mb-2">ID Web & Struk</h3>
+            <p class="text-sm text-slate-400 mb-4">Daftar sekali, simpan struk otomatis di perangkat dan gunakan ID untuk pembayaran.</p>
+            ${existing}
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Nama</label>
+                    <input id="webUserName" type="text" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none" placeholder="Nama lengkap" value="${user?.name || ''}">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Telegram (opsional)</label>
+                    <input id="webUserTelegram" type="text" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none" placeholder="Contoh: rullzyebot" value="${user?.telegramUsername || ''}">
+                    <p class="text-[10px] text-slate-500 mt-2">Masukkan username untuk memudahkan sinkronisasi notifikasi payment.</p>
+                </div>
+                <button id="btnSaveWebUser" class="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl py-3 font-bold">${user ? 'Perbarui ID Web' : 'Buat ID Web'}</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('btnSaveWebUser').onclick = async () => {
+        const name = document.getElementById('webUserName').value.trim();
+        const telegramUsername = document.getElementById('webUserTelegram').value.trim();
+        if (!name) return Swal.fire('Oops', 'Nama harus diisi.', 'warning');
+
+        if (user && user.randomId) {
+            saveWebUser({ ...user, name, telegramUsername, updatedAt: new Date().toISOString() });
+            Swal.fire('Sukses', 'Data ID web berhasil diperbarui.', 'success');
+            document.getElementById('webUserModal')?.remove();
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/web-user/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, telegramUsername })
+            });
+            const data = await res.json();
+            if (data.success) {
+                saveWebUser({ name, telegramUsername, randomId: data.randomId, createdAt: new Date().toISOString() });
+                Swal.fire('Berhasil', `ID Web Anda adalah ${data.randomId}`, 'success');
+                document.getElementById('webUserModal')?.remove();
+            } else {
+                Swal.fire('Gagal', data.message || 'Tidak dapat membuat ID.', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'Gagal terhubung ke server.', 'error');
+        }
+    };
+}
+
+function openReceiptHistory() {
+    const receipts = getReceiptCache();
+    const modal = document.createElement('div');
+    modal.id = 'receiptHistoryModal';
+    modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[110] flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-slate-950 rounded-3xl w-full max-w-2xl p-6 shadow-2xl modal-pop relative border border-white/10">
+            <button onclick="document.getElementById('receiptHistoryModal').remove()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-xl font-black text-white mb-4">Riwayat Struk</h3>
+            <div class="space-y-3 max-h-[65vh] overflow-y-auto pr-2">
+                ${receipts.length === 0 ? '<p class="text-slate-400">Belum ada struk tersimpan. Lakukan pembayaran terlebih dahulu.</p>' : receipts.map(r => `
+                    <div class="rounded-3xl border border-white/10 bg-slate-900 p-4">
+                        <div class="flex items-start justify-between gap-4 mb-3">
+                            <div>
+                                <p class="text-[10px] uppercase tracking-widest text-slate-500">Order ID</p>
+                                <p class="font-black text-white">${r.orderId || r.invoiceId || r.paymentId}</p>
+                            </div>
+                            <span class="text-amber-400 font-black">Rp ${Number(r.amount || 0).toLocaleString('id-ID')}</span>
+                        </div>
+                        <p class="text-sm font-semibold text-white mb-2">${r.productName || 'Produk Web'}</p>
+                        <p class="text-[10px] text-slate-400">${r.target || ''}</p>
+                        <p class="text-[10px] text-slate-500 mt-3">Tanggal: ${new Date(r.createdAt || r.date || Date.now()).toLocaleString('id-ID')}</p>
+                        <a href="${r.qr_url || '#'}" target="_blank" class="inline-flex items-center gap-2 mt-3 text-xs font-bold text-violet-300">Lihat QRIS <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
 
 // ==================== BANNER ====================
 async function loadBanners() {
@@ -109,6 +253,15 @@ async function loadProducts() {
     }
 }
 
+function getSourceLabel(source) {
+    switch (source) {
+        case 'ppob': return 'PPOB';
+        case 'topup': return 'Top Up';
+        case 'premku': return 'Akun Digital';
+        default: return 'Lainnya';
+    }
+}
+
 function renderBadgeSections() {
     const todaySeed = parseInt(new Date().toISOString().slice(0,10).replace(/-/g,''), 10);
     const container = document.getElementById('badge-sections');
@@ -129,29 +282,29 @@ function renderBadgeSections() {
             link: '/ppob.html'
         },
         {
-            title: '⭐ Akun Aplikasi Terlaris',
-            desc: 'Akun premium favorit',
-            filter: p => p.source === 'premku' && (!p.badge || p.badge !== 'Hot'),
+            title: '🎮 Top Up Game Pilihan',
+            desc: 'Top up game cepat dan mudah',
+            filter: p => p.source === 'topup',
             limit: 6,
-            link: '/akundigital.html'
+            link: '/topup.html'
         },
         {
-            title: '🎉 Promo Akun / Hot Akun',
-            desc: 'Akun premium dengan promo terbatas',
-            filter: p => p.source === 'premku' && (p.badge === 'Hot' || p.badge === 'Promo'),
+            title: '⭐ Akun Digital Populer',
+            desc: 'Akun premium siap pakai',
+            filter: p => p.source === 'premku',
             limit: 6,
             link: '/akundigital.html'
         }
     ];
 
-    container.innerHTML = badges.map(b => {
+    container.innerHTML = badges.map((b, index) => {
         let items = allProducts.filter(b.filter);
         if (items.length > b.limit) {
-            items = getRandomItems(items, b.limit, todaySeed + badges.indexOf(b));
+            items = getRandomItems(items, b.limit, todaySeed + index);
         }
         return `
             <section>
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center justify-between mb-4 gap-3">
                     <div>
                         <h2 class="text-lg font-black text-white">${b.title}</h2>
                         <p class="text-[10px] uppercase font-bold tracking-widest text-violet-400">${b.desc}</p>
@@ -166,14 +319,135 @@ function renderBadgeSections() {
                             <div class="w-10 h-10 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center mb-3 text-lg shadow-inner">
                                 ${getProductIcon(p.name)}
                             </div>
-                            <h3 class="font-bold text-slate-200 text-[11px] leading-tight line-clamp-2 mb-2 relative z-10">${p.name}</h3>
-                            <p class="text-xs font-black text-amber-400 relative z-10">Rp ${p.price.toLocaleString('id-ID')}</p>
+                            <div class="space-y-2 relative z-10">
+                                <p class="text-[10px] uppercase tracking-widest text-slate-400">${getSourceLabel(p.source)}</p>
+                                <h3 class="font-bold text-slate-200 text-[11px] leading-tight line-clamp-2">${p.name}</h3>
+                                <p class="text-xs font-black text-amber-400">Rp ${p.price.toLocaleString('id-ID')}</p>
+                            </div>
                         </div>
                     `).join('')}
                 </div>
             </section>
         `;
     }).join('');
+}
+
+function openOrder(id, name, price, source) {
+    const labelTarget = source === 'ppob' ? 'Nomor Tujuan / HP' : source === 'topup' ? 'UID / Username / Target' : 'Username / Tujuan';
+    const requireTarget = source === 'ppob' || source === 'topup';
+    const modal = document.createElement('div');
+    modal.id = 'orderModal';
+    modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-slate-950 rounded-3xl w-full max-w-xl p-6 shadow-2xl modal-pop relative border border-white/10">
+            <button onclick="document.getElementById('orderModal').remove()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            <div class="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
+                <div>
+                    <h3 class="text-xl font-black text-white mb-2">Checkout Cepat</h3>
+                    <p class="text-sm text-slate-400 mb-4">${name}</p>
+                    <div class="rounded-3xl bg-slate-900 border border-white/10 p-4 mb-4">
+                        <p class="text-[11px] uppercase tracking-widest text-slate-500">Kategori</p>
+                        <p class="text-sm font-bold text-white mb-2">${getSourceLabel(source)}</p>
+                        <p class="text-[11px] uppercase tracking-widest text-slate-500">Harga</p>
+                        <p class="text-lg font-black text-amber-400">Rp ${price.toLocaleString('id-ID')}</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Random ID Telegram <span class="text-rose-500">*</span></label>
+                            <input id="modal-randomid" type="text" placeholder="ID-ABC123" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-violet-500">
+                        </div>
+                        <div id="modal-target-group" class="${requireTarget ? '' : 'hidden'}">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">${labelTarget} ${requireTarget ? '<span class="text-rose-500">*</span>' : ''}</label>
+                            <input id="modal-target" type="text" placeholder="${labelTarget}" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-violet-500">
+                        </div>
+                        <div class="text-xs text-slate-500 bg-white/5 border border-white/10 rounded-2xl p-3">
+                            <p class="font-bold text-white">Catatan:</p>
+                            <p>Checkout akan membuat invoice QRIS di web. Gunakan Random ID yang didaftarkan di Bot Telegram.</p>
+                            <p>Jika ingin proses otomatis, selesaikan pembayaran melalui QRIS di layar.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="rounded-3xl bg-slate-900 border border-white/10 p-4 flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-300 items-center justify-center"><i class="fa-solid fa-check"></i></span>
+                            <div>
+                                <p class="text-[11px] uppercase tracking-widest text-slate-500">Keuntungan</p>
+                                <p class="text-sm text-white font-bold">Langsung dari web, bukan bot</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex w-10 h-10 rounded-2xl bg-violet-500/10 text-violet-300 items-center justify-center"><i class="fa-solid fa-clock"></i></span>
+                            <div>
+                                <p class="text-[11px] uppercase tracking-widest text-slate-500">Proses</p>
+                                <p class="text-sm text-white font-bold">Invoice QRIS otomatis</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-300 items-center justify-center"><i class="fa-solid fa-wallet"></i></span>
+                            <div>
+                                <p class="text-[11px] uppercase tracking-widest text-slate-500">Bayar</p>
+                                <p class="text-sm text-white font-bold">Selesaikan melalui QRIS</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="btn-order" class="mt-4 w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold py-3 rounded-2xl hover:shadow-lg transition">Bayar Sekarang</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('btn-order').onclick = async function() {
+        const randomId = document.getElementById('modal-randomid').value.trim().toUpperCase();
+        const target = document.getElementById('modal-target')?.value.trim();
+        if (!randomId) return Swal.fire('Oops', 'Random ID wajib diisi.', 'warning');
+        if (requireTarget && !target) return Swal.fire('Oops', `${labelTarget} wajib diisi.`, 'warning');
+
+        let endpoint = '/api/order';
+        let body = {
+            service: id.replace(/^[A-Z]+-/, ''),
+            productName: name,
+            displayPrice: price,
+            randomId,
+            target: target || randomId
+        };
+
+        if (source === 'ppob') endpoint = '/api/ppob-order';
+        else if (source === 'topup') endpoint = '/api/topup-order';
+        else if (source === 'premku') endpoint = '/api/order';
+
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (data.status) {
+                const invoice = data.invoice || {};
+                document.querySelector('#orderModal .modal-pop').innerHTML = `
+                    <div class="text-center">
+                        <h3 class="text-xl font-black text-white mb-4">Invoice Siap</h3>
+                        <div class="bg-slate-900 border border-white/10 rounded-3xl p-5 mb-4 inline-block">
+                            <p class="text-[11px] uppercase tracking-widest text-slate-500">Total Bayar</p>
+                            <p class="text-2xl font-black text-amber-400 mb-3">Rp ${invoice.amount?.toLocaleString('id-ID') || price.toLocaleString('id-ID')}</p>
+                            <img src="${invoice.qr_url || ''}" class="mx-auto mb-4 rounded-3xl max-w-full h-auto" alt="QRIS">
+                            <p class="text-xs text-slate-400">Scan QRIS untuk menyelesaikan pembayaran.</p>
+                        </div>
+                        <a href="${invoice.botLink || '#'}" target="_blank" class="inline-flex items-center justify-center gap-2 bg-violet-600 text-white font-bold px-6 py-3 rounded-2xl hover:bg-violet-500 transition">Buka Bot / Konfirmasi</a>
+                        <button onclick="document.getElementById('orderModal').remove()" class="mt-4 text-xs text-slate-400">Tutup</button>
+                    </div>
+                `;
+            } else {
+                Swal.fire('Gagal', data.message || 'Gagal membuat pesanan.', 'error');
+                modal.remove();
+            }
+        } catch (e) {
+            Swal.fire('Error', 'Gagal terhubung ke server.', 'error');
+            modal.remove();
+        }
+    };
 }
 
 
@@ -217,6 +491,7 @@ let selectedProduct = null;
 
 function openOrder(id, name, price, source) {
     selectedProduct = { id, name, price, source };
+    const storedUser = getStoredWebUser();
     const modal = document.createElement('div');
     modal.id = 'orderModal';
     modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4';
@@ -226,8 +501,9 @@ function openOrder(id, name, price, source) {
             <h3 class="text-xl font-black text-slate-800 mb-2 text-center">Konfirmasi Pesanan</h3>
             <p class="text-sm font-bold text-indigo-600 mb-4 text-center">${name}</p>
             <div class="mb-4">
-                <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Random ID Telegram <span class="text-red-500">*</span></label>
-                <input type="text" id="modal-randomid" placeholder="ID-ABC123" class="w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm uppercase font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+                <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Random ID Web</label>
+                <input type="text" id="modal-randomid" placeholder="ID-ABC123" class="w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm uppercase font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value="${storedUser?.randomId || ''}">
+                <p class="text-[10px] text-slate-400 mt-2">${storedUser ? 'ID ini diambil dari daftar web Anda.' : 'Isi ID web yang sudah dibuat atau buat baru dari tombol atas.'}</p>
             </div>
             <div id="modal-target-container" class="mb-4 hidden">
                 <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Nomor Tujuan / UID <span class="text-red-500">*</span></label>
@@ -243,13 +519,21 @@ function openOrder(id, name, price, source) {
     }
 
     document.getElementById('btn-order').onclick = async function() {
-        const randomId = document.getElementById('modal-randomid').value.trim().toUpperCase();
+        const randomIdInput = document.getElementById('modal-randomid').value.trim().toUpperCase();
         const target = document.getElementById('modal-target')?.value.trim();
-        if (!randomId) return alert('Masukkan Random ID!');
-        if ((source === 'ppob' || source === 'topup') && !target) return alert('Masukkan nomor tujuan / UID!');
+        const randomId = randomIdInput || storedUser?.randomId;
+        if (!randomId) return Swal.fire('Perhatian', 'Masukkan Random ID Web atau buat ID terlebih dahulu.', 'warning');
+        if ((source === 'ppob' || source === 'topup') && !target) return Swal.fire('Perhatian', 'Masukkan nomor tujuan / UID.', 'warning');
 
         let endpoint = '/api/order';
-        let body = { service: selectedProduct.id.replace(/^(PREMKU|PPOB|TOPUP)-/, ''), productName: selectedProduct.name, displayPrice: selectedProduct.price, randomId: randomId, target: target || randomId };
+        const body = {
+            service: selectedProduct.id.replace(/^(PREMKU|PPOB|TOPUP)-/, ''),
+            productName: selectedProduct.name,
+            displayPrice: selectedProduct.price,
+            randomId,
+            target: target || randomId,
+        };
+
         if (source === 'ppob') {
             endpoint = '/api/ppob-order';
             body.productId = selectedProduct.id.replace('PPOB-', '');
@@ -267,6 +551,18 @@ function openOrder(id, name, price, source) {
         });
         const data = await res.json();
         if (data.status) {
+            addReceiptToCache({
+                orderId: data.invoice.order_id || data.invoice.id || data.invoice.payment_id || new Date().getTime(),
+                invoiceId: data.invoice.id || data.invoice.order_id,
+                paymentId: data.invoice.payment_id,
+                productName: selectedProduct.name,
+                amount: data.invoice.amount,
+                target: body.target,
+                qr_url: data.invoice.qr_url,
+                botLink: data.invoice.botLink,
+                createdAt: new Date().toISOString(),
+            });
+
             modal.querySelector('.modal-pop').innerHTML = `
                 <h3 class="text-lg font-black mb-4">QRIS Siap</h3>
                 <img src="${data.invoice.qr_url}" class="w-40 h-40 mx-auto rounded-xl mb-4">
@@ -275,7 +571,7 @@ function openOrder(id, name, price, source) {
                 <button onclick="document.getElementById('orderModal').remove()" class="mt-2 text-slate-400 text-xs">Tutup</button>
             `;
         } else {
-            alert(data.message || 'Gagal');
+            Swal.fire('Gagal', data.message || 'Gagal membuat pesanan.', 'error');
             modal.remove();
         }
     };
@@ -301,3 +597,4 @@ setInterval(() => { document.getElementById('live-counter').innerText = (35 + Ma
 // Init
 loadBanners();
 loadProducts();
+updateWebUserButton();

@@ -162,6 +162,8 @@
                     </span>
                     <span id="live-counter">47 online</span>
                 </div>
+                <button id="btnWebUser" onclick="openWebUserModal()" class="text-xs font-bold text-slate-300 bg-white/5 backdrop-blur px-4 py-2 rounded-full border border-white/10 transition hover:text-white hover:bg-violet-600/20">Daftar ID Web</button>
+                <button id="btnInvoiceHistory" onclick="openReceiptHistory()" class="text-xs font-bold text-slate-300 bg-white/5 backdrop-blur px-4 py-2 rounded-full border border-white/10 transition hover:text-white hover:bg-amber-600/20">Riwayat Struk</button>
                 <a href="https://wa.me/6285848651208" class="text-xs font-bold text-slate-300 hover:text-violet-300 bg-white/5 backdrop-blur px-4 py-2 rounded-full border border-white/10 transition hover:border-violet-400/50">
                     <i class="fa-solid fa-headset mr-1"></i>CS
                 </a>
@@ -204,6 +206,29 @@
         </div>
     </div>
     
+    <section class="max-w-7xl mx-auto px-4 pb-8 relative z-10">
+        <div class="bg-slate-950/90 border border-white/10 rounded-3xl p-6 shadow-2xl shadow-violet-500/10">
+            <div class="grid gap-6 lg:grid-cols-3">
+                <div class="rounded-3xl border border-white/10 p-5 bg-slate-900/80">
+                    <div class="flex items-center justify-center w-12 h-12 rounded-3xl bg-violet-500/10 text-violet-300 mb-4"><i class="fa-solid fa-user-plus"></i></div>
+                    <h3 class="text-white font-black mb-2">1. Buat ID Web</h3>
+                    <p class="text-sm text-slate-400">Daftar langsung di website tanpa harus login. Dapatkan ID random yang bisa digunakan untuk pembayaran dan struk.</p>
+                </div>
+                <div class="rounded-3xl border border-white/10 p-5 bg-slate-900/80">
+                    <div class="flex items-center justify-center w-12 h-12 rounded-3xl bg-amber-500/10 text-amber-300 mb-4"><i class="fa-solid fa-qrcode"></i></div>
+                    <h3 class="text-white font-black mb-2">2. Bayar dengan QRIS</h3>
+                    <p class="text-sm text-slate-400">Setiap pesanan web menghasilkan invoice QRIS. Bayar langsung di layar dan otomatis tercatat.</p>
+                </div>
+                <div class="rounded-3xl border border-white/10 p-5 bg-slate-900/80">
+                    <div class="flex items-center justify-center w-12 h-12 rounded-3xl bg-emerald-500/10 text-emerald-300 mb-4"><i class="fa-solid fa-receipt"></i></div>
+                    <h3 class="text-white font-black mb-2">3. Simpan Struk Otomatis</h3>
+                    <p class="text-sm text-slate-400">Struk disimpan di perangkat Anda. Tidak perlu login untuk melihat riwayat transaksi.</p>
+                </div>
+            </div>
+            <div class="mt-6 text-sm text-slate-400 border-t border-white/10 pt-4">Jika ingin notifikasi Telegram, masukkan username Telegram saat daftar. Notifikasi status berhasil/gagal bisa dilanjutkan melalui bot setelah connect.</div>
+        </div>
+    </section>
+
     <script>
         setInterval(()=>{
             let t=document.getElementById('fs-timer');
@@ -269,6 +294,29 @@
                             <i class="fa-solid fa-chart-line mr-2"></i>Dashboard Affiliate
                         </a>
                     </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PROSES CHECKOUT WEB ==================== -->
+    <section class="relative z-10 py-12 px-4">
+        <div class="max-w-6xl mx-auto bg-slate-900/80 border border-white/10 rounded-3xl p-8 shadow-2xl shadow-violet-500/10">
+            <div class="grid gap-6 md:grid-cols-3">
+                <div class="p-5 rounded-3xl bg-slate-950/80 border border-white/10 text-center">
+                    <div class="mx-auto mb-4 w-12 h-12 rounded-3xl bg-violet-500/10 flex items-center justify-center text-violet-300"><i class="fa-solid fa-magnifying-glass"></i></div>
+                    <h3 class="font-black text-white text-lg mb-2">1. Pilih Produk</h3>
+                    <p class="text-sm text-slate-400">Telusuri produk pulsa, paket data, topup game, atau akun digital langsung dari website.</p>
+                </div>
+                <div class="p-5 rounded-3xl bg-slate-950/80 border border-white/10 text-center">
+                    <div class="mx-auto mb-4 w-12 h-12 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-300"><i class="fa-solid fa-id-card"></i></div>
+                    <h3 class="font-black text-white text-lg mb-2">2. Masukkan Random ID</h3>
+                    <p class="text-sm text-slate-400">Gunakan Random ID affiliate Anda untuk mencatat transaksi dan dapat komisi otomatis.</p>
+                </div>
+                <div class="p-5 rounded-3xl bg-slate-950/80 border border-white/10 text-center">
+                    <div class="mx-auto mb-4 w-12 h-12 rounded-3xl bg-amber-500/10 flex items-center justify-center text-amber-300"><i class="fa-solid fa-qrcode"></i></div>
+                    <h3 class="font-black text-white text-lg mb-2">3. Bayar QRIS</h3>
+                    <p class="text-sm text-slate-400">Tampilkan invoice QRIS langsung di web dan bayar tanpa perlu bot untuk menerima struk.</p>
                 </div>
             </div>
         </div>

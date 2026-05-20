@@ -72,6 +72,7 @@
 
     <!-- Stats Grid -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5" id="statsGrid"></div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5" id="actionGrid"></div>
 
     <!-- Tabs -->
     <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
@@ -90,6 +91,9 @@
 <script>
 let currentProfile = {};
 let dashData = {};
+let affiliateProducts = [];
+let currentProductCategory = 'all';
+let productSearchTerm = '';
 
 function switchDashTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); if(b.dataset.tab === tab) b.classList.add('active'); });
@@ -101,14 +105,19 @@ function renderTab(tab) {
     if (tab === 'links') {
         c.innerHTML = `<div class="glass p-5 glow-card fade-up">
             <h3 class="font-bold text-white mb-4"><i class="fa-solid fa-link text-violet-400 mr-2"></i>Link Affiliate</h3>
-            <div class="space-y-3">
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Link Telegram</label>
-                <div class="flex mt-1"><input id="linkTelegram" readonly class="flex-grow bg-white/5 border border-white/10 rounded-l-xl px-3 py-2.5 text-xs font-mono text-slate-300" onclick="this.select()"><button onclick="copyLink('linkTelegram')" class="bg-violet-600 text-white px-4 rounded-r-xl text-xs hover:bg-violet-500"><i class="fa-solid fa-copy"></i></button></div></div>
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Landing Page Toko</label>
-                <div class="flex mt-1"><input id="linkWebsite" readonly class="flex-grow bg-white/5 border border-white/10 rounded-l-xl px-3 py-2.5 text-xs font-mono text-slate-300" onclick="this.select()"><button onclick="copyLink('linkWebsite')" class="bg-violet-600 text-white px-4 rounded-r-xl text-xs hover:bg-violet-500"><i class="fa-solid fa-copy"></i></button></div></div>
-            </div>
-            <div class="mt-4 p-3 bg-violet-500/10 rounded-xl border border-violet-500/20">
-                <p class="text-[11px] text-violet-300"><i class="fa-solid fa-info-circle mr-1"></i>Bagikan link di atas ke teman. Setiap orang yang daftar via link Anda menjadi downline, dan Anda dapat <strong>${dashData.data?.commissionPercent || 20}% komisi</strong> dari keuntungan setiap transaksi mereka!</p>
+            <div class="grid gap-4 lg:grid-cols-2">
+                <div class="space-y-3">
+                    <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Link Telegram</label>
+                    <div class="flex mt-1"><input id="linkTelegram" readonly class="flex-grow bg-white/5 border border-white/10 rounded-l-xl px-3 py-2.5 text-xs font-mono text-slate-300" onclick="this.select()"><button onclick="copyLink('linkTelegram')" class="bg-violet-600 text-white px-4 rounded-r-xl text-xs hover:bg-violet-500"><i class="fa-solid fa-copy"></i></button></div></div>
+                    <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Landing Page Toko</label>
+                    <div class="flex mt-1"><input id="linkWebsite" readonly class="flex-grow bg-white/5 border border-white/10 rounded-l-xl px-3 py-2.5 text-xs font-mono text-slate-300" onclick="this.select()"><button onclick="copyLink('linkWebsite')" class="bg-violet-600 text-white px-4 rounded-r-xl text-xs hover:bg-violet-500"><i class="fa-solid fa-copy"></i></button></div></div>
+                </div>
+                <div class="bg-slate-900 border border-white/10 rounded-3xl p-5 text-sm space-y-3">
+                    <div><span class="text-slate-400 uppercase text-[10px] tracking-widest">Komisi Affiliate</span><p class="font-black text-white text-xl">${dashData.data?.commissionPercent || 20}% dari profit</p></div>
+                    <div><span class="text-slate-400 uppercase text-[10px] tracking-widest">Minimal Withdraw</span><p class="font-black text-white text-lg">Rp ${(dashData.data?.minWithdraw || 10000).toLocaleString('id-ID')}</p></div>
+                    <div><span class="text-slate-400 uppercase text-[10px] tracking-widest">Total Downline</span><p class="font-black text-white text-lg">${dashData.data?.totalDownline || 0}</p></div>
+                    <div class="bg-violet-500/10 border border-violet-500/20 rounded-2xl p-3 text-[11px] text-violet-200">Bagikan link di atas. Setiap pendaftaran dan transaksi downline akan tercatat otomatis di dashboard Anda.</div>
+                </div>
             </div>
         </div>`;
         document.getElementById('linkTelegram').value = dashData.data?.linkTelegram || '';
@@ -118,43 +127,108 @@ function renderTab(tab) {
         const colors = ['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#ec4899','#0891b2','#4f46e5'];
         c.innerHTML = `<div class="glass p-5 glow-card fade-up">
             <h3 class="font-bold text-white mb-4"><i class="fa-solid fa-palette text-pink-400 mr-2"></i>Tampilan Toko</h3>
-            <p class="text-xs text-slate-400 mb-4">Kustomisasi tampilan halaman toko Anda seperti Lynk.id</p>
+            <p class="text-xs text-slate-400 mb-4">Kustomisasi halaman toko affiliate Anda dengan tampilan profesional.</p>
 
-            <div class="space-y-4">
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">URL Avatar / Foto Profil</label>
-                <input type="text" id="inp-avatar" value="${currentProfile.avatar||''}" placeholder="https://example.com/foto.jpg" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white mt-1 outline-none focus:border-violet-500">
-                <p class="text-[10px] text-slate-500 mt-1">Upload foto ke imgur.com lalu paste linknya di sini</p></div>
+            <div class="grid gap-6 lg:grid-cols-[2fr_1.2fr]">
+                <div class="space-y-4">
+                    <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">URL Avatar / Foto Profil</label>
+                    <input type="text" id="inp-avatar" value="${currentProfile.avatar||''}" placeholder="https://example.com/foto.jpg" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white mt-1 outline-none focus:border-violet-500">
+                    <p class="text-[10px] text-slate-500 mt-1">Upload foto ke penyedia hosting gambar lalu paste linknya di sini.</p></div>
 
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Warna Tema</label>
-                <div class="flex gap-2 mt-2 flex-wrap">${colors.map(cl => `<button onclick="document.getElementById('inp-color').value='${cl}';document.querySelectorAll('.clr-btn').forEach(b=>b.classList.remove('ring-2'));this.classList.add('ring-2')" class="clr-btn w-8 h-8 rounded-full hover:scale-110 transition ${(currentProfile.themeColor||'#7c3aed')===cl?'ring-2 ring-white ring-offset-2 ring-offset-slate-900':''}" style="background:${cl}"></button>`).join('')}</div>
-                <input type="text" id="inp-color" value="${currentProfile.themeColor||'#7c3aed'}" placeholder="#7c3aed" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white mt-2 outline-none focus:border-violet-500"></div>
+                    <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Warna Tema</label>
+                    <div class="flex gap-2 mt-2 flex-wrap">${colors.map(cl => `<button onclick="document.getElementById('inp-color').value='${cl}';document.querySelectorAll('.clr-btn').forEach(b=>b.classList.remove('ring-2'));this.classList.add('ring-2')" class="clr-btn w-8 h-8 rounded-full hover:scale-110 transition ${(currentProfile.themeColor||'#7c3aed')===cl?'ring-2 ring-white ring-offset-2 ring-offset-slate-900':''}" style="background:${cl}"></button>`).join('')}</div>
+                    <input type="text" id="inp-color" value="${currentProfile.themeColor||'#7c3aed'}" placeholder="#7c3aed" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white mt-2 outline-none focus:border-violet-500"></div>
 
-                <div class="border-t border-white/5 pt-4"><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Link Sosial Media</label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div class="flex items-center gap-2"><i class="fa-brands fa-instagram text-pink-400 w-5"></i><input type="text" id="sl-instagram" value="${sl.instagram||''}" placeholder="username" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
-                    <div class="flex items-center gap-2"><i class="fa-brands fa-tiktok text-white w-5"></i><input type="text" id="sl-tiktok" value="${sl.tiktok||''}" placeholder="username" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
-                    <div class="flex items-center gap-2"><i class="fa-brands fa-whatsapp text-emerald-400 w-5"></i><input type="text" id="sl-whatsapp" value="${sl.whatsapp||''}" placeholder="628xxx" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
-                    <div class="flex items-center gap-2"><i class="fa-brands fa-youtube text-red-400 w-5"></i><input type="text" id="sl-youtube" value="${sl.youtube||''}" placeholder="channel" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
-                    <div class="flex items-center gap-2"><i class="fa-brands fa-telegram text-sky-400 w-5"></i><input type="text" id="sl-telegram" value="${sl.telegram||''}" placeholder="username" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
-                    <div class="flex items-center gap-2"><i class="fa-solid fa-bag-shopping text-orange-400 w-5"></i><input type="text" id="sl-shopee" value="${sl.shopee||''}" placeholder="link shopee" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
-                </div></div>
+                    <div class="border-t border-white/5 pt-4"><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Link Sosial Media</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="flex items-center gap-2"><i class="fa-brands fa-instagram text-pink-400 w-5"></i><input type="text" id="sl-instagram" value="${sl.instagram||''}" placeholder="username" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
+                        <div class="flex items-center gap-2"><i class="fa-brands fa-tiktok text-white w-5"></i><input type="text" id="sl-tiktok" value="${sl.tiktok||''}" placeholder="username" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
+                        <div class="flex items-center gap-2"><i class="fa-brands fa-whatsapp text-emerald-400 w-5"></i><input type="text" id="sl-whatsapp" value="${sl.whatsapp||''}" placeholder="628xxx" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
+                        <div class="flex items-center gap-2"><i class="fa-brands fa-youtube text-red-400 w-5"></i><input type="text" id="sl-youtube" value="${sl.youtube||''}" placeholder="channel" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
+                        <div class="flex items-center gap-2"><i class="fa-brands fa-telegram text-sky-400 w-5"></i><input type="text" id="sl-telegram" value="${sl.telegram||''}" placeholder="username" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-bag-shopping text-orange-400 w-5"></i><input type="text" id="sl-shopee" value="${sl.shopee||''}" placeholder="link shopee" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"></div>
+                    </div></div>
+                </div>
+                <div class="glass p-5 rounded-3xl border border-white/10">
+                    <h4 class="font-bold text-white mb-3">Pratinjau Toko</h4>
+                    <div class="rounded-3xl overflow-hidden border border-white/10" style="background:${currentProfile.themeColor || '#7c3aed'}1a;">
+                        <div class="p-4 bg-slate-950/90">
+                            <div class="flex items-center gap-3">
+                                <div class="w-16 h-16 rounded-3xl bg-white/10 overflow-hidden flex items-center justify-center"><img src="${currentProfile.avatar||'https://placehold.co/80x80/7c3aed/ffffff?text=Avatar'}" alt="Avatar" class="w-full h-full object-cover"></div>
+                                <div>
+                                    <p class="text-sm font-black text-white">${currentProfile.affiliateName || currentProfile.name}</p>
+                                    <p class="text-[11px] text-slate-300">${currentProfile.bio || 'Toko affiliate keren dengan tampilan modern.'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div class="rounded-2xl bg-slate-900/80 p-3 border border-white/10">
+                                <p class="text-[11px] uppercase tracking-widest text-slate-500">Link Toko</p>
+                                <p class="text-sm text-white break-all">${dashData.data?.linkWebsite}</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                ${Object.entries(sl).map(([key,val]) => `<div class="rounded-2xl bg-slate-900/80 p-3 border border-white/10 text-[10px] text-slate-300">${key.toUpperCase()}:<br><span class="text-white break-all">${val}</span></div>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="flex gap-3 mt-5">
+            <div class="flex gap-3 mt-5 flex-col sm:flex-row">
                 <button onclick="saveTampilan()" class="bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold px-6 py-3 rounded-xl text-sm hover:shadow-lg transition flex-grow">Simpan Tampilan</button>
-                <a href="/toko/${currentProfile.randomId}" target="_blank" class="bg-white/5 border border-white/10 text-white font-bold px-5 py-3 rounded-xl text-sm hover:bg-white/10 transition"><i class="fa-solid fa-eye mr-1"></i>Preview</a>
+                <a href="/toko/${currentProfile.randomId}" target="_blank" class="bg-white/5 border border-white/10 text-white font-bold px-5 py-3 rounded-xl text-sm hover:bg-white/10 transition flex-grow text-center"><i class="fa-solid fa-eye mr-1"></i>Preview</a>
             </div>
         </div>`;
     } else if (tab === 'settings') {
         c.innerHTML = `<div class="glass p-5 glow-card fade-up">
-            <h3 class="font-bold text-white mb-4"><i class="fa-solid fa-cog text-violet-400 mr-2"></i>Pengaturan Toko</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Markup Harga (%)</label>
-                <input type="range" id="markupSlider" min="0" max="100" value="${dashData.data?.markupPercent||0}" oninput="document.getElementById('markupVal').innerText=this.value+'%'" class="w-full mt-2 accent-violet-500">
-                <p class="text-sm text-center font-bold text-violet-400 mt-1"><span id="markupVal">${dashData.data?.markupPercent||0}%</span></p></div>
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Produk Ditampilkan</label>
-                <div id="productCBs" class="max-h-40 overflow-y-auto bg-white/5 rounded-xl p-3 text-xs mt-2 space-y-1"></div></div>
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h3 class="font-bold text-white mb-2"><i class="fa-solid fa-cog text-violet-400 mr-2"></i>Pengaturan Toko</h3>
+                    <p class="text-xs text-slate-400">Pilih produk, atur markup, dan tampilkan toko affiliate Anda hanya dengan beberapa klik.</p>
+                </div>
+                <div class="inline-flex gap-2 flex-wrap">
+                    <button onclick="selectAllProducts()" class="text-xs font-bold px-4 py-2 rounded-full bg-white/10 border border-white/10 text-white hover:bg-white/15">Pilih Semua</button>
+                    <button onclick="clearSelectedProducts()" class="text-xs font-bold px-4 py-2 rounded-full bg-slate-800 border border-white/10 text-slate-200 hover:bg-slate-700">Bersihkan</button>
+                </div>
             </div>
-            <button onclick="saveSettings()" class="mt-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold px-6 py-3 rounded-xl text-sm hover:shadow-lg hover:shadow-violet-500/20 transition">Simpan Pengaturan</button>
+            <div class="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4 mt-4">
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Markup Harga (%)</label>
+                        <input type="range" id="markupSlider" min="0" max="100" value="${dashData.data?.markupPercent||0}" oninput="document.getElementById('markupVal').innerText=this.value+'%'" class="w-full mt-2 accent-violet-500">
+                        <p class="text-sm text-center font-bold text-violet-400 mt-1"><span id="markupVal">${dashData.data?.markupPercent||0}%</span></p>
+                    </div>
+                    <div class="bg-slate-900 border border-white/10 rounded-3xl p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div>
+                                <p class="text-[10px] uppercase tracking-widest text-slate-500">Produk Dipilih</p>
+                                <p id="selectedCount" class="font-black text-white text-lg">0 produk</p>
+                            </div>
+                            <span class="text-[10px] py-1 px-3 rounded-full bg-violet-500/10 text-violet-300">PPOB, TopUp, Akun</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-[10px] text-slate-400">
+                            <div class="bg-white/5 rounded-2xl p-3"><p class="font-bold text-white">Link Toko</p><p class="mt-1 text-slate-300 truncate">${dashData.data?.linkWebsite}</p></div>
+                            <div class="bg-white/5 rounded-2xl p-3"><p class="font-bold text-white">Downline</p><p class="mt-1 text-slate-300">${dashData.data?.totalDownline || 0} orang</p></div>
+                            <div class="bg-white/5 rounded-2xl p-3"><p class="font-bold text-white">Komisi Bulan Ini</p><p class="mt-1 text-slate-300">Rp ${(dashData.data?.monthlyCommission||0).toLocaleString('id-ID')}</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cari Produk</label>
+                        <input id="productSearch" oninput="filterAffiliateProducts()" type="text" placeholder="Cari nama produk..." class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-xs text-white outline-none focus:border-violet-500">
+                    </div>
+                    <div class="flex flex-wrap gap-2" id="categoryFilters"></div>
+                </div>
+            </div>
+            <div class="mt-4 bg-white/5 border border-white/10 rounded-3xl p-4">
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="space-y-1"><p class="text-[10px] uppercase tracking-widest text-slate-400">Total Produk</p><p id="totalProducts" class="font-black text-white">-</p></div>
+                    <div class="space-y-1"><p class="text-[10px] uppercase tracking-widest text-slate-400">Kategori Aktif</p><p id="currentCategoryLabel" class="font-black text-white">Semua</p></div>
+                    <div class="space-y-1"><p class="text-[10px] uppercase tracking-widest text-slate-400">Pilih untuk Toko</p><p id="selectedSummary" class="font-black text-white">-</p></div>
+                </div>
+            </div>
+            <div id="productCBs" class="max-h-[42rem] overflow-y-auto mt-4 grid gap-3"></div>
+            <button onclick="saveSettings()" class="mt-4 w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold px-6 py-3 rounded-xl text-sm hover:shadow-lg hover:shadow-violet-500/20 transition">Simpan Pengaturan</button>
         </div>`;
         loadProductCheckboxes();
     } else if (tab === 'downline') {
@@ -225,6 +299,20 @@ function populateDashboard(d) {
         <p class="text-[10px] text-slate-400 font-bold uppercase">${s.label}</p>
         <h3 class="text-lg font-black text-white mt-0.5">${s.value}</h3>
     </div>`).join('');
+
+    const actions = [
+        { label: 'Lihat Link Telegram', icon: 'fa-paperclip', action: "switchDashTab('links')" },
+        { label: 'Lihat Link Website', icon: 'fa-globe', action: "switchDashTab('links')" },
+        { label: 'Edit Profil', icon: 'fa-user-edit', action: 'editProfile()' },
+        { label: 'Edit Tampilan', icon: 'fa-paintbrush', action: "switchDashTab('tampilan')" },
+        { label: 'Pilih Produk', icon: 'fa-box-open', action: "switchDashTab('settings')" },
+        { label: 'Tarik Komisi', icon: 'fa-money-bill-transfer', action: 'tarikKomisi()' },
+        { label: 'Lihat Downline', icon: 'fa-users', action: "switchDashTab('downline')" },
+        { label: 'Riwayat Komisi', icon: 'fa-clock-rotate-left', action: "switchDashTab('history')" },
+        { label: 'Preview Toko', icon: 'fa-eye', action: `window.open('/toko/${d.data.randomId}', '_blank')` },
+        { label: 'Lihat Pengaturan', icon: 'fa-gear', action: "switchDashTab('settings')" }
+    ];
+    document.getElementById('actionGrid').innerHTML = actions.map(a => `<button onclick="${a.action}" class="glass glow-card p-4 text-left transition hover:-translate-y-1 hover:border-violet-500/40 border border-white/10 rounded-3xl"><div class="flex items-center gap-3 mb-3"><span class="w-11 h-11 rounded-2xl bg-violet-500/10 text-violet-300 flex items-center justify-center"><i class="fa-solid ${a.icon}"></i></span><div><p class="text-xs uppercase tracking-widest text-slate-400">Aksi</p><p class="font-bold text-white">${a.label}</p></div></div></button>`).join('');
     switchDashTab('links');
 }
 
@@ -232,10 +320,62 @@ async function loadProductCheckboxes() {
     try {
         const r = await fetch('/api/mixed-products'); const d = await r.json();
         if (d.products) {
-            const sel = dashData.data?.selectedProducts || [];
-            document.getElementById('productCBs').innerHTML = d.products.map(p => `<label class="flex items-center gap-2 py-0.5 text-slate-300 hover:text-white cursor-pointer"><input type="checkbox" value="${p.id}" ${sel.includes(p.id)?'checked':''} class="product-cb accent-violet-500"><span class="truncate">${p.name.substring(0,50)}</span></label>`).join('');
+            affiliateProducts = d.products.map(p => ({
+                ...p,
+                label: `${p.name} (${p.source === 'ppob' ? 'PPOB' : p.source === 'topup' ? 'Top Up' : 'Akun'})`
+            }));
+            currentProductCategory = 'all';
+            productSearchTerm = '';
+            renderProductSelection();
+            renderCategoryFilters();
         }
-    } catch(e) {}
+    } catch(e) { console.error(e); }
+}
+
+function renderCategoryFilters() {
+    const categories = ['all','premku','ppob','topup'];
+    document.getElementById('categoryFilters').innerHTML = categories.map(cat => {
+        const label = cat === 'all' ? 'Semua' : cat === 'premku' ? 'Akun' : cat === 'ppob' ? 'PPOB' : 'Top Up';
+        return `<button class="text-[10px] font-bold px-4 py-2 rounded-full ${currentProductCategory === cat ? 'bg-violet-600 text-white' : 'bg-white/5 text-slate-300 border border-white/10'}" onclick="setAffiliateCategory('${cat}')">${label}</button>`;
+    }).join('');
+}
+
+function setAffiliateCategory(category) {
+    currentProductCategory = category;
+    renderCategoryFilters();
+    renderProductSelection();
+}
+
+function filterAffiliateProducts() {
+    productSearchTerm = document.getElementById('productSearch').value.trim().toLowerCase();
+    renderProductSelection();
+}
+
+function renderProductSelection() {
+    const sel = dashData.data?.selectedProducts || [];
+    const filtered = affiliateProducts.filter(p => {
+        const matchCategory = currentProductCategory === 'all' || p.source === currentProductCategory;
+        const matchSearch = !productSearchTerm || p.label.toLowerCase().includes(productSearchTerm);
+        return matchCategory && matchSearch;
+    });
+    const total = filtered.length;
+    const selected = affiliateProducts.filter(p => sel.includes(p.id)).length;
+    document.getElementById('totalProducts').innerText = `${total} produk cocok`;
+    document.getElementById('selectedCount').innerText = `${selected} dipilih`;
+    document.getElementById('currentCategoryLabel').innerText = currentProductCategory === 'all' ? 'Semua' : currentProductCategory === 'premku' ? 'Akun' : currentProductCategory === 'ppob' ? 'PPOB' : 'Top Up';
+    document.getElementById('selectedSummary').innerText = sel.length ? `${sel.length} produk` : 'Belum ada';
+    document.getElementById('productCBs').innerHTML = filtered.map(p => `<label class="flex items-center gap-3 p-3 rounded-3xl bg-slate-900 border border-white/10 cursor-pointer hover:border-violet-500"><input type="checkbox" value="${p.id}" ${sel.includes(p.id) ? 'checked' : ''} class="product-cb accent-violet-500"><div class="flex-1 text-xs text-slate-300"><span class="font-bold text-white">${p.name}</span><br><span class="text-[10px] text-slate-500">${p.source.toUpperCase()} • Rp ${p.price.toLocaleString('id-ID')}</span></div></label>`).join('');
+}
+
+function selectAllProducts() {
+    const sel = affiliateProducts.map(p => p.id);
+    dashData.data.selectedProducts = sel;
+    renderProductSelection();
+}
+
+function clearSelectedProducts() {
+    dashData.data.selectedProducts = [];
+    renderProductSelection();
 }
 
 async function editProfile() {
