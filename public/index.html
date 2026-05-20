@@ -56,23 +56,35 @@
             -webkit-backdrop-filter: blur(24px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .header-button {
-            min-height: 2.75rem;
-            padding: 0.75rem 1rem;
-            border-radius: 9999px;
-            font-size: 0.8rem;
-            line-height: 1.2;
-            white-space: nowrap;
-            transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+        .page-action {
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .header-button:hover {
-            transform: translateY(-1px);
+        .page-action:active {
+            transform: scale(0.98);
+        }
+        .page-action-overlay {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(124, 58, 237, 0.35);
+            pointer-events: none;
+            transform: translate(-50%, -50%) scale(0);
+            animation: pageActionCircle 0.8s ease-out forwards;
+            z-index: 9999;
+            box-shadow: 0 0 120px rgba(124, 58, 237, 0.65);
+        }
+        @keyframes pageActionCircle {
+            to {
+                transform: translate(-50%, -50%) scale(150);
+                opacity: 0;
+            }
         }
         @media (max-width: 640px) {
-            .header-button {
-                min-width: 6.5rem;
-                padding: 0.65rem 0.9rem;
-                font-size: 0.75rem;
+            .page-action {
+                min-width: auto;
             }
         }
         /* ========== GLOW PULSE DI LOGO ========== */
@@ -262,9 +274,9 @@
                     </span>
                     <span id="live-counter">47 online</span>
                 </div>
-                <button id="btnWebUser" onclick="openWebUserModal()" class="header-button text-xs font-bold text-slate-300 bg-white/7 backdrop-blur border border-white/10 transition hover:text-white hover:bg-violet-600/20">Daftar ID Web</button>
-                <button id="btnInvoiceHistory" onclick="openReceiptHistory()" class="header-button text-xs font-bold text-slate-300 bg-white/7 backdrop-blur border border-white/10 transition hover:text-white hover:bg-amber-600/20">Riwayat Struk</button>
-                <a href="https://wa.me/6285848651208" class="header-button text-xs font-bold text-slate-300 hover:text-violet-300 bg-white/7 backdrop-blur border border-white/10 transition hover:border-violet-400/50 inline-flex items-center justify-center">
+                <button id="btnWebUser" onclick="openWebUserModal()" class="text-xs font-bold text-slate-300 bg-white/7 backdrop-blur border border-white/10 transition hover:text-white hover:bg-violet-600/20 rounded-full px-4 py-2">Daftar ID Web</button>
+                <button id="btnInvoiceHistory" onclick="openReceiptHistory()" class="text-xs font-bold text-slate-300 bg-white/7 backdrop-blur border border-white/10 transition hover:text-white hover:bg-amber-600/20 rounded-full px-4 py-2">Riwayat Struk</button>
+                <a href="https://wa.me/6285848651208" class="text-xs font-bold text-slate-300 hover:text-violet-300 bg-white/7 backdrop-blur border border-white/10 transition hover:border-violet-400/50 rounded-full px-4 py-2 inline-flex items-center justify-center">
                     <i class="fa-solid fa-headset mr-1"></i>CS
                 </a>
                 <a href="/faq.html" class="hidden sm:inline-flex text-xs font-bold text-white bg-violet-600/15 px-4 py-2 rounded-full border border-violet-500/20 hover:bg-violet-600/25 transition">FAQ</a>
@@ -279,8 +291,8 @@
                 <h1 class="hero-heading font-black text-white tracking-tight leading-tight">RullzyeStore — Top up game, pulsa, dan akun premium dalam satu layanan.</h1>
                 <p class="hero-subtitle text-slate-300 max-w-xl">Daftar ID web gratis, bayar QRIS langsung, dan dapatkan struk otomatis tanpa login. Pilihan aman dan recommended untuk transaksi digital cepat.</p>
                 <div class="hero-cta-buttons flex flex-col sm:flex-row gap-3">
-                    <a href="/topup.html" class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-2xl shadow-violet-500/20 hover:scale-[1.01] transition">Beli Sekarang</a>
-                    <a href="/faq.html" class="inline-flex items-center justify-center rounded-full border border-white/10 px-6 py-3 text-sm font-bold text-white/90 hover:text-white hover:border-violet-400 transition">Lihat FAQ</a>
+                    <a href="/topup.html" class="page-action inline-flex items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-2xl shadow-violet-500/20 hover:scale-[1.01] transition">Beli Sekarang</a>
+                    <a href="/faq.html" class="page-action inline-flex items-center justify-center rounded-full border border-white/10 px-6 py-3 text-sm font-bold text-white/90 hover:text-white hover:border-violet-400 transition">Lihat FAQ</a>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-300">
                     <div class="rounded-3xl bg-slate-950/80 border border-white/10 p-4"><span class="font-black text-white">24/7</span><p class="text-slate-400 mt-2">Layanan selalu aktif</p></div>
@@ -503,7 +515,18 @@
 
     <script src="/js/index.js"></script>
     <script>
+        function dispatchPageActionAnimation(event) {
+            const circle = document.createElement('div');
+            circle.className = 'page-action-overlay';
+            circle.style.left = `${event.clientX}px`;
+            circle.style.top = `${event.clientY}px`;
+            document.body.appendChild(circle);
+            circle.addEventListener('animationend', () => circle.remove());
+        }
         window.addEventListener('load', () => {
+            document.querySelectorAll('.page-action').forEach(el => {
+                el.addEventListener('click', dispatchPageActionAnimation);
+            });
             if (typeof gsap !== 'undefined') {
                 gsap.from('header', { y: -30, opacity: 0, duration: 0.8, ease: 'power2.out' });
                 gsap.from('section.pt-24', { y: 30, opacity: 0, duration: 0.9, delay: 0.1, ease: 'power2.out', stagger: 0.12 });
