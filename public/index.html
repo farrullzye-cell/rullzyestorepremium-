@@ -161,6 +161,18 @@
             background-clip: text;
             animation: gradientShift 4s ease infinite;
         }
+        .hero-heading { font-size: clamp(2.25rem, 6vw, 3.5rem); }
+        .hero-subtitle { font-size: clamp(0.95rem, 2.3vw, 1.05rem); line-height: 1.8; }
+        .hero-cta-buttons a { min-width: 100%; }
+        .hero-visual img { max-height: 320px; }
+        @media (min-width: 640px) {
+            .hero-cta-buttons a { min-width: auto; }
+            .hero-visual img { max-height: 420px; }
+        }
+        @media (max-width: 480px) {
+            .header-glass { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+            .live-badge { display: none; }
+        }
         @keyframes gradientShift {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -242,22 +254,22 @@
     </header>
 
     <section class="pt-24 pb-10 px-4">
-        <div class="max-w-6xl mx-auto grid gap-10 lg:grid-cols-2 items-center">
-            <div class="space-y-6">
+        <div class="max-w-6xl mx-auto grid gap-8 lg:grid-cols-2 items-center">
+            <div class="space-y-5">
                 <p class="text-sm uppercase tracking-[0.35em] text-violet-300">Solusi Digital 24 Jam</p>
-                <h1 class="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">RullzyeStore — Top up game, pulsa, dan akun premium dalam satu layanan.</h1>
-                <p class="text-slate-300 text-base md:text-lg max-w-xl">Daftar ID web gratis, bayar QRIS langsung, dan dapatkan struk otomatis tanpa login. Pilihan aman dan recommended untuk transaksi digital cepat.</p>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <a href="/topup.html" class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 px-8 py-4 text-sm font-bold text-white shadow-2xl shadow-violet-500/20 hover:scale-[1.01] transition">Beli Sekarang</a>
-                    <a href="/faq.html" class="inline-flex items-center justify-center rounded-full border border-white/10 px-8 py-4 text-sm font-bold text-white/90 hover:text-white hover:border-violet-400 transition">Lihat FAQ</a>
+                <h1 class="hero-heading font-black text-white tracking-tight leading-tight">RullzyeStore — Top up game, pulsa, dan akun premium dalam satu layanan.</h1>
+                <p class="hero-subtitle text-slate-300 max-w-xl">Daftar ID web gratis, bayar QRIS langsung, dan dapatkan struk otomatis tanpa login. Pilihan aman dan recommended untuk transaksi digital cepat.</p>
+                <div class="hero-cta-buttons flex flex-col sm:flex-row gap-3">
+                    <a href="/topup.html" class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-2xl shadow-violet-500/20 hover:scale-[1.01] transition">Beli Sekarang</a>
+                    <a href="/faq.html" class="inline-flex items-center justify-center rounded-full border border-white/10 px-6 py-3 text-sm font-bold text-white/90 hover:text-white hover:border-violet-400 transition">Lihat FAQ</a>
                 </div>
-                <div class="grid grid-cols-2 gap-3 text-sm text-slate-300">
-                    <div class="rounded-3xl bg-slate-950/80 border border-white/10 p-4"><span class="font-black text-white">24/7</span><p class="text-slate-400">Layanan selalu aktif</p></div>
-                    <div class="rounded-3xl bg-slate-950/80 border border-white/10 p-4"><span class="font-black text-white">Komisi Affiliate</span><p class="text-slate-400">Program referral otomatis</p></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-300">
+                    <div class="rounded-3xl bg-slate-950/80 border border-white/10 p-4"><span class="font-black text-white">24/7</span><p class="text-slate-400 mt-2">Layanan selalu aktif</p></div>
+                    <div class="rounded-3xl bg-slate-950/80 border border-white/10 p-4"><span class="font-black text-white">Komisi Affiliate</span><p class="text-slate-400 mt-2">Program referral otomatis</p></div>
                 </div>
             </div>
-            <div class="relative overflow-hidden rounded-[2rem] shadow-2xl shadow-violet-500/15">
-                <img src="https://i.imgur.com/zMj3j9B.jpeg" alt="Logo RullzyeStore" class="w-full h-[280px] md:h-[360px] lg:h-[420px] object-cover" />
+            <div class="relative overflow-hidden rounded-[1.75rem] shadow-2xl shadow-violet-500/15 hero-visual">
+                <img src="https://i.imgur.com/zMj3j9B.jpeg" alt="Logo RullzyeStore" class="w-full h-[260px] sm:h-[320px] md:h-[420px] object-cover" />
                 <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-transparent"></div>
             </div>
         </div>
