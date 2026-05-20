@@ -4,9 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>RullzyeStore — Akun Premium, Pulsa & Game</title>
+    <meta name="description" content="RullzyeStore menyediakan pulsa, paket data, top up game, akun premium, dan layanan digital terpercaya. Daftar ID Web, bayar QRIS, dan simpan struk otomatis." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="RullzyeStore — Akun Premium, Pulsa & Game" />
+    <meta property="og:description" content="RullzyeStore menyediakan pulsa, paket data, top up game, akun premium, dan layanan digital terpercaya. Daftar ID Web, bayar QRIS, dan simpan struk otomatis." />
+    <meta property="og:url" content="https://rullzyestorepremium.com/" />
+    <meta property="og:image" content="https://i.imgur.com/zMj3j9B.jpeg" />
+    <meta property="og:site_name" content="RullzyeStore" />
+    <meta property="og:locale" content="id_ID" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RullzyeStore — Akun Premium, Pulsa & Game" />
+    <meta name="twitter:description" content="RullzyeStore menyediakan pulsa, paket data, top up game, akun premium, dan layanan digital terpercaya. Daftar ID Web, bayar QRIS, dan simpan struk otomatis." />
+    <meta name="twitter:image" content="https://i.imgur.com/zMj3j9B.jpeg" />
+    <link rel="canonical" href="https://rullzyestorepremium.com/" />
+    <meta name="theme-color" content="#6d28d9" />
+    <link rel="icon" href="https://i.imgur.com/zMj3j9B.jpeg" type="image/jpeg" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         body {
@@ -137,6 +153,34 @@
             100% { background-position: 0% 50%; }
         }
     </style>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "url": "https://rullzyestorepremium.com",
+          "name": "RullzyeStore",
+          "description": "RullzyeStore menyediakan pulsa, paket data, top up game, akun premium, dan layanan digital terpercaya.",
+          "publisher": {
+            "@type": "Organization",
+            "name": "RullzyeStore",
+            "logo": "https://i.imgur.com/zMj3j9B.jpeg"
+          }
+        },
+        {
+          "@type": "Organization",
+          "name": "RullzyeStore",
+          "url": "https://rullzyestorepremium.com",
+          "logo": "https://i.imgur.com/zMj3j9B.jpeg",
+          "sameAs": [
+            "https://wa.me/6285848651208",
+            "https://t.me/RullzyeBot"
+          ]
+        }
+      ]
+    }
+    </script>
 </head>
 <body class="min-h-screen flex flex-col">
 
@@ -149,8 +193,8 @@
         </div>
         <div class="max-w-7xl mx-auto px-6 h-14 flex justify-between items-center">
             <a href="#" class="flex items-center gap-3 group">
-                <div class="bg-gradient-to-br from-violet-600 to-purple-600 p-2.5 rounded-xl logo-glow group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-gem text-white text-sm"></i>
+                <div class="bg-gradient-to-br from-violet-600 to-purple-600 p-2.5 rounded-2xl logo-glow group-hover:scale-110 transition-transform overflow-hidden">
+                    <img src="https://i.imgur.com/zMj3j9B.jpeg" alt="Logo RullzyeStore" class="w-10 h-10 rounded-xl object-cover" />
                 </div>
                 <span id="nav-store-name" class="font-black text-xl text-white tracking-tight">Rullzye<span class="text-violet-400">Store</span></span>
             </a>
@@ -167,9 +211,32 @@
                 <a href="https://wa.me/6285848651208" class="text-xs font-bold text-slate-300 hover:text-violet-300 bg-white/5 backdrop-blur px-4 py-2 rounded-full border border-white/10 transition hover:border-violet-400/50">
                     <i class="fa-solid fa-headset mr-1"></i>CS
                 </a>
+                <a href="/faq.html" class="hidden sm:inline-flex text-xs font-bold text-white bg-violet-600/15 px-4 py-2 rounded-full border border-violet-500/20 hover:bg-violet-600/25 transition">FAQ</a>
             </div>
         </div>
     </header>
+
+    <section class="pt-24 pb-10 px-4">
+        <div class="max-w-6xl mx-auto grid gap-10 lg:grid-cols-2 items-center">
+            <div class="space-y-6">
+                <p class="text-sm uppercase tracking-[0.35em] text-violet-300">Solusi Digital 24 Jam</p>
+                <h1 class="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">RullzyeStore — Top up game, pulsa, dan akun premium dalam satu layanan.</h1>
+                <p class="text-slate-300 text-base md:text-lg max-w-xl">Daftar ID web gratis, bayar QRIS langsung, dan dapatkan struk otomatis tanpa login. Pilihan aman dan recommended untuk transaksi digital cepat.</p>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="/topup.html" class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 px-8 py-4 text-sm font-bold text-white shadow-2xl shadow-violet-500/20 hover:scale-[1.01] transition">Beli Sekarang</a>
+                    <a href="/faq.html" class="inline-flex items-center justify-center rounded-full border border-white/10 px-8 py-4 text-sm font-bold text-white/90 hover:text-white hover:border-violet-400 transition">Lihat FAQ</a>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm text-slate-300">
+                    <div class="rounded-3xl bg-slate-950/80 border border-white/10 p-4"><span class="font-black text-white">24/7</span><p class="text-slate-400">Layanan selalu aktif</p></div>
+                    <div class="rounded-3xl bg-slate-950/80 border border-white/10 p-4"><span class="font-black text-white">Komisi Affiliate</span><p class="text-slate-400">Program referral otomatis</p></div>
+                </div>
+            </div>
+            <div class="relative overflow-hidden rounded-[2rem] shadow-2xl shadow-violet-500/15">
+                <img src="https://i.imgur.com/zMj3j9B.jpeg" alt="Logo RullzyeStore" class="w-full h-[420px] object-cover" />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-transparent"></div>
+            </div>
+        </div>
+    </section>
 
     <!-- ==================== HERO + SLIDER ==================== -->
     <section class="pt-24 pb-4 px-4 relative z-10">
@@ -347,6 +414,7 @@
                 <ul class="space-y-2 text-sm">
                     <li><a href="https://wa.me/6285848651208" class="hover:text-violet-400 transition">Hubungi CS</a></li>
                     <li><a href="https://t.me/RullzyeBot" class="hover:text-violet-400 transition">Bot Telegram</a></li>
+                    <li><a href="/faq.html" class="hover:text-violet-400 transition">FAQ</a></li>
                     <li><a href="#" class="hover:text-violet-400 transition">Syarat & Ketentuan</a></li>
                     <li><a href="#" class="hover:text-violet-400 transition">Kebijakan Privasi</a></li>
                 </ul>
@@ -378,5 +446,22 @@
     </div>
 
     <script src="/js/index.js"></script>
+    <script>
+        window.addEventListener('load', () => {
+            if (typeof gsap !== 'undefined') {
+                gsap.from('header', { y: -30, opacity: 0, duration: 0.8, ease: 'power2.out' });
+                gsap.from('section.pt-24', { y: 30, opacity: 0, duration: 0.9, delay: 0.1, ease: 'power2.out', stagger: 0.12 });
+                gsap.from('.product-card, .slider-btn, .live-badge, .footer', { y: 20, opacity: 0, duration: 0.8, delay: 0.2, ease: 'power2.out', stagger: 0.08 });
+            }
+
+            const fomo = document.getElementById('fomo-notif');
+            if (fomo) {
+                setTimeout(() => {
+                    fomo.style.transform = 'translateY(0)';
+                    fomo.style.opacity = '1';
+                }, 2400);
+            }
+        });
+    </script>
 </body>
 </html>
