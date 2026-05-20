@@ -25,6 +25,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48 64x64" type="image/x-icon" />
+    <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48 64x64" type="image/x-icon" />
     <link rel="icon" href="/favicon.jpeg" type="image/jpeg" sizes="192x192" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon.jpeg" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -267,19 +268,7 @@
                 <span id="nav-store-name" class="font-black text-xl text-white tracking-tight">Rullzye<span class="text-violet-400">Store</span></span>
             </a>
             <div class="flex items-center gap-3">
-                <div class="hidden sm:flex items-center gap-2 live-badge px-3 py-1.5 rounded-full text-[10px] font-bold text-emerald-400">
-                    <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-                    </span>
-                    <span id="live-counter">47 online</span>
-                </div>
-                <button id="btnWebUser" onclick="openWebUserModal()" class="text-xs font-bold text-slate-300 bg-white/7 backdrop-blur border border-white/10 transition hover:text-white hover:bg-violet-600/20 rounded-full px-4 py-2">Daftar ID Web</button>
-                <button id="btnInvoiceHistory" onclick="openReceiptHistory()" class="text-xs font-bold text-slate-300 bg-white/7 backdrop-blur border border-white/10 transition hover:text-white hover:bg-amber-600/20 rounded-full px-4 py-2">Riwayat Struk</button>
-                <a href="https://wa.me/6285848651208" class="text-xs font-bold text-slate-300 hover:text-violet-300 bg-white/7 backdrop-blur border border-white/10 transition hover:border-violet-400/50 rounded-full px-4 py-2 inline-flex items-center justify-center">
-                    <i class="fa-solid fa-headset mr-1"></i>CS
-                </a>
-                <a href="/faq.html" class="hidden sm:inline-flex text-xs font-bold text-white bg-violet-600/15 px-4 py-2 rounded-full border border-violet-500/20 hover:bg-violet-600/25 transition">FAQ</a>
+                <span class="hidden sm:inline-flex text-[11px] text-slate-400 uppercase tracking-[0.35em]">Solusi digital cepat & aman</span>
             </div>
         </div>
     </header>
@@ -303,6 +292,20 @@
                 <img src="https://i.imgur.com/zMj3j9B.jpeg" alt="Logo RullzyeStore" class="w-full h-[260px] sm:h-[320px] md:h-[420px] object-cover" />
                 <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-transparent"></div>
             </div>
+        </div>
+    </section>
+
+    <section class="max-w-6xl mx-auto py-6 px-4">
+        <div class="grid gap-3 sm:grid-cols-3">
+            <a href="javascript:void(0)" onclick="openWebUserModal()" class="page-action inline-flex items-center justify-center rounded-3xl border border-violet-500/20 bg-violet-600/10 px-5 py-4 text-sm font-bold text-white transition hover:bg-violet-600/15">
+                <i class="fa-solid fa-user-plus mr-2"></i> Daftar ID Web
+            </a>
+            <button onclick="openReceiptHistory()" class="page-action inline-flex items-center justify-center rounded-3xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm font-bold text-white transition hover:bg-amber-500/15">
+                <i class="fa-solid fa-receipt mr-2"></i> Riwayat Struk
+            </button>
+            <a href="https://wa.me/6285848651208" class="page-action inline-flex items-center justify-center rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-bold text-slate-200 transition hover:bg-white/10">
+                <i class="fa-solid fa-headset mr-2"></i> Kontak CS
+            </a>
         </div>
     </section>
 
