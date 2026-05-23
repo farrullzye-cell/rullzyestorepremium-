@@ -37,9 +37,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        * {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: #03050f;
@@ -50,21 +54,58 @@
                 radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
                 radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.03) 0%, transparent 70%);
         }
+
+        /* ========== MOBILE-FIRST RESPONSIVE UTILITIES ========== */
+        @media (max-width: 480px) {
+            body {
+                font-size: 15px;
+            }
+        }
+
         /* ========== HEADER GLASS EFFECT ========== */
         .header-glass {
             background: rgba(10, 15, 35, 0.85);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
         }
+
+        @media (max-width: 640px) {
+            .header-glass {
+                padding-top: 0.5rem;
+                padding-bottom: 0.5rem;
+            }
+        }
+
+        /* ========== MARQUEE ========== */
+        marquee {
+            font-size: 12px;
+        }
+
+        @media (max-width: 480px) {
+            marquee {
+                font-size: 10px;
+            }
+        }
+
+        /* ========== PAGE ACTION BUTTON ========== */
         .page-action {
             position: relative;
             overflow: hidden;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+            touch-action: manipulation;
         }
+
         .page-action:active {
-            transform: scale(0.98);
+            transform: scale(0.96);
         }
+
+        .page-action:hover {
+            box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+        }
+
         .page-action-overlay {
             position: fixed;
             width: 20px;
@@ -77,93 +118,137 @@
             z-index: 9999;
             box-shadow: 0 0 120px rgba(124, 58, 237, 0.65);
         }
+
         @keyframes pageActionCircle {
             to {
                 transform: translate(-50%, -50%) scale(150);
                 opacity: 0;
             }
         }
-        @media (max-width: 640px) {
-            .page-action {
-                min-width: auto;
-            }
-        }
-        /* ========== GLOW PULSE DI LOGO ========== */
+
+        /* ========== LOGO GLOW ========== */
         .logo-glow {
             box-shadow: 0 0 25px rgba(139, 92, 246, 0.5), 0 0 50px rgba(139, 92, 246, 0.2);
             animation: logoPulse 3s ease-in-out infinite;
         }
+
         @keyframes logoPulse {
             0%, 100% { box-shadow: 0 0 25px rgba(139, 92, 246, 0.5), 0 0 50px rgba(139, 92, 246, 0.2); }
             50% { box-shadow: 0 0 35px rgba(139, 92, 246, 0.7), 0 0 70px rgba(139, 92, 246, 0.3); }
         }
-        /* ========== LIVE COUNTER ========== */
+
+        /* ========== LIVE BADGE ========== */
         .live-badge {
             background: rgba(16, 185, 129, 0.1);
             border: 1px solid rgba(16, 185, 129, 0.3);
             animation: liveBadgePulse 2s ease-in-out infinite;
+            font-size: 11px;
         }
+
         @keyframes liveBadgePulse {
             0%, 100% { border-color: rgba(16, 185, 129, 0.3); }
             50% { border-color: rgba(16, 185, 129, 0.6); }
         }
+
+        @media (max-width: 640px) {
+            .live-badge { display: none; }
+        }
+
         /* ========== SLIDER ========== */
         .slider-container {
             position: relative;
             overflow: hidden;
-            border-radius: 4px;
+            border-radius: 12px;
         }
+
         .slider-track {
             display: flex;
             transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1.2);
         }
+
         .slider-slide {
             min-width: 100%;
-            height: 200px;
+            height: 180px;
             cursor: pointer;
             object-fit: cover;
         }
-        @media (min-width: 640px) { .slider-slide { height: 280px; } }
-        @media (min-width: 1024px) { .slider-slide { height: 360px; } }
+
+        @media (min-width: 640px) { 
+            .slider-slide { height: 260px; } 
+        }
+
+        @media (min-width: 1024px) { 
+            .slider-slide { height: 340px; } 
+        }
+
         .slider-btn {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.12);
             backdrop-filter: blur(10px);
             border-radius: 50%;
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             z-index: 10;
-            transition: all 0.2s;
-            opacity: 0.7;
-            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s ease;
+            opacity: 0.8;
+            border: 1px solid rgba(255,255,255,0.15);
         }
-        .slider-btn:hover { opacity: 1; background: rgba(255,255,255,0.2); }
-        .slider-btn.left { left: 10px; }
-        .slider-btn.right { right: 10px; }
+
+        .slider-btn:hover { 
+            opacity: 1; 
+            background: rgba(255,255,255,0.2);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .slider-btn:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        .slider-btn.left { left: 12px; }
+        .slider-btn.right { right: 12px; }
+
+        @media (max-width: 640px) {
+            .slider-btn {
+                width: 36px;
+                height: 36px;
+            }
+        }
+
         .slider-dots {
             position: absolute;
-            bottom: 12px;
+            bottom: 14px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             gap: 6px;
             z-index: 10;
         }
+
         .slider-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: rgba(255,255,255,0.4);
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             cursor: pointer;
         }
-        .slider-dot.active { background: white; width: 24px; border-radius: 10px; }
+
+        .slider-dot:hover {
+            background: rgba(255,255,255,0.6);
+        }
+
+        .slider-dot.active { 
+            background: white; 
+            width: 24px; 
+            border-radius: 10px;
+        }
+
         /* ========== PRODUCT CARD ========== */
         .product-card {
             transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1.2);
@@ -175,15 +260,28 @@
             cursor: pointer;
             overflow: hidden;
         }
+
         .product-card:hover {
             transform: translateY(-6px);
             box-shadow: 0 20px 40px -15px rgba(139, 92, 246, 0.4);
             border-color: rgba(139, 92, 246, 0.5);
             background: rgba(20, 30, 55, 0.9);
         }
+
+        .product-card:active {
+            transform: translateY(-3px);
+        }
+
         /* ========== MODAL ========== */
-        .modal-pop { animation: pop 0.3s ease; }
-        @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-pop { 
+            animation: pop 0.3s ease; 
+        }
+
+        @keyframes pop { 
+            from { transform: scale(0.9); opacity: 0; } 
+            to { transform: scale(1); opacity: 1; } 
+        }
+
         /* ========== GRADIENT TEXT ========== */
         .gradient-text {
             background: linear-gradient(135deg, #c084fc, #a78bfa, #818cf8, #c084fc);
@@ -193,22 +291,99 @@
             background-clip: text;
             animation: gradientShift 4s ease infinite;
         }
-        .hero-heading { font-size: clamp(2.25rem, 6vw, 3.5rem); }
-        .hero-subtitle { font-size: clamp(0.95rem, 2.3vw, 1.05rem); line-height: 1.8; }
-        .hero-cta-buttons a { min-width: 100%; }
-        .hero-visual img { max-height: 320px; }
-        @media (min-width: 640px) {
-            .hero-cta-buttons a { min-width: auto; }
-            .hero-visual img { max-height: 420px; }
-        }
-        @media (max-width: 480px) {
-            .header-glass { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-            .live-badge { display: none; }
-        }
+
         @keyframes gradientShift {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
+        }
+
+        /* ========== HERO SECTION RESPONSIVE ========== */
+        .hero-heading { 
+            font-size: clamp(1.875rem, 5vw, 3.5rem);
+            line-height: 1.2;
+        }
+
+        .hero-subtitle { 
+            font-size: clamp(0.9375rem, 2vw, 1.0625rem); 
+            line-height: 1.7;
+        }
+
+        .hero-cta-buttons {
+            flex-wrap: wrap;
+        }
+
+        .hero-cta-buttons a { 
+            width: 100%;
+            min-height: 48px;
+        }
+
+        @media (min-width: 640px) {
+            .hero-cta-buttons a { 
+                width: auto;
+                min-height: 44px;
+            }
+        }
+
+        .hero-visual img { 
+            max-height: 280px;
+            width: 100%;
+        }
+
+        @media (min-width: 640px) {
+            .hero-visual img { 
+                max-height: 380px; 
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .hero-visual img { 
+                max-height: 420px; 
+            }
+        }
+
+        /* ========== SECTION SPACING ========== */
+        section {
+            scroll-margin-top: 80px;
+        }
+
+        @media (max-width: 640px) {
+            section {
+                scroll-margin-top: 70px;
+            }
+        }
+
+        /* ========== FOOTER RESPONSIVE ========== */
+        footer {
+            margin-top: auto;
+            padding-top: 3rem;
+            padding-bottom: 1.5rem;
+        }
+
+        @media (max-width: 640px) {
+            footer {
+                padding-top: 2rem;
+                padding-bottom: 1rem;
+            }
+        }
+
+        /* ========== UTILITY IMPROVEMENTS ========== */
+        @media (max-width: 480px) {
+            .max-w-7xl,
+            .max-w-6xl,
+            .max-w-5xl,
+            .max-w-4xl {
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            h1, h2, h3 { word-wrap: break-word; }
+
+            .pt-24 { padding-top: 1.5rem; }
+            .pb-8 { padding-bottom: 1.5rem; }
+            .px-4 { padding-left: 1rem; padding-right: 1rem; }
+            .py-16 { padding-top: 2rem; padding-bottom: 2rem; }
+            .py-12 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
         }
     </style>
     <script type="application/ld+json">
@@ -295,16 +470,16 @@
         </div>
     </section>
 
-    <section class="max-w-6xl mx-auto py-6 px-4">
-        <div class="grid gap-3 sm:grid-cols-3">
-            <a href="javascript:void(0)" onclick="openWebUserModal()" class="page-action inline-flex items-center justify-center rounded-3xl border border-violet-500/20 bg-violet-600/10 px-5 py-4 text-sm font-bold text-white transition hover:bg-violet-600/15">
-                <i class="fa-solid fa-user-plus mr-2"></i> Daftar ID Web
+    <section class="max-w-6xl mx-auto py-4 sm:py-6 px-4">
+        <div class="grid gap-2 sm:gap-3 grid-cols-3">
+            <a href="javascript:void(0)" onclick="openWebUserModal()" class="page-action inline-flex items-center justify-center rounded-2xl sm:rounded-3xl border border-violet-500/20 bg-violet-600/10 px-3 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm font-bold text-white transition hover:bg-violet-600/15 active:bg-violet-600/20">
+                <i class="fa-solid fa-user-plus mr-1 sm:mr-2"></i> <span class="hidden sm:inline">Daftar ID Web</span><span class="sm:hidden">Daftar</span>
             </a>
-            <button onclick="openReceiptHistory()" class="page-action inline-flex items-center justify-center rounded-3xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm font-bold text-white transition hover:bg-amber-500/15">
-                <i class="fa-solid fa-receipt mr-2"></i> Riwayat Struk
+            <button onclick="openReceiptHistory()" class="page-action inline-flex items-center justify-center rounded-2xl sm:rounded-3xl border border-amber-500/20 bg-amber-500/10 px-3 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm font-bold text-white transition hover:bg-amber-500/15 active:bg-amber-500/20">
+                <i class="fa-solid fa-receipt mr-1 sm:mr-2"></i> <span class="hidden sm:inline">Riwayat Struk</span><span class="sm:hidden">Riwayat</span>
             </button>
-            <a href="https://wa.me/6285848651208" class="page-action inline-flex items-center justify-center rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-bold text-slate-200 transition hover:bg-white/10">
-                <i class="fa-solid fa-headset mr-2"></i> Kontak CS
+            <a href="https://wa.me/6285848651208" class="page-action inline-flex items-center justify-center rounded-2xl sm:rounded-3xl border border-white/10 bg-white/5 px-3 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm font-bold text-slate-200 transition hover:bg-white/10 active:bg-white/15">
+                <i class="fa-solid fa-headset mr-1 sm:mr-2"></i> <span class="hidden sm:inline">Kontak CS</span><span class="sm:hidden">CS</span>
             </a>
         </div>
     </section>
@@ -322,48 +497,48 @@
     </section>
 
     <!-- ==================== FLASH SALE (DUMMY/ANIMATED) ==================== -->
-    <div class="max-w-7xl mx-auto px-4 pb-6 relative z-10 mt-[-10px]">
-        <div class="bg-gradient-to-r from-rose-600/90 to-red-600/90 rounded-2xl p-4 flex flex-col md:flex-row items-center gap-4 justify-between border border-rose-500/30 shadow-lg shadow-rose-500/20">
-            <div class="flex items-center gap-3">
-                <i class="fa-solid fa-bolt text-3xl text-yellow-300 animate-pulse"></i>
+    <div class="max-w-7xl mx-auto px-4 pb-4 sm:pb-6 relative z-10 mt-[-6px] sm:mt-[-10px]">
+        <div class="bg-gradient-to-r from-rose-600/90 to-red-600/90 rounded-2xl sm:rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 justify-between border border-rose-500/30 shadow-lg shadow-rose-500/20">
+            <div class="flex items-center gap-2 sm:gap-3">
+                <i class="fa-solid fa-bolt text-2xl sm:text-3xl text-yellow-300 animate-pulse"></i>
                 <div>
-                    <h3 class="text-white font-black italic text-lg leading-tight">FLASH SALE</h3>
-                    <p class="text-rose-200 text-[10px] font-bold">Berakhir dalam: <span id="fs-timer" class="bg-black/20 px-2 py-0.5 rounded text-white ml-1">02:14:59</span></p>
+                    <h3 class="text-white font-black italic text-base sm:text-lg leading-tight">FLASH SALE</h3>
+                    <p class="text-rose-200 text-[9px] sm:text-[10px] font-bold">Berakhir dalam: <span id="fs-timer" class="bg-black/20 px-2 py-0.5 rounded text-white ml-1 text-[8px] sm:text-[10px]">02:14:59</span></p>
                 </div>
             </div>
-            <div class="flex gap-3 overflow-x-auto w-full md:w-auto pb-1 hide-scrollbar">
-                <div class="bg-white/10 p-2 rounded-xl border border-white/20 min-w-[120px] flex items-center gap-2 backdrop-blur-sm cursor-pointer hover:bg-white/20 transition">
+            <div class="flex gap-2 sm:gap-3 overflow-x-auto w-full sm:w-auto pb-1 hide-scrollbar">
+                <div class="bg-white/10 p-2 rounded-xl border border-white/20 min-w-[110px] sm:min-w-[120px] flex items-center gap-2 backdrop-blur-sm cursor-pointer hover:bg-white/20 transition active:bg-white/25">
                     <img src="https://placehold.co/100x100/1e293b/white?text=MLBB" class="w-10 h-10 rounded-lg">
-                    <div><p class="text-[10px] text-white font-bold truncate w-16">86 Diamonds</p><p class="text-xs font-black text-yellow-300">Rp 19.500</p></div>
+                    <div><p class="text-[9px] sm:text-[10px] text-white font-bold truncate w-14 sm:w-16">86 Diamonds</p><p class="text-xs font-black text-yellow-300">Rp 19.500</p></div>
                 </div>
-                <div class="bg-white/10 p-2 rounded-xl border border-white/20 min-w-[120px] flex items-center gap-2 backdrop-blur-sm cursor-pointer hover:bg-white/20 transition">
+                <div class="bg-white/10 p-2 rounded-xl border border-white/20 min-w-[110px] sm:min-w-[120px] flex items-center gap-2 backdrop-blur-sm cursor-pointer hover:bg-white/20 transition active:bg-white/25">
                     <img src="https://placehold.co/100x100/1e293b/white?text=FF" class="w-10 h-10 rounded-lg">
-                    <div><p class="text-[10px] text-white font-bold truncate w-16">140 Diamonds</p><p class="text-xs font-black text-yellow-300">Rp 18.000</p></div>
+                    <div><p class="text-[9px] sm:text-[10px] text-white font-bold truncate w-14 sm:w-16">140 Diamonds</p><p class="text-xs font-black text-yellow-300">Rp 18.000</p></div>
                 </div>
             </div>
         </div>
     </div>
     
-    <section class="max-w-7xl mx-auto px-4 pb-8 relative z-10">
-        <div class="bg-slate-950/90 border border-white/10 rounded-3xl p-6 shadow-2xl shadow-violet-500/10">
-            <div class="grid gap-6 lg:grid-cols-3">
-                <div class="rounded-3xl border border-white/10 p-5 bg-slate-900/80">
-                    <div class="flex items-center justify-center w-12 h-12 rounded-3xl bg-violet-500/10 text-violet-300 mb-4"><i class="fa-solid fa-user-plus"></i></div>
-                    <h3 class="text-white font-black mb-2">1. Buat ID Web</h3>
-                    <p class="text-sm text-slate-400">Daftar langsung di website tanpa harus login. Dapatkan ID random yang bisa digunakan untuk pembayaran dan struk.</p>
+    <section class="max-w-7xl mx-auto px-4 pb-6 sm:pb-8 relative z-10">
+        <div class="bg-slate-950/90 border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl shadow-violet-500/10">
+            <div class="grid gap-3 sm:gap-4 lg:gap-6 lg:grid-cols-3">
+                <div class="rounded-2xl sm:rounded-3xl border border-white/10 p-4 sm:p-5 bg-slate-900/80">
+                    <div class="flex items-center justify-center w-12 h-12 rounded-2xl sm:rounded-3xl bg-violet-500/10 text-violet-300 mb-3 sm:mb-4"><i class="fa-solid fa-user-plus"></i></div>
+                    <h3 class="text-white font-black mb-2 text-sm sm:text-base">1. Buat ID Web</h3>
+                    <p class="text-xs sm:text-sm text-slate-400">Daftar langsung di website tanpa harus login. Dapatkan ID random yang bisa digunakan untuk pembayaran dan struk.</p>
                 </div>
-                <div class="rounded-3xl border border-white/10 p-5 bg-slate-900/80">
-                    <div class="flex items-center justify-center w-12 h-12 rounded-3xl bg-amber-500/10 text-amber-300 mb-4"><i class="fa-solid fa-qrcode"></i></div>
-                    <h3 class="text-white font-black mb-2">2. Bayar dengan QRIS</h3>
-                    <p class="text-sm text-slate-400">Setiap pesanan web menghasilkan invoice QRIS. Bayar langsung di layar dan otomatis tercatat.</p>
+                <div class="rounded-2xl sm:rounded-3xl border border-white/10 p-4 sm:p-5 bg-slate-900/80">
+                    <div class="flex items-center justify-center w-12 h-12 rounded-2xl sm:rounded-3xl bg-amber-500/10 text-amber-300 mb-3 sm:mb-4"><i class="fa-solid fa-qrcode"></i></div>
+                    <h3 class="text-white font-black mb-2 text-sm sm:text-base">2. Bayar dengan QRIS</h3>
+                    <p class="text-xs sm:text-sm text-slate-400">Setiap pesanan web menghasilkan invoice QRIS. Bayar langsung di layar dan otomatis tercatat.</p>
                 </div>
-                <div class="rounded-3xl border border-white/10 p-5 bg-slate-900/80">
-                    <div class="flex items-center justify-center w-12 h-12 rounded-3xl bg-emerald-500/10 text-emerald-300 mb-4"><i class="fa-solid fa-receipt"></i></div>
-                    <h3 class="text-white font-black mb-2">3. Simpan Struk Otomatis</h3>
-                    <p class="text-sm text-slate-400">Struk disimpan di perangkat Anda. Tidak perlu login untuk melihat riwayat transaksi.</p>
+                <div class="rounded-2xl sm:rounded-3xl border border-white/10 p-4 sm:p-5 bg-slate-900/80">
+                    <div class="flex items-center justify-center w-12 h-12 rounded-2xl sm:rounded-3xl bg-emerald-500/10 text-emerald-300 mb-3 sm:mb-4"><i class="fa-solid fa-receipt"></i></div>
+                    <h3 class="text-white font-black mb-2 text-sm sm:text-base">3. Simpan Struk Otomatis</h3>
+                    <p class="text-xs sm:text-sm text-slate-400">Struk disimpan di perangkat Anda. Tidak perlu login untuk melihat riwayat transaksi.</p>
                 </div>
             </div>
-            <div class="mt-6 text-sm text-slate-400 border-t border-white/10 pt-4">Jika ingin notifikasi Telegram, masukkan username Telegram saat daftar. Notifikasi status berhasil/gagal bisa dilanjutkan melalui bot setelah connect.</div>
+            <div class="mt-4 sm:mt-6 text-xs sm:text-sm text-slate-400 border-t border-white/10 pt-3 sm:pt-4">Jika ingin notifikasi Telegram, masukkan username Telegram saat daftar. Notifikasi status berhasil/gagal bisa dilanjutkan melalui bot setelah connect.</div>
         </div>
     </section>
 
@@ -375,18 +550,18 @@
     </script>
 
     <!-- ==================== TOMBOL NAVIGASI CEPAT ==================== -->
-    <div class="flex justify-center gap-3 px-4 pb-8 relative z-10 flex-wrap">
-        <a href="/topup.html" class="inline-flex items-center justify-center flex-col gap-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold w-24 h-24 rounded-2xl text-[10px] shadow-lg transition hover:-translate-y-1">
-            <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center mb-1"><i class="fa-solid fa-gamepad text-emerald-400 text-lg"></i></div>Top Up
+    <div class="flex justify-center gap-2 sm:gap-3 px-4 pb-8 relative z-10 flex-wrap">
+        <a href="/topup.html" class="inline-flex items-center justify-center flex-col gap-1.5 bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/10 text-white font-bold w-20 h-20 sm:w-24 sm:h-24 rounded-2xl text-[9px] sm:text-[10px] shadow-lg transition hover:-translate-y-1 active:translate-y-0">
+            <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center"><i class="fa-solid fa-gamepad text-emerald-400 text-base sm:text-lg"></i></div><span>Top Up</span>
         </a>
-        <a href="/smmpanel.html" class="inline-flex items-center justify-center flex-col gap-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold w-24 h-24 rounded-2xl text-[10px] shadow-lg transition hover:-translate-y-1">
-            <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center mb-1"><i class="fa-solid fa-users text-indigo-400 text-lg"></i></div>Sosmed
+        <a href="/smmpanel.html" class="inline-flex items-center justify-center flex-col gap-1.5 bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/10 text-white font-bold w-20 h-20 sm:w-24 sm:h-24 rounded-2xl text-[9px] sm:text-[10px] shadow-lg transition hover:-translate-y-1 active:translate-y-0">
+            <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center"><i class="fa-solid fa-users text-indigo-400 text-base sm:text-lg"></i></div><span>Sosmed</span>
         </a>
-        <a href="/ppob.html" class="inline-flex items-center justify-center flex-col gap-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold w-24 h-24 rounded-2xl text-[10px] shadow-lg transition hover:-translate-y-1">
-            <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center mb-1"><i class="fa-solid fa-bolt text-amber-400 text-lg"></i></div>PPOB
+        <a href="/ppob.html" class="inline-flex items-center justify-center flex-col gap-1.5 bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/10 text-white font-bold w-20 h-20 sm:w-24 sm:h-24 rounded-2xl text-[9px] sm:text-[10px] shadow-lg transition hover:-translate-y-1 active:translate-y-0">
+            <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center"><i class="fa-solid fa-bolt text-amber-400 text-base sm:text-lg"></i></div><span>PPOB</span>
         </a>
-        <a href="/affiliate.html" class="inline-flex items-center justify-center flex-col gap-1 bg-gradient-to-br from-violet-600/80 to-purple-600/80 hover:from-violet-500 hover:to-purple-500 border border-violet-500/30 text-white font-bold w-24 h-24 rounded-2xl text-[10px] shadow-lg shadow-violet-500/20 transition hover:-translate-y-1">
-            <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mb-1"><i class="fa-solid fa-handshake text-white text-lg"></i></div>Affiliate
+        <a href="/affiliate.html" class="inline-flex items-center justify-center flex-col gap-1.5 bg-gradient-to-br from-violet-600/80 to-purple-600/80 hover:from-violet-500 hover:to-purple-500 active:from-violet-600 active:to-purple-600 border border-violet-500/30 text-white font-bold w-20 h-20 sm:w-24 sm:h-24 rounded-2xl text-[9px] sm:text-[10px] shadow-lg shadow-violet-500/20 transition hover:-translate-y-1 active:translate-y-0">
+            <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"><i class="fa-solid fa-handshake text-white text-base sm:text-lg"></i></div><span>Affiliate</span>
         </a>
     </div>
 
@@ -396,40 +571,40 @@
     </div>
 
     <!-- ==================== AFFILIATE CTA ==================== -->
-    <section class="relative z-10 py-16 px-4">
+    <section class="relative z-10 py-12 sm:py-16 px-4">
         <div class="max-w-4xl mx-auto">
-            <div class="bg-gradient-to-br from-violet-600/20 via-purple-600/10 to-indigo-600/20 border border-violet-500/20 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-40 h-40 bg-violet-500/10 rounded-full blur-3xl"></div>
-                <div class="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl"></div>
+            <div class="bg-gradient-to-br from-violet-600/20 via-purple-600/10 to-indigo-600/20 border border-violet-500/20 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 text-center relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 sm:w-40 h-32 sm:h-40 bg-violet-500/10 rounded-full blur-3xl"></div>
+                <div class="absolute bottom-0 left-0 w-24 sm:w-32 h-24 sm:h-32 bg-purple-500/10 rounded-full blur-3xl"></div>
                 <div class="relative z-10">
-                    <div class="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-amber-500/20">
-                        <i class="fa-solid fa-handshake text-white text-2xl"></i>
+                    <div class="w-14 sm:w-16 h-14 sm:h-16 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-5 shadow-lg shadow-amber-500/20">
+                        <i class="fa-solid fa-handshake text-white text-xl sm:text-2xl"></i>
                     </div>
-                    <h2 class="text-2xl md:text-3xl font-black text-white mb-3">Gabung Program Affiliate</h2>
-                    <p class="text-sm text-slate-400 max-w-lg mx-auto mb-6">Dapatkan <strong class="text-amber-400">20% komisi</strong> dari setiap transaksi downline Anda. Gratis mendaftar, tanpa modal!</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-xl mx-auto mb-8">
-                        <div class="bg-white/5 rounded-xl p-3 border border-white/5">
-                            <i class="fa-solid fa-link text-violet-400 mb-1"></i>
-                            <p class="text-[11px] font-bold text-white">Link Unik</p>
-                            <p class="text-[10px] text-slate-400">Landing page toko sendiri</p>
+                    <h2 class="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">Gabung Program Affiliate</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 max-w-lg mx-auto mb-5 sm:mb-6">Dapatkan <strong class="text-amber-400">20% komisi</strong> dari setiap transaksi downline Anda. Gratis mendaftar, tanpa modal!</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 max-w-xl mx-auto mb-6 sm:mb-8">
+                        <div class="bg-white/5 rounded-xl p-2.5 sm:p-3 border border-white/5">
+                            <i class="fa-solid fa-link text-violet-400 mb-1 text-sm"></i>
+                            <p class="text-[10px] sm:text-[11px] font-bold text-white">Link Unik</p>
+                            <p class="text-[9px] sm:text-[10px] text-slate-400">Landing page toko sendiri</p>
                         </div>
-                        <div class="bg-white/5 rounded-xl p-3 border border-white/5">
-                            <i class="fa-solid fa-coins text-amber-400 mb-1"></i>
-                            <p class="text-[11px] font-bold text-white">Komisi Otomatis</p>
-                            <p class="text-[10px] text-slate-400">Masuk saldo setiap transaksi</p>
+                        <div class="bg-white/5 rounded-xl p-2.5 sm:p-3 border border-white/5">
+                            <i class="fa-solid fa-coins text-amber-400 mb-1 text-sm"></i>
+                            <p class="text-[10px] sm:text-[11px] font-bold text-white">Komisi Otomatis</p>
+                            <p class="text-[9px] sm:text-[10px] text-slate-400">Masuk saldo setiap transaksi</p>
                         </div>
-                        <div class="bg-white/5 rounded-xl p-3 border border-white/5">
-                            <i class="fa-solid fa-money-bill-transfer text-emerald-400 mb-1"></i>
-                            <p class="text-[11px] font-bold text-white">Withdraw Mudah</p>
-                            <p class="text-[10px] text-slate-400">Transfer ke bank/e-wallet</p>
+                        <div class="bg-white/5 rounded-xl p-2.5 sm:p-3 border border-white/5">
+                            <i class="fa-solid fa-money-bill-transfer text-emerald-400 mb-1 text-sm"></i>
+                            <p class="text-[10px] sm:text-[11px] font-bold text-white">Withdraw Mudah</p>
+                            <p class="text-[9px] sm:text-[10px] text-slate-400">Transfer ke bank/e-wallet</p>
                         </div>
                     </div>
-                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                        <button onclick="applyAffiliate()" class="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-8 py-3.5 rounded-full text-sm shadow-lg shadow-amber-500/20 hover:scale-105 transition">
-                            <i class="fa-solid fa-rocket mr-2"></i>Daftar Affiliate Gratis
+                    <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
+                        <button onclick="applyAffiliate()" class="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-full text-xs sm:text-sm shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition active:scale-95">
+                            <i class="fa-solid fa-rocket mr-1.5 sm:mr-2"></i><span>Daftar Affiliate Gratis</span>
                         </button>
-                        <a href="/affiliate.html" class="bg-white/5 border border-white/10 text-white font-bold px-8 py-3.5 rounded-full text-sm hover:bg-white/10 transition">
-                            <i class="fa-solid fa-chart-line mr-2"></i>Dashboard Affiliate
+                        <a href="/affiliate.html" class="bg-white/5 border border-white/10 text-white font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-full text-xs sm:text-sm hover:bg-white/10 transition active:bg-white/15">
+                            <i class="fa-solid fa-chart-line mr-1.5 sm:mr-2"></i><span>Dashboard Affiliate</span>
                         </a>
                     </div>
                 </div>
@@ -438,23 +613,23 @@
     </section>
 
     <!-- ==================== PROSES CHECKOUT WEB ==================== -->
-    <section class="relative z-10 py-12 px-4">
-        <div class="max-w-6xl mx-auto bg-slate-900/80 border border-white/10 rounded-3xl p-8 shadow-2xl shadow-violet-500/10">
-            <div class="grid gap-6 md:grid-cols-3">
-                <div class="p-5 rounded-3xl bg-slate-950/80 border border-white/10 text-center">
-                    <div class="mx-auto mb-4 w-12 h-12 rounded-3xl bg-violet-500/10 flex items-center justify-center text-violet-300"><i class="fa-solid fa-magnifying-glass"></i></div>
-                    <h3 class="font-black text-white text-lg mb-2">1. Pilih Produk</h3>
-                    <p class="text-sm text-slate-400">Telusuri produk pulsa, paket data, topup game, atau akun digital langsung dari website.</p>
+    <section class="relative z-10 py-12 sm:py-12 px-4">
+        <div class="max-w-6xl mx-auto bg-slate-900/80 border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl shadow-violet-500/10">
+            <div class="grid gap-4 sm:gap-5 md:gap-6 md:grid-cols-3">
+                <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-slate-950/80 border border-white/10 text-center">
+                    <div class="mx-auto mb-3 sm:mb-4 w-12 h-12 rounded-2xl sm:rounded-3xl bg-violet-500/10 flex items-center justify-center text-violet-300"><i class="fa-solid fa-magnifying-glass"></i></div>
+                    <h3 class="font-black text-white text-sm sm:text-base md:text-lg mb-2">1. Pilih Produk</h3>
+                    <p class="text-xs sm:text-sm text-slate-400">Telusuri produk pulsa, paket data, topup game, atau akun digital langsung dari website.</p>
                 </div>
-                <div class="p-5 rounded-3xl bg-slate-950/80 border border-white/10 text-center">
-                    <div class="mx-auto mb-4 w-12 h-12 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-300"><i class="fa-solid fa-id-card"></i></div>
-                    <h3 class="font-black text-white text-lg mb-2">2. Masukkan Random ID</h3>
-                    <p class="text-sm text-slate-400">Gunakan Random ID affiliate Anda untuk mencatat transaksi dan dapat komisi otomatis.</p>
+                <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-slate-950/80 border border-white/10 text-center">
+                    <div class="mx-auto mb-3 sm:mb-4 w-12 h-12 rounded-2xl sm:rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-300"><i class="fa-solid fa-id-card"></i></div>
+                    <h3 class="font-black text-white text-sm sm:text-base md:text-lg mb-2">2. Masukkan Random ID</h3>
+                    <p class="text-xs sm:text-sm text-slate-400">Gunakan Random ID affiliate Anda untuk mencatat transaksi dan dapat komisi otomatis.</p>
                 </div>
-                <div class="p-5 rounded-3xl bg-slate-950/80 border border-white/10 text-center">
-                    <div class="mx-auto mb-4 w-12 h-12 rounded-3xl bg-amber-500/10 flex items-center justify-center text-amber-300"><i class="fa-solid fa-qrcode"></i></div>
-                    <h3 class="font-black text-white text-lg mb-2">3. Bayar QRIS</h3>
-                    <p class="text-sm text-slate-400">Tampilkan invoice QRIS langsung di web dan bayar tanpa perlu bot untuk menerima struk.</p>
+                <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-slate-950/80 border border-white/10 text-center">
+                    <div class="mx-auto mb-3 sm:mb-4 w-12 h-12 rounded-2xl sm:rounded-3xl bg-amber-500/10 flex items-center justify-center text-amber-300"><i class="fa-solid fa-qrcode"></i></div>
+                    <h3 class="font-black text-white text-sm sm:text-base md:text-lg mb-2">3. Bayar QRIS</h3>
+                    <p class="text-xs sm:text-sm text-slate-400">Tampilkan invoice QRIS langsung di web dan bayar tanpa perlu bot untuk menerima struk.</p>
                 </div>
             </div>
         </div>
@@ -462,17 +637,17 @@
 
     <!-- ==================== FOOTER PROFESIONAL ==================== -->
     <footer class="relative z-10 bg-slate-900 text-slate-300 mt-auto border-t border-white/5">
-        <div class="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             <div>
-                <div class="flex items-center gap-2 mb-4">
-                    <div class="bg-violet-600 p-2 rounded-lg"><i class="fa-solid fa-gem text-white text-sm"></i></div>
-                    <span class="font-black text-lg text-white">RullzyeStore</span>
+                <div class="flex items-center gap-2 mb-3 sm:mb-4">
+                    <div class="bg-violet-600 p-2 rounded-lg"><i class="fa-solid fa-gem text-white text-xs sm:text-sm"></i></div>
+                    <span class="font-black text-base sm:text-lg text-white">RullzyeStore</span>
                 </div>
-                <p class="text-sm text-slate-400">Tempat terpercaya untuk akun premium, pulsa, kuota, top up game, dan layanan digital lainnya.</p>
+                <p class="text-xs sm:text-sm text-slate-400">Tempat terpercaya untuk akun premium, pulsa, kuota, top up game, dan layanan digital lainnya.</p>
             </div>
             <div>
-                <h4 class="font-bold text-white mb-3">Layanan</h4>
-                <ul class="space-y-2 text-sm">
+                <h4 class="font-bold text-white mb-2 sm:mb-3 text-sm">Layanan</h4>
+                <ul class="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                     <li><a href="/topup.html" class="hover:text-violet-400 transition">Top Up Game</a></li>
                     <li><a href="/ppob.html" class="hover:text-violet-400 transition">Pulsa & Paket Data</a></li>
                     <li><a href="/smmpanel.html" class="hover:text-violet-400 transition">Followers & Sosmed</a></li>
@@ -481,8 +656,8 @@
                 </ul>
             </div>
             <div>
-                <h4 class="font-bold text-white mb-3">Bantuan</h4>
-                <ul class="space-y-2 text-sm">
+                <h4 class="font-bold text-white mb-2 sm:mb-3 text-sm">Bantuan</h4>
+                <ul class="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                     <li><a href="https://wa.me/6285848651208" class="hover:text-violet-400 transition">Hubungi CS</a></li>
                     <li><a href="https://t.me/RullzyeBot" class="hover:text-violet-400 transition">Bot Telegram</a></li>
                     <li><a href="/faq.html" class="hover:text-violet-400 transition">FAQ</a></li>
@@ -491,28 +666,28 @@
                 </ul>
             </div>
             <div>
-                <h4 class="font-bold text-white mb-3">Jam Operasional</h4>
-                <p class="text-sm text-slate-400">Senin - Minggu: 24 Jam</p>
-                <p class="text-sm text-slate-400 mt-1">Transaksi Otomatis</p>
-                <div class="flex gap-3 mt-4">
-                    <a href="https://wa.me/6285848651208" class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center hover:bg-violet-600 transition"><i class="fa-brands fa-whatsapp text-white text-sm"></i></a>
-                    <a href="https://t.me/RullzyeBot" class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center hover:bg-violet-600 transition"><i class="fa-brands fa-telegram text-white text-sm"></i></a>
+                <h4 class="font-bold text-white mb-2 sm:mb-3 text-sm">Jam Operasional</h4>
+                <p class="text-xs sm:text-sm text-slate-400">Senin - Minggu: 24 Jam</p>
+                <p class="text-xs sm:text-sm text-slate-400 mt-1">Transaksi Otomatis</p>
+                <div class="flex gap-2 sm:gap-3 mt-3 sm:mt-4">
+                    <a href="https://wa.me/6285848651208" class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center hover:bg-violet-600 active:bg-violet-700 transition"><i class="fa-brands fa-whatsapp text-white text-xs sm:text-sm"></i></a>
+                    <a href="https://t.me/RullzyeBot" class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center hover:bg-violet-600 active:bg-violet-700 transition"><i class="fa-brands fa-telegram text-white text-xs sm:text-sm"></i></a>
                 </div>
             </div>
         </div>
-        <div class="border-t border-slate-700 py-6 text-center text-xs text-slate-500">
+        <div class="border-t border-slate-700 py-4 sm:py-6 text-center text-[11px] sm:text-xs text-slate-500 px-4">
             &copy; 2026 RullzyeStore. All rights reserved. Powered by <a href="https://premku.com" class="hover:text-violet-400">Premku</a> & <a href="https://flowix.web.id" class="hover:text-violet-400">Flowix</a>
         </div>
     </footer>
 
     <!-- ==================== FOMO ==================== -->
-    <div id="fomo-notif" class="fixed bottom-6 left-6 z-[90] transform translate-y-40 opacity-0 bg-slate-900/90 backdrop-blur-xl shadow-2xl p-4 rounded-2xl flex items-center gap-3 max-w-[280px] border border-white/10">
-        <div class="bg-gradient-to-br from-violet-500 to-purple-500 p-2.5 rounded-full shadow-lg">
-            <i class="fa-solid fa-cart-shopping text-white text-xs"></i>
+    <div id="fomo-notif" class="fixed bottom-4 sm:bottom-6 left-4 sm:left-6 z-[90] transform translate-y-40 opacity-0 bg-slate-900/90 backdrop-blur-xl shadow-2xl p-3 sm:p-4 rounded-2xl flex items-center gap-2 sm:gap-3 max-w-[260px] sm:max-w-[280px] border border-white/10 transition">
+        <div class="bg-gradient-to-br from-violet-500 to-purple-500 p-2 sm:p-2.5 rounded-full shadow-lg flex-shrink-0">
+            <i class="fa-solid fa-cart-shopping text-white text-[10px] sm:text-xs"></i>
         </div>
         <div>
-            <p id="fomo-user" class="text-[9px] text-slate-400 font-black uppercase">Baru saja</p>
-            <p id="fomo-text" class="text-[11px] font-bold text-slate-200">Membeli Produk</p>
+            <p id="fomo-user" class="text-[8px] sm:text-[9px] text-slate-400 font-black uppercase">Baru saja</p>
+            <p id="fomo-text" class="text-[10px] sm:text-[11px] font-bold text-slate-200">Membeli Produk</p>
         </div>
     </div>
 
@@ -526,15 +701,11 @@
             document.body.appendChild(circle);
             circle.addEventListener('animationend', () => circle.remove());
         }
+        
         window.addEventListener('load', () => {
             document.querySelectorAll('.page-action').forEach(el => {
                 el.addEventListener('click', dispatchPageActionAnimation);
             });
-            if (typeof gsap !== 'undefined') {
-                gsap.from('header', { y: -30, opacity: 0, duration: 0.8, ease: 'power2.out' });
-                gsap.from('section.pt-24', { y: 30, opacity: 0, duration: 0.9, delay: 0.1, ease: 'power2.out', stagger: 0.12 });
-                gsap.from('.product-card, .slider-btn, .live-badge, .footer', { y: 20, opacity: 0, duration: 0.8, delay: 0.2, ease: 'power2.out', stagger: 0.08 });
-            }
 
             const fomo = document.getElementById('fomo-notif');
             if (fomo) {
