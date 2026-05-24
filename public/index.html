@@ -25,7 +25,6 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48 64x64" type="image/x-icon" />
-    <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48 64x64" type="image/x-icon" />
     <link rel="icon" href="/favicon.jpeg" type="image/jpeg" sizes="192x192" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon.jpeg" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -428,7 +427,7 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- ==================== HEADER (RAME) ==================== -->
+    <!-- HEADER -->
     <header class="fixed top-0 w-full z-50 header-glass">
         <!-- Top bar kecil & Marquee -->
         <div class="bg-gradient-to-r from-violet-600/80 via-purple-600/80 to-indigo-600/80 text-white text-[10px] font-bold py-1.5 px-4 flex">
@@ -436,7 +435,7 @@
             <marquee class="flex-grow text-white/90" id="store-marquee">Selamat datang di RullzyeStore! Temukan berbagai kebutuhan digital dengan harga terbaik. Flash Sale 24 Jam Nonstop!</marquee>
         </div>
         <div class="max-w-7xl mx-auto px-6 h-14 flex justify-between items-center">
-            <a href="#" class="flex items-center gap-3 group">
+                    <a href="#" class="flex items-center gap-3 group" aria-label="Beranda RullzyeStore">
                 <div class="bg-gradient-to-br from-violet-600 to-purple-600 p-2.5 rounded-2xl logo-glow group-hover:scale-110 transition-transform overflow-hidden">
                     <img src="https://i.imgur.com/zMj3j9B.jpeg" alt="Logo RullzyeStore" class="w-10 h-10 rounded-xl object-cover" />
                 </div>
@@ -447,7 +446,7 @@
             </div>
         </div>
     </header>
-
+<main class="flex-1">
     <section class="pt-24 pb-10 px-4">
         <div class="max-w-6xl mx-auto grid gap-8 lg:grid-cols-2 items-center">
             <div class="space-y-5">
@@ -475,7 +474,7 @@
             <a href="javascript:void(0)" onclick="openWebUserModal()" class="page-action inline-flex items-center justify-center rounded-2xl sm:rounded-3xl border border-violet-500/20 bg-violet-600/10 px-3 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm font-bold text-white transition hover:bg-violet-600/15 active:bg-violet-600/20">
                 <i class="fa-solid fa-user-plus mr-1 sm:mr-2"></i> <span class="hidden sm:inline">Daftar ID Web</span><span class="sm:hidden">Daftar</span>
             </a>
-            <button onclick="openReceiptHistory()" class="page-action inline-flex items-center justify-center rounded-2xl sm:rounded-3xl border border-amber-500/20 bg-amber-500/10 px-3 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm font-bold text-white transition hover:bg-amber-500/15 active:bg-amber-500/20">
+            <button type="button" onclick="openReceiptHistory()" class="page-action inline-flex items-center justify-center rounded-2xl sm:rounded-3xl border border-amber-500/20 bg-amber-500/10 px-3 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm font-bold text-white transition hover:bg-amber-500/15 active:bg-amber-500/20">
                 <i class="fa-solid fa-receipt mr-1 sm:mr-2"></i> <span class="hidden sm:inline">Riwayat Struk</span><span class="sm:hidden">Riwayat</span>
             </button>
             <a href="https://wa.me/6285848651208" class="page-action inline-flex items-center justify-center rounded-2xl sm:rounded-3xl border border-white/10 bg-white/5 px-3 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm font-bold text-slate-200 transition hover:bg-white/10 active:bg-white/15">
@@ -484,7 +483,8 @@
         </div>
     </section>
 
-    <!-- ==================== HERO + SLIDER ==================== -->
+
+    <!-- HERO + SLIDER -->
     <section class="pt-24 pb-4 px-4 relative z-10">
         <div class="max-w-5xl mx-auto">
             <div class="slider-container shadow-2xl shadow-violet-500/10" id="banner-slider">
@@ -600,7 +600,7 @@
                         </div>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
-                        <button onclick="applyAffiliate()" class="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-full text-xs sm:text-sm shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition active:scale-95">
+                        <button type="button" onclick="applyAffiliate()" class="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-full text-xs sm:text-sm shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition active:scale-95">
                             <i class="fa-solid fa-rocket mr-1.5 sm:mr-2"></i><span>Daftar Affiliate Gratis</span>
                         </button>
                         <a href="/affiliate.html" class="bg-white/5 border border-white/10 text-white font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-full text-xs sm:text-sm hover:bg-white/10 transition active:bg-white/15">
@@ -634,6 +634,7 @@
             </div>
         </div>
     </section>
+</main>
 
     <!-- ==================== FOOTER PROFESIONAL ==================== -->
     <footer class="relative z-10 bg-slate-900 text-slate-300 mt-auto border-t border-white/5">
@@ -680,7 +681,7 @@
         </div>
     </footer>
 
-    <!-- ==================== FOMO ==================== -->
+    <!-- FOMO -->
     <div id="fomo-notif" class="fixed bottom-4 sm:bottom-6 left-4 sm:left-6 z-[90] transform translate-y-40 opacity-0 bg-slate-900/90 backdrop-blur-xl shadow-2xl p-3 sm:p-4 rounded-2xl flex items-center gap-2 sm:gap-3 max-w-[260px] sm:max-w-[280px] border border-white/10 transition">
         <div class="bg-gradient-to-br from-violet-500 to-purple-500 p-2 sm:p-2.5 rounded-full shadow-lg flex-shrink-0">
             <i class="fa-solid fa-cart-shopping text-white text-[10px] sm:text-xs"></i>
