@@ -29,7 +29,10 @@ const getConfig = () => {
     try { return JSON.parse(fs.readFileSync('./config.json')); }
     catch(e) { return { apiKey: '', celestialApiKey: '', celestialSecret: '', smmApiKey: '', smmSecretKey: '', profit: 2000, botUsername: '', telegramToken: '', storeName: 'Rullzye Store', productSettings: {}, flowixApiKey: '', flowixMerchantId: '' }; }
 };
-const saveConfig = (configData) => fs.writeFileSync('./config.json', JSON.stringify(configData, null, 2));
+const saveConfig = async (configData) => {
+    fs.writeFileSync('./config.json', JSON.stringify(configData, null, 2));
+    try { await axios.put(`${FIREBASE_URL}/system_config.json`, configData); console.log('✅ Config disimpan ke Firebase'); } catch(e) { console.error('❌ Gagal simpan config ke Firebase:', e.message); }
+};
 
 const getOrders = async () => { try { const res = await axios.get(`${FIREBASE_URL}/orders.json`); return res.data ? (Array.isArray(res.data) ? res.data : Object.values(res.data)) : []; } catch (e) { return []; } };
 const saveOrders = async (orders) => { try { await axios.put(`${FIREBASE_URL}/orders.json`, orders); } catch (e) { } };
@@ -49,11 +52,8 @@ const getCelestialSignature = (apiKey, secret) => crypto.createHash('md5').updat
 // ================= 2. LOAD MODULE FLOWIX =================
 const ppob = require('./ppob.js');
 
-// ================= 3. LOAD BOT SYSTEM =================
-const { bot, sendBroadcast, notifyAffiliateApproved, notifyAffiliateRejected, notifyWithdrawSuccess, notifyWithdrawRejected, notifyGroupAffiliateNew, notifyGroupOrderNew, notifyGroupOrderSuccess, notifyGroupWithdrawNew, notifyGroupWithdrawProcessed, notifyGroupError, notifyGroupCommission, notifyGroupStockUpdate } = require('./bot.js');
-
-// Load affiliate API
-require('./affiliate_api.js')(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL);
+// ================= 3. BOT SYSTEM VARS (dideklarasikan dulu, di-load setelah config) =================
+let bot, sendBroadcast, notifyAffiliateApproved, notifyAffiliateRejected, notifyWithdrawSuccess, notifyWithdrawRejected, notifyGroupAffiliateNew, notifyGroupOrderNew, notifyGroupOrderSuccess, notifyGroupWithdrawNew, notifyGroupWithdrawProcessed, notifyGroupError, notifyGroupCommission, notifyGroupStockUpdate;
 
 // ================= ADMIN: AUTH ENDPOINT =================
 app.post('/api/admin/auth', (req, res) => {
@@ -135,9 +135,9 @@ app.get('/api/admin/orders', async (req, res) => {
 
 app.post('/api/admin/config', async (req, res) => {
     try {
-        const currentConfig = getConfig();               // baca config yang sudah ada
-        const updatedConfig = { ...currentConfig, ...req.body }; // merge dengan data baru
-        saveConfig(updatedConfig);
+        const currentConfig = getConfig();
+        const updatedConfig = { ...currentConfig, ...req.body };
+        await saveConfig(updatedConfig);
         res.json({ success: true, message: 'Konfigurasi disimpan.' });
     } catch (e) {
         console.error('Gagal menyimpan config:', e);
@@ -215,12 +215,12 @@ app.get('/api/admin/affiliate-config', (req, res) => {
         affiliateWelcomeMsg: cfg.affiliateWelcomeMsg || '',
     });
 });
-app.post('/api/admin/affiliate-config', (req, res) => {
+app.post('/api/admin/affiliate-config', async (req, res) => {
     try {
         const cfg = getConfig();
         const fields = ['affiliateCommissionPercent','affiliateMinWithdraw','affiliateAutoApprove','affiliateMaxMarkup','affiliateEnabled','affiliateWelcomeMsg'];
         fields.forEach(f => { if (req.body[f] !== undefined) cfg[f] = req.body[f]; });
-        saveConfig(cfg);
+        await saveConfig(cfg);
         res.json({ success: true });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
@@ -280,29 +280,6 @@ app.get('/api/admin/check-ip', async (req, res) => {
 // ================= ADMIN: SYSTEM CONFIGURATION =================
 app.get('/api/admin/config', (req, res) => {
     res.json(getConfig());
-});
-
-app.post('/api/admin/config', async (req, res) => {
-    try {
-        const currentCfg = getConfig();
-        const newCfg = { ...currentCfg, ...req.body };
-        // Simpan ke config.json lokal
-        saveConfig(newCfg);
-        
-        // Simpan permanen ke Firebase Database
-        await axios.put(`${FIREBASE_URL}/system_config.json`, newCfg);
-        
-        // Kirim respon sukses lalu restart server secara otomatis (jika di host di Render)
-        res.json({ success: true, message: 'Berhasil disimpan. Server akan otomatis restart untuk menerapkan perubahan.' });
-        
-        setTimeout(() => {
-            console.log("🔄 Konfigurasi berubah. Memuat ulang server...");
-            process.exit(1); // Ini akan memicu Render/PM2 untuk merestart aplikasi
-        }, 1500);
-        
-    } catch(e) {
-        res.json({ success: false, message: e.message });
-    }
 });
 
 // ================= ADMIN: EXPORT DATABASE =================
@@ -491,12 +468,12 @@ app.get('/api/admin/flowix-config', (req, res) => {
     const cfg = getConfig();
     res.json({ apiKey: cfg.flowixApiKey || '', merchantId: cfg.flowixMerchantId || '' });
 });
-app.post('/api/admin/flowix-config', (req, res) => {
+app.post('/api/admin/flowix-config', async (req, res) => {
     try {
         const cfg = getConfig();
         cfg.flowixApiKey = req.body.apiKey || '';
         cfg.flowixMerchantId = req.body.merchantId || '';
-        saveConfig(cfg);
+        await saveConfig(cfg);
         res.json({ success: true });
     } catch (e) {
         res.json({ success: false, message: e.message });
@@ -558,7 +535,6 @@ app.get('/api/server-ip', async (req, res) => {
 });
 
 // ================= 7. ROUTE API LAINNYA =================
-app.get('/api/admin/config', (req, res) => res.json(getConfig()));
 app.get("/status", (req, res) => res.status(200).json({ status: "online" }));
 
 
@@ -1179,7 +1155,7 @@ app.post('/api/admin/change-pin', async (req, res) => {
         if (!newPin || newPin.length < 4) return res.json({ success: false, message: 'PIN baru minimal 4 karakter.' });
         const cfg = getConfig();
         cfg.adminPin = newPin;
-        saveConfig(cfg);
+        await saveConfig(cfg);
         res.json({ success: true, message: 'PIN berhasil diganti!' });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
@@ -1189,7 +1165,7 @@ app.post('/api/admin/save-groups', async (req, res) => {
         const { groupIds } = req.body;
         const cfg = getConfig();
         cfg.groupIds = groupIds;
-        saveConfig(cfg);
+        await saveConfig(cfg);
         res.json({ success: true });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
@@ -1247,6 +1223,47 @@ app.get('/api/topup-products-debug', async (req, res) => {
 
 process.on('uncaughtException', (err) => {
     console.error('Error:', err);
-    notifyGroupError(`Uncaught Exception: ${err.message}`).catch(() => {});
+    if (notifyGroupError) notifyGroupError(`Uncaught Exception: ${err.message}`).catch(() => {});
 });
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server berjalan di port ${PORT}`));
+
+async function initConfigFromFirebase() {
+    try {
+        const res = await axios.get(`${FIREBASE_URL}/system_config.json`);
+        if (res.data && Object.keys(res.data).length > 0) {
+            fs.writeFileSync('./config.json', JSON.stringify(res.data, null, 2));
+            console.log('✅ Konfigurasi dimuat dari Firebase');
+            return true;
+        } else {
+            console.log('📁 Firebase config kosong, menggunakan config lokal');
+        }
+    } catch(e) {
+        console.log('📁 Gagal muat dari Firebase:', e.message);
+    }
+    return false;
+}
+
+(async () => {
+    await initConfigFromFirebase();
+
+    // Load bot (membaca config.json yang sudah diperbarui dari Firebase)
+    const botModule = require('./bot.js');
+    bot = botModule.bot;
+    sendBroadcast = botModule.sendBroadcast;
+    notifyAffiliateApproved = botModule.notifyAffiliateApproved;
+    notifyAffiliateRejected = botModule.notifyAffiliateRejected;
+    notifyWithdrawSuccess = botModule.notifyWithdrawSuccess;
+    notifyWithdrawRejected = botModule.notifyWithdrawRejected;
+    notifyGroupAffiliateNew = botModule.notifyGroupAffiliateNew;
+    notifyGroupOrderNew = botModule.notifyGroupOrderNew;
+    notifyGroupOrderSuccess = botModule.notifyGroupOrderSuccess;
+    notifyGroupWithdrawNew = botModule.notifyGroupWithdrawNew;
+    notifyGroupWithdrawProcessed = botModule.notifyGroupWithdrawProcessed;
+    notifyGroupError = botModule.notifyGroupError;
+    notifyGroupCommission = botModule.notifyGroupCommission;
+    notifyGroupStockUpdate = botModule.notifyGroupStockUpdate;
+
+    // Load affiliate API routes
+    require('./affiliate_api.js')(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL);
+
+    app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server berjalan di port ${PORT}`));
+})();
