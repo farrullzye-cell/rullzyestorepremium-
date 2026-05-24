@@ -2,72 +2,110 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pembayaran QRIS – RullzyeStore</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pembayaran QRIS - RullzyeStore</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #faf9ff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .qr-wrapper {
+            background: #fff;
+            padding: 12px;
+            border-radius: 20px;
+            display: inline-flex;
+            box-shadow: 0 0 0 1px rgba(124,58,237,0.15);
+        }
+        .qr-wrapper img {
+            width: 200px;
+            height: 200px;
+            border-radius: 12px;
+            display: block;
+        }
+        .info-box {
+            background: rgba(124,58,237,0.08);
+            border: 1px solid rgba(124,58,237,0.15);
+            border-radius: 16px;
+            padding: 16px;
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-violet-50 to-white">
+<body>
 
-    <div class="bg-white rounded-[32px] shadow-2xl max-w-md w-full p-8 text-center border border-violet-100">
-        <div class="mb-6">
-            <div class="bg-violet-100 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-3">
-                <i class="fa-solid fa-qrcode text-violet-600 text-2xl"></i>
+    <div class="glass scale-in" style="max-width: 440px; width: 100%; padding: 24px; border-radius: 28px; text-align: center;">
+
+        <!-- Header -->
+        <div style="margin-bottom: 24px;">
+            <div style="width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 18px; background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(99,102,241,0.1)); display: flex; align-items: center; justify-content: center; position: relative;">
+                <div style="position: absolute; inset: -2px; border-radius: 20px; background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(99,102,241,0.1)); z-index: -1;"></div>
+                <i class="fa-solid fa-qrcode" style="color: #c084fc; font-size: 26px;"></i>
             </div>
-            <h1 class="text-2xl font-black text-slate-800">Scan QRIS</h1>
-            <p class="text-slate-500 text-sm mt-1">Bayar sebelum transaksi diproses</p>
+            <h1 class="gradient-text" style="font-size: 22px; font-weight: 800; margin-bottom: 4px;">Scan QRIS</h1>
+            <p style="color: var(--text-secondary); font-size: 13px;">Bayar sebelum transaksi diproses</p>
         </div>
 
         <!-- QR Code -->
-        <div class="bg-slate-50 p-6 rounded-3xl mb-6 flex justify-center">
-            <img id="qr-image" src="" alt="QR Code" class="w-48 h-48 rounded-xl border-4 border-white shadow" onerror="this.onerror=null; this.parentNode.innerHTML='<p class=\'text-slate-400\'>QR tidak tersedia</p>';">
+        <div class="fade-up" style="margin-bottom: 24px;">
+            <div class="qr-wrapper" id="qr-container">
+                <img id="qr-image" src="" alt="QR Code">
+            </div>
+            <p id="qr-fallback" style="display: none; color: var(--text-muted); font-size: 13px;">QR tidak tersedia</p>
         </div>
 
         <!-- Total Tagihan -->
-        <p class="text-xs font-bold text-slate-400 uppercase mb-1">Total Tagihan</p>
-        <h2 id="amount-display" class="text-4xl font-black text-violet-600 mb-6">Rp 0</h2>
+        <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 4px;">Total Tagihan</p>
+        <h2 id="amount-display" class="gradient-text" style="font-size: 36px; font-weight: 800; margin-bottom: 24px;">Rp 0</h2>
 
-        <!-- Instruksi -->
-        <div class="text-left bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-xs text-amber-800 space-y-2">
-            <p><i class="fa-solid fa-circle-info mr-1"></i> <strong>Penting:</strong> Jangan tutup halaman ini setelah scan.</p>
-            <p><i class="fa-solid fa-check-circle mr-1"></i> Setelah pembayaran terverifikasi, layanan akan otomatis diproses.</p>
-            <p><i class="fa-brands fa-telegram mr-1"></i> Notifikasi akan dikirim ke Telegram Anda.</p>
+        <!-- Info / Instruksi -->
+        <div class="info-box" style="margin-bottom: 24px; text-align: left; font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
+            <p style="margin-bottom: 6px;"><i class="fa-solid fa-circle-info" style="color: var(--accent-light); width: 18px; text-align: center; margin-right: 6px;"></i> Jangan tutup halaman ini setelah scan.</p>
+            <p style="margin-bottom: 6px;"><i class="fa-solid fa-check-circle" style="color: var(--success); width: 18px; text-align: center; margin-right: 6px;"></i> Setelah pembayaran terverifikasi, layanan akan otomatis diproses.</p>
+            <p><i class="fa-brands fa-telegram" style="color: var(--accent-light); width: 18px; text-align: center; margin-right: 6px;"></i> Notifikasi akan dikirim ke Telegram Anda.</p>
         </div>
 
         <!-- Tombol Aksi -->
-        <div class="space-y-3">
-            <a id="bot-link" href="#" target="_blank" class="block w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 rounded-2xl shadow-lg transition">
-                <i class="fa-brands fa-telegram mr-2"></i> Konfirmasi via Bot
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <a id="bot-link" href="#" target="_blank" class="btn-primary" style="padding: 14px 24px; border-radius: 18px; font-size: 14px;">
+                <i class="fa-brands fa-telegram"></i> Konfirmasi via Bot
             </a>
-            <button onclick="window.location.href='/ppob.html'" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-2xl transition">
+            <button onclick="window.location.href='/ppob.html'" class="btn-outline" style="padding: 12px 24px; border-radius: 18px; font-size: 13px; justify-content: center;">
                 Pilih Layanan Lain
             </button>
         </div>
 
-        <p class="text-[10px] text-slate-400 mt-6">Order ID: <span id="order-id" class="font-mono font-bold text-slate-600"></span></p>
+        <!-- Order ID -->
+        <p style="font-size: 10px; color: var(--text-muted); margin-top: 20px;">
+            Order ID: <span id="order-id" style="font-family: monospace; font-weight: 700; color: var(--text-secondary);"></span>
+        </p>
+
     </div>
 
     <script>
-        // Ambil parameter dari URL
         const urlParams = new URLSearchParams(window.location.search);
         const orderId = urlParams.get('orderId') || 'Tidak diketahui';
         const amount = urlParams.get('amount') || '0';
         const qrUrl = decodeURIComponent(urlParams.get('qr_url') || '');
         const botLink = decodeURIComponent(urlParams.get('botLink') || '');
 
-        // Tampilkan data
         document.getElementById('order-id').innerText = orderId;
         document.getElementById('amount-display').innerText = 'Rp ' + Number(amount).toLocaleString('id-ID');
 
         const qrImg = document.getElementById('qr-image');
+        const qrContainer = document.getElementById('qr-container');
+        const qrFallback = document.getElementById('qr-fallback');
+
         if (qrUrl) {
             qrImg.src = qrUrl;
         } else {
-            qrImg.parentNode.innerHTML = '<p class="text-slate-400">QR Code tidak tersedia, silakan gunakan link Bot untuk konfirmasi.</p>';
+            qrContainer.style.display = 'none';
+            qrFallback.style.display = 'block';
+            qrFallback.innerText = 'QR Code tidak tersedia, silakan gunakan link Bot untuk konfirmasi.';
         }
 
         const botLinkEl = document.getElementById('bot-link');

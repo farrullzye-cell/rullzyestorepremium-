@@ -1,10 +1,13 @@
 {
-  "name": "RullzyeStore",
-  "short_name": "Rullzye",
+  "name": "RullzyeStore Premium",
+  "short_name": "RullzyeStore",
+  "description": "Jual akun premium, top up game, pulsa, paket data, PPOB, dan SMM panel. Bayar QRIS cepat.",
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#6d28d9",
+  "orientation": "portrait",
+  "theme_color": "#7c3aed",
   "background_color": "#03050f",
+  "categories": ["shopping", "utilities", "lifestyle"],
   "icons": [
     {
       "src": "/favicon.jpeg",
@@ -14,7 +17,8 @@
     {
       "src": "/favicon.jpeg",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "type": "image/jpeg",
+      "purpose": "any maskable"
     }
   ]
 }

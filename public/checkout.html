@@ -1,121 +1,119 @@
 <!DOCTYPE html>
-<html lang="ms-MY" class="scroll-smooth">
+<html lang="id-ID" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Checkout - Premium Rullzye</title>
+    <title>Checkout Top Up Game - RullzyeStore</title>
+    <meta name="description" content="Checkout top up game Mobile Legends, Free Fire, PUBG, Genshin Impact. Bayar QRIS, cek nickname, proses cepat." />
+    <meta name="robots" content="noindex, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Checkout Top Up Game - RullzyeStore" />
+    <meta property="og:description" content="Selesaikan pembayaran top up game favoritmu dengan QRIS." />
+    <meta property="og:url" content="https://rullzyestorepremium.my.id/checkout.html" />
+    <meta property="og:image" content="https://rullzyestorepremium.my.id/favicon.jpeg" />
+    <meta property="og:site_name" content="RullzyeStore" />
+    <meta property="og:locale" content="id_ID" />
+    <link rel="canonical" href="https://rullzyestorepremium.my.id/checkout.html" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <meta name="theme-color" content="#6d28d9" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; color: #334155; }
-        .item-card { border: 2px solid #e2e8f0; transition: all 0.2s; }
-        .item-card.selected { border-color: #f97316; background-color: #fff7ed; transform: scale(1.02); box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.2); }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #03050f; color: #e2e8f0; min-height: 100vh; }
+        .glass { background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.06); }
+        .item-card { border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; background: rgba(15,23,42,0.5); border-radius: 16px; cursor: pointer; }
+        .item-card:hover { border-color: rgba(124,58,237,0.4); }
+        .item-card.selected { border-color: #8b5cf6; background: rgba(139,92,246,0.1); transform: scale(1.02); }
         .modal-pop { animation: pop 0.3s ease; }
         @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .step-badge { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9999px; font-size: 0.75rem; font-weight: 900; }
     </style>
 </head>
-<body class="pb-24">
-
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-4xl mx-auto px-4 h-16 flex justify-between items-center">
-            <a href="/topup.html" class="text-slate-500 hover:text-orange-600 font-bold text-sm"><i class="fa-solid fa-arrow-left mr-2"></i> Kembali</a>
-            <h1 id="game-title" class="font-black text-lg text-slate-800">Memuatkan...</h1>
-            <div class="w-16"></div>
+<body>
+    <header class="bg-[#03050f]/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 h-14 md:h-16 flex justify-between items-center">
+            <a href="/topup.html" class="text-slate-400 hover:text-violet-400 text-sm font-bold transition flex items-center gap-1.5"><i class="fa-solid fa-arrow-left"></i><span class="hidden xs:inline">Kembali</span></a>
+            <h1 id="game-title" class="font-black text-base md:text-lg text-white truncate mx-2 text-center">Memuat...</h1>
+            <div class="w-14 md:w-16"></div>
         </div>
     </header>
-
-    <main class="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        <div class="md:col-span-2 space-y-6">
-            
-            <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-1.5 h-full bg-orange-500"></div>
-                <h2 class="text-lg font-black text-slate-800 mb-4"><span class="bg-orange-100 text-orange-600 w-8 h-8 inline-flex items-center justify-center rounded-full text-sm mr-2">1</span> Masukkan Data Akaun</h2>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1.5">User ID / ID Pemain <span class="text-red-500">*</span></label>
-                        <input type="text" id="targetId" placeholder="Contoh: 12345678" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition">
+    <main class="max-w-5xl mx-auto px-4 mt-4 md:mt-6 pb-24">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <div class="lg:col-span-2 space-y-4 md:space-y-6">
+                <div class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl border-l-4 border-violet-500">
+                    <h2 class="text-base md:text-lg font-black text-white mb-4 flex items-center gap-2"><span class="step-badge bg-violet-500/20 text-violet-400">1</span> Masukkan Data Akun</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1.5">User ID / ID Pemain <span class="text-red-500">*</span></label>
+                            <input type="text" id="targetId" placeholder="Contoh: 12345678" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:border-violet-500 focus:bg-white/10 transition placeholder:text-slate-500">
+                        </div>
+                        <div id="zoneBox" style="display:none;">
+                            <label class="block text-xs font-bold text-slate-400 mb-1.5">Zone ID / Server</label>
+                            <input type="text" id="zoneId" placeholder="Contoh: 1234" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:border-violet-500 focus:bg-white/10 transition placeholder:text-slate-500">
+                        </div>
                     </div>
-                    <div id="zoneBox" style="display:none;">
-                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Zone ID / Server</label>
-                        <input type="text" id="zoneId" placeholder="Contoh: 1234" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition">
+                    <div class="mt-4 pt-4 border-t border-white/5 flex flex-wrap items-center gap-3">
+                        <button id="btn-cek-nick" class="bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 border border-violet-500/20 font-bold py-2.5 px-4 rounded-xl text-xs transition active:scale-95">
+                            <i class="fa-solid fa-magnifying-glass mr-1.5"></i> Cek Nama Pemain
+                        </button>
+                        <div id="nick-result" class="text-sm font-black text-white hidden"></div>
                     </div>
+                    <p class="text-[10px] text-slate-500 font-bold mt-2">*Pilih salah satu Item/Nominal di bawah dahulu sebelum klik Cek Nama.</p>
                 </div>
-
-                <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3">
-                    <button id="btn-cek-nick" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 font-bold py-2 px-4 rounded-xl text-xs transition">
-                        <i class="fa-solid fa-magnifying-glass mr-1"></i> Cek Nama Pemain
-                    </button>
-                    <div id="nick-result" class="text-sm font-black text-slate-700 hidden"></div>
-                </div>
-                <p class="text-[10px] text-slate-400 font-bold mt-2">*Sila pilih salah satu Item/Nominal di bawah dahulu sebelum klik Cek Nama.</p>
-            </div>
-
-            <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-1.5 h-full bg-orange-500"></div>
-                <h2 class="text-lg font-black text-slate-800 mb-4"><span class="bg-orange-100 text-orange-600 w-8 h-8 inline-flex items-center justify-center rounded-full text-sm mr-2">2</span> Pilih Item Top Up</h2>
-                
-                <div id="item-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <p class="col-span-full text-slate-400 font-bold text-sm">Sila tunggu...</p>
+                <div class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl border-l-4 border-violet-500">
+                    <h2 class="text-base md:text-lg font-black text-white mb-4 flex items-center gap-2"><span class="step-badge bg-violet-500/20 text-violet-400">2</span> Pilih Item Top Up</h2>
+                    <div id="item-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
+                        <p class="col-span-full text-slate-500 font-bold text-sm">Silakan tunggu...</p>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <div class="md:col-span-1">
-            <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm sticky top-24">
-                <h2 class="text-lg font-black text-slate-800 mb-4"><span class="bg-emerald-100 text-emerald-600 w-8 h-8 inline-flex items-center justify-center rounded-full text-sm mr-2">3</span> Pembayaran</h2>
-                
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-5">
-                    <p class="text-xs font-bold text-slate-400 mb-1 uppercase">Item Dipilih:</p>
-                    <p id="summary-name" class="font-black text-slate-700 text-sm mb-3">-</p>
-                    <p class="text-xs font-bold text-slate-400 mb-1 uppercase">Harga:</p>
-                    <h3 id="summary-price" class="text-2xl font-black text-orange-500">Rp 0</h3>
+            <div class="lg:col-span-1">
+                <div class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl sticky top-20 md:top-24">
+                    <h2 class="text-base md:text-lg font-black text-white mb-4 flex items-center gap-2"><span class="step-badge bg-emerald-500/20 text-emerald-400">3</span> Pembayaran</h2>
+                    <div class="bg-white/5 p-4 rounded-2xl border border-white/10 mb-4">
+                        <p class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Item Dipilih</p>
+                        <p id="summary-name" class="font-black text-white text-sm mb-3 min-h-[1.25rem]">-</p>
+                        <p class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Harga</p>
+                        <h3 id="summary-price" class="text-xl md:text-2xl font-black text-violet-400">Rp 0</h3>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Random ID (dari Bot)</label>
+                        <input type="text" id="randomId" placeholder="Contoh: ID-A1B2C3" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:border-violet-500 focus:bg-white/10 transition uppercase placeholder:text-slate-500">
+                    </div>
+                    <button id="btn-pay" disabled class="w-full bg-slate-700 text-slate-500 font-black py-3.5 md:py-4 rounded-xl md:rounded-2xl transition mt-2 cursor-not-allowed text-sm md:text-base">Pilih Item Dahulu</button>
                 </div>
-
-                <div class="mt-3">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Random ID (dari Bot)</label>
-                    <input type="text" id="randomId" placeholder="Contoh: ID-A1B2C3" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition uppercase">
-                </div>
-
-                <button id="btn-pay" disabled class="w-full bg-slate-300 text-slate-500 font-black py-4 rounded-2xl shadow-sm transition mt-4">Sila Pilih Item</button>
             </div>
         </div>
     </main>
-
-    <div id="modal-qris" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
-        <div class="bg-white rounded-[32px] w-full max-w-sm p-6 sm:p-8 shadow-2xl relative modal-pop text-center">
-            
+    <div id="modal-qris" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+        <div class="bg-[#03050f] border border-white/10 rounded-3xl w-full max-w-sm p-6 shadow-2xl relative modal-pop text-center">
             <div id="modal-loader" class="py-8">
-                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent mb-4"></div>
-                <p class="font-bold text-slate-800">Menjana QRIS...</p>
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-violet-500 border-t-transparent mb-4"></div>
+                <p class="font-bold text-white">Menyiapkan QRIS...</p>
             </div>
-
             <div id="modal-content" class="hidden">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Imbas untuk Bayar</p>
-                <h2 id="qris-amount" class="text-3xl font-black text-orange-500 mb-4">Rp 0</h2>
-                <div class="bg-slate-50 p-3 rounded-3xl mb-5 inline-block border border-slate-100 shadow-inner">
-                    <img id="qris-img" src="" class="w-48 h-48 rounded-xl border-4 border-white shadow-md mx-auto">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Scan untuk Bayar</p>
+                <h2 id="qris-amount" class="text-2xl md:text-3xl font-black text-violet-400 mb-4">Rp 0</h2>
+                <div class="bg-white/5 p-3 rounded-2xl mb-5 inline-block border border-white/10">
+                    <img id="qris-img" src="" class="w-44 h-44 md:w-48 md:h-48 rounded-xl border-4 border-white/10 shadow-md mx-auto">
                 </div>
-                <p class="text-xs font-bold text-slate-500 mb-4">Selepas bayar, klik butang di bawah untuk mendapatkan status Top Up di Telegram.</p>
-                <a id="btn-tele" href="#" target="_blank" class="block w-full bg-[#0088cc] hover:bg-[#0077b5] text-white font-black py-4 rounded-2xl shadow-lg shadow-blue-500/30 transition mb-3"><i class="fa-brands fa-telegram mr-2"></i> Ke Telegram</a>
-                <button onclick="closeModal()" class="text-slate-400 text-xs font-bold uppercase hover:text-slate-600">Tutup</button>
+                <p class="text-xs font-bold text-slate-400 mb-4">Setelah bayar, klik tombol di bawah untuk mendapatkan status Top Up di Telegram.</p>
+                <a id="btn-tele" href="#" target="_blank" class="flex items-center justify-center gap-2 w-full bg-[#0088cc] hover:bg-[#0077b5] text-white font-black py-3.5 md:py-4 rounded-xl md:rounded-2xl shadow-lg transition active:scale-[0.98]"><i class="fa-brands fa-telegram"></i> Ke Telegram</a>
+                <button onclick="closeModal()" class="mt-3 text-slate-500 text-xs font-bold uppercase hover:text-slate-300 transition">Tutup</button>
             </div>
         </div>
     </div>
-
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const selectedGame = urlParams.get('game');
-        
-        if(!selectedGame) window.location.href = '/topup.html'; 
+        if(!selectedGame) window.location.href = '/topup.html';
         document.getElementById('game-title').innerText = selectedGame;
-
         let gameItems = [];
         let selectedItem = null;
         let currentNickname = null;
-
         fetch('/api/topup-products').then(r => r.json()).then(res => {
             if(res.success) {
                 gameItems = res.products.filter(p => p.name.startsWith(selectedGame + ' - '));
@@ -124,126 +122,96 @@
                 }
                 renderItems();
             } else {
-                document.getElementById('item-grid').innerHTML = '<p class="col-span-full text-red-500 font-bold">Ralat memuatkan data.</p>';
+                document.getElementById('item-grid').innerHTML = '<p class="col-span-full text-red-400 font-bold">Gagal memuat data.</p>';
             }
         });
-
         function renderItems() {
             const grid = document.getElementById('item-grid');
             grid.innerHTML = '';
-            
             gameItems.forEach((item, index) => {
                 const itemName = item.name.replace(selectedGame + ' - ', '');
                 grid.innerHTML += `
-                    <div id="item-${index}" onclick="selectItem(${index})" class="item-card bg-white rounded-2xl p-3 cursor-pointer text-center relative overflow-hidden">
-                        <h3 class="font-black text-slate-700 text-xs sm:text-sm mb-1 h-10 flex items-center justify-center leading-tight">${itemName}</h3>
-                        <p class="text-orange-500 font-extrabold text-sm sm:text-base mt-2">Rp ${item.price.toLocaleString('id-ID')}</p>
+                    <div id="item-${index}" onclick="selectItem(${index})" class="item-card p-3 cursor-pointer text-center relative overflow-hidden">
+                        <h3 class="font-black text-white text-xs sm:text-sm mb-1 h-10 flex items-center justify-center leading-tight px-1">${itemName}</h3>
+                        <p class="text-violet-400 font-extrabold text-sm sm:text-base mt-2">Rp ${item.price.toLocaleString('id-ID')}</p>
                     </div>
                 `;
             });
         }
-
         function selectItem(index) {
             document.querySelectorAll('.item-card').forEach(el => el.classList.remove('selected'));
             document.getElementById(`item-${index}`).classList.add('selected');
-
             selectedItem = gameItems[index];
             const itemName = selectedItem.name.replace(selectedGame + ' - ', '');
-            
             document.getElementById('summary-name').innerText = itemName;
             document.getElementById('summary-price').innerText = `Rp ${selectedItem.price.toLocaleString('id-ID')}`;
-            
             const btnPay = document.getElementById('btn-pay');
             btnPay.disabled = false;
-            btnPay.className = "w-full bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-orange-500/30 transition transform hover:scale-[1.02] cursor-pointer";
+            btnPay.className = "w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-black py-3.5 md:py-4 rounded-xl md:rounded-2xl shadow-lg transition active:scale-[0.98] cursor-pointer text-sm md:text-base";
             btnPay.innerText = "Beli Sekarang";
         }
-
         document.getElementById('btn-cek-nick').onclick = function() {
             const target = document.getElementById('targetId').value;
             const zone = document.getElementById('zoneId').value;
-
-            if(!target) return alert('Sila isi User ID dahulu!');
-            if(!selectedItem) return alert('Sila klik/pilih salah satu Item Top Up dahulu di bawah!');
-
+            if(!target) return alert('Isi User ID dahulu!');
+            if(!selectedItem) return alert('Klik/pilih salah satu Item Top Up dahulu!');
             const btn = this;
             const resEl = document.getElementById('nick-result');
-            
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sedang Menyemak...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Menyemak...';
             resEl.classList.add('hidden');
-
             fetch('/api/cek-nickname', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    service: selectedItem.id, 
-                    target: target,
-                    targetZone: zone
-                })
+                body: JSON.stringify({ service: selectedItem.id, target: target, targetZone: zone })
             }).then(r => r.json()).then(res => {
-                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass mr-1"></i> Cek Semula';
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass mr-1.5"></i> Cek Semula';
                 resEl.classList.remove('hidden');
-                
                 if(res.success) {
                     currentNickname = res.nickname;
-                    resEl.innerHTML = `✅ Akaun Dijumpai: <span class="text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md ml-1 border border-emerald-100">${res.nickname}</span>`;
+                    resEl.innerHTML = `Akun Ditemukan: <span class="text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md ml-1 border border-emerald-500/20">${res.nickname}</span>`;
                 } else {
                     currentNickname = null;
-                    resEl.innerHTML = `❌ <span class="text-red-500">${res.message}</span>`;
+                    resEl.innerHTML = `<span class="text-red-400">${res.message}</span>`;
                 }
             }).catch(() => {
-                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass mr-1"></i> Cek Nama Pemain';
-                alert('Ralat server. Tidak dapat menyemak nama.');
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass mr-1.5"></i> Cek Nama Pemain';
+                alert('Gagal server. Tidak dapat menyemak nama.');
             });
         };
-
         document.getElementById('btn-pay').onclick = function() {
             const target = document.getElementById('targetId').value;
             const zone = document.getElementById('zoneId').value;
             const randomId = document.getElementById('randomId')?.value.trim();
-
-            if(!target) return alert('Sila masukkan User ID / ID Pemain!');
-            if(!selectedItem) return alert('Sila pilih item top up!');
+            if(!target) return alert('Masukkan User ID / ID Pemain!');
+            if(!selectedItem) return alert('Pilih item top up!');
             if(!randomId) return alert('Masukkan Random ID Anda dari Bot Telegram!');
-
             document.getElementById('modal-qris').style.display = 'flex';
             document.getElementById('modal-loader').classList.remove('hidden');
             document.getElementById('modal-content').classList.add('hidden');
-
             fetch('/api/topup-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    service: selectedItem.id, 
-                    productName: selectedItem.name,
-                    displayPrice: selectedItem.price, 
-                    target: target,
-                    targetZone: zone,
-                    randomId: randomId,
-                    nickname: currentNickname || target
-                })
+                body: JSON.stringify({ service: selectedItem.id, productName: selectedItem.name, displayPrice: selectedItem.price, target: target, targetZone: zone, randomId: randomId, nickname: currentNickname || target })
             }).then(r => r.json()).then(res => {
                 document.getElementById('modal-loader').classList.add('hidden');
                 document.getElementById('modal-content').classList.remove('hidden');
-                
                 if (res.status) {
                     document.getElementById('qris-amount').innerText = `Rp ${res.invoice.amount.toLocaleString('id-ID')}`;
                     document.getElementById('qris-img').src = res.invoice.qr_url;
                     document.getElementById('btn-tele').href = res.invoice.botLink;
                 } else {
                     document.getElementById('modal-content').innerHTML = `
-                        <i class="fa-solid fa-circle-xmark text-4xl text-red-500 mb-3"></i>
-                        <p class="text-slate-800 font-bold mb-4">Gagal mencipta pesanan.</p>
-                        <button onclick="closeModal()" class="bg-slate-100 px-6 py-2 rounded-xl text-slate-500 text-xs font-bold uppercase hover:bg-slate-200">Tutup</button>
+                        <i class="fa-solid fa-circle-xmark text-4xl text-red-400 mb-3"></i>
+                        <p class="text-white font-bold mb-4">Gagal membuat pesanan.</p>
+                        <button onclick="closeModal()" class="bg-white/5 px-6 py-2 rounded-xl text-slate-400 text-xs font-bold uppercase hover:bg-white/10 border border-white/10 transition">Tutup</button>
                     `;
                 }
             }).catch(() => {
                 document.getElementById('modal-loader').classList.add('hidden');
                 document.getElementById('modal-content').classList.remove('hidden');
-                document.getElementById('modal-content').innerHTML = '<p class="text-slate-800 font-bold mb-4">Ralat rangkaian.</p><button onclick="closeModal()" class="bg-slate-100 px-6 py-2 rounded-xl text-slate-500 text-xs font-bold uppercase hover:bg-slate-200">Tutup</button>';
+                document.getElementById('modal-content').innerHTML = '<p class="text-white font-bold mb-4">Gagal jaringan.</p><button onclick="closeModal()" class="bg-white/5 px-6 py-2 rounded-xl text-slate-400 text-xs font-bold uppercase hover:bg-white/10 border border-white/10 transition">Tutup</button>';
             });
         };
-
         function closeModal() { document.getElementById('modal-qris').style.display = 'none'; }
     </script>
 </body>

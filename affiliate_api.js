@@ -1,11 +1,13 @@
-// affiliate_api.js — Sistem Affiliate Matang
+// affiliate_api.js — Sistem Affiliate Matang + Anti Fraud
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
 
 module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL) {
     const router = express.Router();
+    const security = require('./anti_fraud.js');
 
+    // ================= HELPERS =================
     const getWithdraws = async () => {
         try {
             const r = await axios.get(`${FIREBASE_URL}/withdraws.json`);
@@ -18,13 +20,28 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
     const getConfig = () => {
         try { return JSON.parse(fs.readFileSync('./config.json')); } catch(e) { return {}; }
     };
+    const getAuditLogs = async () => {
+        try {
+            const r = await axios.get(`${FIREBASE_URL}/audit_logs.json`);
+            return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : [];
+        } catch(e) { return []; }
+    };
+    const saveAuditLogs = async (logs) => {
+        try { await axios.put(`${FIREBASE_URL}/audit_logs.json`, logs); } catch(e) {}
+    };
+
+    const getClientIP = (req) => {
+        return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+               req.ip || req.connection.remoteAddress || '0.0.0.0';
+    };
 
     // ============================================================
     // APPLY JADI AFFILIATE
     // ============================================================
-    router.post('/apply', async (req, res) => {
+    router.post('/apply', security.rateLimitMiddleware('apply'), async (req, res) => {
         try {
             const { randomId } = req.body;
+            const ip = getClientIP(req);
             const cfg = getConfig();
             if (cfg.affiliateEnabled === false) return res.json({ success: false, message: 'Pendaftaran affiliate sedang ditutup.' });
 
@@ -35,33 +52,58 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
             if (user.isBanned) return res.json({ success: false, message: 'Akun Anda dibanned dari program affiliate.' });
             if (user.affiliatePending && !cfg.affiliateAutoApprove) return res.json({ success: false, message: 'Permintaan sudah terkirim, tunggu persetujuan admin.' });
 
+            // Cek IP: max 3 akun per IP untuk daftar affiliate
+            security.trackUserIP(ip, randomId);
+            const accountsOnIP = security.getAccountsOnIP(ip);
+            if (accountsOnIP.length > 3) {
+                return res.json({ success: false, message: 'Terlalu banyak akun dari IP yang sama. Hubungi admin.' });
+            }
+
             const idx = users.findIndex(u => u.randomId === randomId);
             if (cfg.affiliateAutoApprove) {
                 users[idx].isAffiliate = true;
                 users[idx].affiliatePending = false;
+                users[idx].affiliateApprovedAt = new Date().toISOString();
             } else {
                 users[idx].affiliatePending = true;
             }
             users[idx].affiliateAppliedAt = new Date().toISOString();
+            users[idx].affiliateApplyIP = ip;
             await saveUsers(users);
 
+            // Audit log
+            const logs = await getAuditLogs();
+            logs.push({
+                id: 'AUDIT-' + Date.now(),
+                action: 'AFFILIATE_APPLY',
+                randomId,
+                ip,
+                autoApproved: cfg.affiliateAutoApprove,
+                timestamp: new Date().toISOString()
+            });
+            await saveAuditLogs(logs);
+
             if (cfg.affiliateAutoApprove) {
-                res.json({ success: true, message: '✅ Pendaftaran berhasil! Anda langsung menjadi affiliate.' });
+                res.json({ success: true, message: 'Pendaftaran berhasil! Anda langsung menjadi affiliate.' });
             } else {
-                res.json({ success: true, message: '✅ Permintaan dikirim! Admin akan mereview dalam 1x24 jam.' });
+                res.json({ success: true, message: 'Permintaan dikirim! Admin akan mereview dalam 1x24 jam.' });
             }
         } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
     // ============================================================
-    // DASHBOARD AFFILIATE (LENGKAP)
+    // LOGIN (generate token)
     // ============================================================
-    router.post('/dashboard', async (req, res) => {
+    router.post('/login', security.rateLimitMiddleware('login'), async (req, res) => {
         try {
             const { randomId } = req.body;
+            const ip = getClientIP(req);
+            const ua = req.headers['user-agent'] || '';
+
+            if (!randomId) return res.json({ success: false, message: 'Random ID diperlukan.' });
+
             const users = await getUsers();
             const user = users.find(u => u.randomId === randomId);
-
             if (!user) return res.json({ success: false, message: 'User tidak ditemukan.' });
             if (!user.isAffiliate && !user.affiliatePending) {
                 return res.json({ success: false, message: 'Anda belum mendaftar sebagai Affiliate.' });
@@ -69,16 +111,57 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
             if (user.affiliatePending && !user.isAffiliate) {
                 return res.json({ success: false, isPending: true, message: 'Permintaan Anda sedang menunggu persetujuan admin.' });
             }
+            if (user.isBanned) {
+                return res.json({ success: false, message: 'Akun Anda dibanned. Alasan: ' + (user.bannedReason || 'Tidak disebutkan') });
+            }
+
+            // Track IP
+            security.trackUserIP(ip, randomId);
+
+            // Generate token, revoke old ones
+            security.revokeUserTokens(randomId);
+            const token = security.generateToken(randomId, ip, ua);
+
+            // Audit log
+            const logs = await getAuditLogs();
+            logs.push({
+                id: 'AUDIT-' + Date.now(),
+                action: 'AFFILIATE_LOGIN',
+                randomId,
+                ip,
+                ua,
+                timestamp: new Date().toISOString()
+            });
+            await saveAuditLogs(logs);
+
+            res.json({ success: true, token });
+        } catch(e) {
+            console.error('[AFFILIATE LOGIN]', e);
+            res.json({ success: false, message: 'Gagal login: ' + e.message });
+        }
+    });
+
+    // ============================================================
+    // DASHBOARD AFFILIATE (LENGKAP) — require token
+    // ============================================================
+    router.post('/dashboard', security.authMiddleware, security.rateLimitMiddleware('dashboard'), async (req, res) => {
+        try {
+            const randomId = req.userSession.randomId;
+            const users = await getUsers();
+            const user = users.find(u => u.randomId === randomId);
+
+            if (!user) return res.json({ success: false, message: 'User tidak ditemukan.' });
+            if (!user.isAffiliate) {
+                return res.json({ success: false, message: 'Akun affiliate tidak aktif.' });
+            }
 
             const cfg = getConfig();
             const orders = await getOrders();
             const wds = await getWithdraws();
 
-            // Filter order yang berasal dari affiliate ini
             const myOrders = orders.filter(o => o.affiliateRef === randomId && o.status === 'SUKSES');
             const myPendingOrders = orders.filter(o => o.affiliateRef === randomId && o.status === 'MENUNGGU_BAYAR');
 
-            // Hitung statistik komisi
             const totalCommission = myOrders.reduce((sum, o) => sum + (o.affiliateCommission || 0), 0);
 
             const now = new Date();
@@ -86,16 +169,13 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
             const monthlyOrders = myOrders.filter(o => (o.completedAt || '').startsWith(thisMonth));
             const monthlyCommission = monthlyOrders.reduce((sum, o) => sum + (o.affiliateCommission || 0), 0);
 
-            // Hitung downline aktif (yang pernah order)
             const downlines = users.filter(u => u.referredBy === randomId);
             const activeDownlines = downlines.filter(dl =>
                 orders.some(o => o.telegramChatId === dl.chatId && o.status === 'SUKSES')
             );
 
-            // Riwayat withdraw
             const myWithdraws = wds.filter(w => w.randomId === randomId).reverse().slice(0, 10);
 
-            // Riwayat komisi (20 terakhir)
             const history = myOrders.slice(-50).reverse().slice(0, 20).map(o => ({
                 id: o.idDeposit || o.idOrder,
                 product: o.productName,
@@ -104,6 +184,9 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                 date: o.completedAt || o.createdAt || new Date().toISOString(),
                 buyerName: o.buyerName || 'Pelanggan'
             }));
+
+            // Hitung sisa cooldown withdraw
+            const wdToday = security.checkWDCooldown(randomId);
 
             res.json({
                 success: true,
@@ -122,7 +205,6 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                     socialLinks: user.socialLinks || {},
                     linkTelegram: `https://t.me/${cfg.botUsername || 'RullzyeBot'}?start=${user.randomId}`,
                     linkWebsite: `https://rullzyestorepremium.my.id/toko/${user.randomId}`,
-                    // Statistik
                     totalDownline: downlines.length,
                     activeDownline: activeDownlines.length,
                     totalCommission,
@@ -133,6 +215,9 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                     minWithdraw: cfg.affiliateMinWithdraw || 10000,
                     joinedAt: user.registeredAt,
                     approvedAt: user.affiliateApprovedAt || null,
+                    wdToday,
+                    maxWdPerDay: 1,
+                    wdCooldownHours: security.WD_COOLDOWN_HOURS,
                 },
                 history,
                 withdrawHistory: myWithdraws,
@@ -150,19 +235,23 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
     });
 
     // ============================================================
-    // UPDATE PROFIL & PENGATURAN TOKO
+    // UPDATE PROFIL & PENGATURAN TOKO — require token
     // ============================================================
-    router.post('/settings', async (req, res) => {
+    router.post('/settings', security.authMiddleware, async (req, res) => {
         try {
-            const { randomId, affiliateName, bio, markupPercent, selectedProducts, avatarUrl, themeColor, socialLinks } = req.body;
+            const randomId = req.userSession.randomId;
+            const { affiliateName, bio, markupPercent, selectedProducts, avatarUrl, themeColor, socialLinks } = req.body;
             let users = await getUsers();
             const idx = users.findIndex(u => u.randomId === randomId);
             if (idx === -1) return res.json({ success: false, message: 'User tidak ditemukan.' });
             if (!users[idx].isAffiliate) return res.json({ success: false, message: 'Bukan affiliate.' });
 
+            const cfg = getConfig();
+            const maxMarkup = users[idx].maxMarkup || cfg.affiliateMaxMarkup || 100;
+
             if (affiliateName !== undefined) users[idx].affiliateName = affiliateName.trim().substring(0, 50);
             if (bio !== undefined) users[idx].affiliateBio = bio.trim().substring(0, 200);
-            if (markupPercent !== undefined) users[idx].markupPercent = Math.max(0, Math.min(100, parseInt(markupPercent) || 0));
+            if (markupPercent !== undefined) users[idx].markupPercent = Math.max(0, Math.min(maxMarkup, parseInt(markupPercent) || 0));
             if (selectedProducts !== undefined) users[idx].selectedProducts = selectedProducts;
             if (avatarUrl !== undefined) users[idx].avatarUrl = avatarUrl.trim().substring(0, 500);
             if (themeColor !== undefined) users[idx].themeColor = themeColor;
@@ -174,14 +263,18 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
     });
 
     // ============================================================
-    // WITHDRAW KOMISI
+    // WITHDRAW KOMISI — require token + anti-fraud
     // ============================================================
-    router.post('/withdraw', async (req, res) => {
+    router.post('/withdraw', security.authMiddleware, security.rateLimitMiddleware('withdraw'), async (req, res) => {
         try {
-            const { randomId, amount, bankDetails } = req.body;
-            if (!randomId || !amount || !bankDetails) {
+            const randomId = req.userSession.randomId;
+            const ip = getClientIP(req);
+            const { amount, bankDetails } = req.body;
+
+            if (!amount || !bankDetails) {
                 return res.json({ success: false, message: 'Semua kolom harus diisi.' });
             }
+
             const cfg = getConfig();
             const minWD = cfg.affiliateMinWithdraw || 10000;
             const amountInt = parseInt(amount);
@@ -190,15 +283,33 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                 return res.json({ success: false, message: `Minimal penarikan Rp ${minWD.toLocaleString('id-ID')}` });
             }
 
+            // Validasi format bank details
+            const bankClean = bankDetails.trim();
+            if (bankClean.length < 5 || bankClean.length > 200) {
+                return res.json({ success: false, message: 'Format bank/e-wallet tidak valid.' });
+            }
+
             let users = await getUsers();
             const idx = users.findIndex(u => u.randomId === randomId);
             if (idx === -1) return res.json({ success: false, message: 'User tidak ditemukan.' });
             if (!users[idx].isAffiliate) return res.json({ success: false, message: 'Bukan affiliate.' });
+
+            // Cek cooldown affiliate baru (24 jam setelah approve)
+            if (security.checkNewAffiliateCooldown(users[idx])) {
+                return res.json({ success: false, message: 'Akun affiliate masih baru. Tunggu 24 jam setelah approval untuk withdraw pertama.' });
+            }
+
+            // Cek daily withdraw limit
+            const wdToday = security.checkWDCooldown(randomId);
+            if (wdToday >= 1) {
+                return res.json({ success: false, message: 'Kamu sudah melakukan withdraw hari ini. Batas withdraw 1 kali per hari.' });
+            }
+
             if ((users[idx].affiliateBalance || 0) < amountInt) {
                 return res.json({ success: false, message: `Saldo tidak mencukupi. Saldo Anda: Rp ${(users[idx].affiliateBalance || 0).toLocaleString('id-ID')}` });
             }
 
-            // Potong saldo
+            // Potong saldo (cegah double withdraw)
             users[idx].affiliateBalance = (users[idx].affiliateBalance || 0) - amountInt;
             users[idx].totalWithdrawn = (users[idx].totalWithdrawn || 0) + amountInt;
             await saveUsers(users);
@@ -213,51 +324,82 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                 name: users[idx].firstName || 'Affiliate',
                 affiliateName: users[idx].affiliateName || users[idx].firstName,
                 amount: amountInt,
-                bankDetails,
+                bankDetails: bankClean,
                 status: 'PENDING',
                 type: 'AFFILIATE',
+                ip,
                 date: new Date().toISOString()
             });
             await saveWithdraws(wds);
 
+            // Increment daily counter
+            security.incrementWDCount(randomId);
+
+            // Audit log
+            const logs = await getAuditLogs();
+            logs.push({
+                id: 'AUDIT-' + Date.now(),
+                action: 'AFFILIATE_WITHDRAW',
+                randomId,
+                amount: amountInt,
+                bankDetails: bankClean,
+                ip,
+                wdId,
+                timestamp: new Date().toISOString()
+            });
+            await saveAuditLogs(logs);
+
             res.json({
                 success: true,
-                message: `✅ Request Withdraw Rp ${amountInt.toLocaleString('id-ID')} berhasil diajukan! Admin akan memproses dalam 1x24 jam.`,
+                message: `Request Withdraw Rp ${amountInt.toLocaleString('id-ID')} berhasil diajukan! Admin akan memproses dalam 1x24 jam.`,
                 wdId
             });
         } catch (e) { res.json({ success: false, message: e.message }); }
     });
 
     // ============================================================
+    // LOGOUT (hapus token)
+    // ============================================================
+    router.post('/logout', (req, res) => {
+        const token = req.headers['x-auth-token'];
+        if (token) security.revokeToken(token);
+        res.json({ success: true, message: 'Berhasil logout.' });
+    });
+
+    // ============================================================
     // FUNGSI INTERNAL: PROSES KOMISI AFFILIATE (dipanggil dari server.js)
     // ============================================================
-    // Ini diekspor sebagai fungsi terpisah
     app.processAffiliateCommission = async function(order) {
         try {
             if (!order || order.status !== 'SUKSES') return;
             const cfg = getConfig();
             const users = await getUsers();
 
-            // Cari buyer berdasarkan chatId
+            // Cek minimum order value
+            if (!security.isOrderEligibleForCommission(order)) return;
+
             const buyer = users.find(u => u.chatId === order.telegramChatId);
             if (!buyer || !buyer.referredBy) return;
 
-            // Cari upline (affiliate yang merujuk buyer)
             const uplineIdx = users.findIndex(u => u.randomId === buyer.referredBy && u.isAffiliate);
             if (uplineIdx === -1) return;
 
-            // Hitung komisi
+            // Fraud detection
+            const fraudIssues = security.detectFraud(users, buyer.randomId, users[uplineIdx].randomId, null);
+            if (fraudIssues.includes('SELF_REFERRAL') || fraudIssues.includes('CIRCULAR_REFERRAL')) {
+                console.log(`[AFFILIATE] Fraud detected for order ${order.idDeposit}: ${fraudIssues.join(', ')}`);
+                return;
+            }
+
             const profit = order.resellerProfit || cfg.profit || 2000;
             const commissionPct = users[uplineIdx].customCommission || cfg.affiliateCommissionPercent || 20;
-            const commission = Math.floor((profit * commissionPct) / 100);
+            const commission = security.calculateCommission(profit, commissionPct, users[uplineIdx]);
             if (commission <= 0 || cfg.affiliateEnabled === false) return;
 
-            // Update saldo affiliate
             users[uplineIdx].affiliateBalance = (users[uplineIdx].affiliateBalance || 0) + commission;
             users[uplineIdx].totalEarned = (users[uplineIdx].totalEarned || 0) + commission;
             await saveUsers(users);
 
-            // Update order dengan info komisi
             const orders = await getOrders();
             const oIdx = orders.findIndex(o => (o.idDeposit === order.idDeposit || o.idOrder === order.idOrder));
             if (oIdx !== -1) {
@@ -268,14 +410,14 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                 await saveOrders(orders);
             }
 
-            console.log(`[AFFILIATE] Komisi Rp ${commission} diberikan ke ${users[uplineIdx].randomId}`);
+            console.log(`[AFFILIATE] Komisi Rp ${commission} (capped dari ${Math.floor((profit * commissionPct) / 100)}) ke ${users[uplineIdx].randomId}`);
         } catch (e) {
             console.error('[AFFILIATE COMMISSION ERROR]', e.message);
         }
     };
 
     // ============================================================
-    // API: REJECT AFFILIATE (untuk admin)
+    // API: REJECT AFFILIATE (admin)
     // ============================================================
     router.post('/reject', async (req, res) => {
         try {
@@ -292,7 +434,7 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
     });
 
     // ============================================================
-    // API: STATISTIK AFFILIATE (untuk admin)
+    // API: STATISTIK AFFILIATE (admin)
     // ============================================================
     router.get('/stats', async (req, res) => {
         try {
@@ -319,6 +461,30 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                     .map(a => ({ name: a.affiliateName || a.firstName, earned: a.totalEarned || 0, balance: a.affiliateBalance || 0 }))
             });
         } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    // ============================================================
+    // API: AUDIT LOGS (admin only)
+    // ============================================================
+    router.get('/audit-logs', async (req, res) => {
+        try {
+            const logs = await getAuditLogs();
+            res.json({ success: true, logs: logs.reverse().slice(0, 100) });
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    // ============================================================
+    // API: CEK TOKEN VALIDITY
+    // ============================================================
+    router.post('/check-token', (req, res) => {
+        const token = req.headers['x-auth-token'];
+        const ip = getClientIP(req);
+        const session = security.verifyToken(token, ip);
+        if (session) {
+            res.json({ success: true, randomId: session.randomId });
+        } else {
+            res.json({ success: false, message: 'Token tidak valid.' });
+        }
     });
 
     app.use('/api/affiliate', router);

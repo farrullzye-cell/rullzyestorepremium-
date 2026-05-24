@@ -3,109 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Reseller - Rullzye Store</title>
+    <title>Portal Reseller - RullzyeStore Premium</title>
+    <meta name="description" content="Portal reseller RullzyeStore. Kelola produk, atur harga jual, tarik dana keuntungan, dan pantau transaksi dengan mudah." />
+    <meta name="robots" content="noindex, follow" />
+    <link rel="canonical" href="https://rullzyestorepremium.my.id/rullzyereseler.html" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <meta name="theme-color" content="#7c3aed" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #0f172a; color: #f8fafc; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); transition: all 0.2s; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #03050f; color: #f1f5f9; }
+        .glass { background: rgba(30, 27, 55, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(139, 92, 246, 0.1); }
+        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(139, 92, 246, 0.15); transition: all 0.25s ease; }
+        .card-hover { transition: all 0.25s ease; }
+        input:focus { box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3); }
+        .violet-glow { box-shadow: 0 0 20px rgba(139, 92, 246, 0.15); }
+        .input-dark { background: rgba(15, 13, 35, 0.7); border: 1px solid rgba(139, 92, 246, 0.2); color: #f1f5f9; }
+        .input-dark::placeholder { color: #6b7280; }
+        table { border-collapse: collapse; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #03050f; }
+        ::-webkit-scrollbar-thumb { background: #4c1d95; border-radius: 8px; }
     </style>
 </head>
-<body class="min-h-screen p-4 flex flex-col items-center">
+<body class="min-h-screen flex flex-col items-center px-3 sm:px-4 py-4 sm:py-6">
 
     <!-- ======================== LOGIN SECTION ======================== -->
-    <div id="loginSection" class="w-full max-w-md glass p-8 rounded-3xl shadow-2xl mt-20">
-        <div class="text-center mb-8">
-            <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/50">
-                <i class="fa-solid fa-handshake text-2xl text-white"></i>
+    <div id="loginSection" class="w-full max-w-sm glass p-6 sm:p-8 rounded-3xl shadow-2xl mt-8 sm:mt-16 md:mt-24 violet-glow">
+        <div class="text-center mb-6 sm:mb-8">
+            <div class="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-violet-600 to-purple-700 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg shadow-violet-600/40">
+                <i class="fa-solid fa-handshake text-xl sm:text-2xl text-white"></i>
             </div>
-            <h2 class="text-2xl font-bold text-white">Portal Reseller</h2>
-            <p class="text-gray-400 text-sm mt-1">Sistem Bisnis Rullzye Store</p>
+            <h2 class="text-xl sm:text-2xl font-bold text-white">Portal Reseller</h2>
+            <p class="text-gray-500 text-xs sm:text-sm mt-1">Sistem Bisnis Rullzye Store</p>
         </div>
-        <input type="text" id="inputRandomId" placeholder="Masukkan Random ID Anda" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white uppercase font-mono mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
-        <button onclick="loginReseller()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition">
+        <input type="text" id="inputRandomId" placeholder="Masukkan Random ID" class="w-full input-dark rounded-xl px-4 py-3 text-white uppercase font-mono tracking-wider text-sm mb-4 focus:outline-none transition">
+        <button onclick="loginReseller()" class="w-full bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-violet-700/25 text-sm sm:text-base">
             Masuk Dashboard <i class="fa-solid fa-arrow-right ml-2"></i>
         </button>
-        <p class="text-xs text-gray-500 mt-4 text-center">Belum punya Random ID? Daftar melalui <a href="https://t.me/rullzyestore_bot" target="_blank" class="text-blue-400 underline">Telegram Bot</a></p>
+        <p class="text-xs text-gray-600 mt-4 text-center leading-relaxed">Belum punya Random ID?<br class="sm:hidden"> Daftar melalui <a href="https://t.me/rullzyestore_bot" target="_blank" class="text-violet-400 hover:text-violet-300 underline font-medium transition">Telegram Bot</a></p>
     </div>
 
     <!-- ======================== DASHBOARD SECTION ======================== -->
-    <div id="dashboardSection" class="w-full max-w-5xl hidden flex-col gap-6 mt-6 pb-20">
-        
+    <div id="dashboardSection" class="w-full max-w-5xl hidden flex-col gap-4 sm:gap-5 mt-4 sm:mt-6 pb-20">
+
         <!-- HEADER -->
-        <div class="glass p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4 border-t-4 border-blue-500">
-            <div>
-                <h1 class="text-2xl font-bold text-white">Halo, <span id="resellerName" class="text-blue-400">Reseller</span> 👋</h1>
-                <p class="text-sm text-gray-400">Random ID: <code id="resellerId" class="text-blue-300 bg-blue-900/30 px-2 py-1 rounded font-bold"></code></p>
+        <div class="glass p-5 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 border-t-4 border-violet-600">
+            <div class="text-center sm:text-left w-full sm:w-auto">
+                <h1 class="text-lg sm:text-2xl font-bold text-white">Halo, <span id="resellerName" class="text-violet-400">Reseller</span></h1>
+                <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Random ID: <code id="resellerId" class="text-violet-300 bg-violet-900/30 px-2 py-0.5 rounded font-bold text-xs"></code></p>
             </div>
-            <div class="bg-slate-800 border border-slate-600 px-6 py-4 rounded-2xl text-center md:text-right w-full md:w-auto">
-                <p class="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">Saldo Keuntungan</p>
-                <h2 id="saldoTotal" class="text-3xl font-black text-green-400">Rp 0</h2>
+            <div class="bg-[#0f0d23] border border-violet-900/30 px-5 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl text-center w-full sm:w-auto sm:min-w-[180px]">
+                <p class="text-[10px] sm:text-xs text-gray-500 uppercase font-bold tracking-widest mb-0.5">Saldo Keuntungan</p>
+                <h2 id="saldoTotal" class="text-xl sm:text-3xl font-black text-emerald-400">Rp 0</h2>
             </div>
         </div>
 
         <!-- BUTTONS -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button onclick="tarikDana()" class="card-hover bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center justify-center transition">
-                <i class="fa-solid fa-money-bill-transfer text-2xl mb-2"></i>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <button onclick="tarikDana()" class="card-hover bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-500 hover:to-green-600 text-white font-semibold py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-lg flex flex-col items-center justify-center gap-1 text-sm sm:text-base">
+                <i class="fa-solid fa-money-bill-transfer text-lg sm:text-2xl"></i>
                 <span>Tarik Dana (WD)</span>
             </button>
-            <button onclick="aturHarga()" class="card-hover bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center justify-center transition">
-                <i class="fa-solid fa-tags text-2xl mb-2"></i>
+            <button onclick="aturHarga()" class="card-hover bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-semibold py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-lg flex flex-col items-center justify-center gap-1 text-sm sm:text-base">
+                <i class="fa-solid fa-tags text-lg sm:text-2xl"></i>
                 <span>Atur Harga Jual</span>
             </button>
-            <a href="/api/reseller/download-sku" class="card-hover bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center justify-center transition text-center">
-                <i class="fa-solid fa-file-csv text-2xl mb-2"></i>
+            <a href="/api/reseller/download-sku" class="card-hover bg-gradient-to-r from-cyan-600 to-teal-700 hover:from-cyan-500 hover:to-teal-600 text-white font-semibold py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-lg flex flex-col items-center justify-center gap-1 text-sm sm:text-base text-center no-underline">
+                <i class="fa-solid fa-file-csv text-lg sm:text-2xl"></i>
                 <span>Download List SKU</span>
             </a>
         </div>
 
         <!-- STATISTIK -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="statsContainer">
-            <div class="glass p-5 rounded-2xl text-center">
-                <p class="text-xs text-gray-400 font-bold uppercase mb-1">Total Transaksi</p>
-                <h2 id="statTotal" class="text-3xl font-black text-white">0</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4" id="statsContainer">
+            <div class="glass p-4 sm:p-5 rounded-xl sm:rounded-2xl text-center card-hover">
+                <p class="text-[10px] sm:text-xs text-gray-500 font-bold uppercase mb-0.5 tracking-wider">Total Transaksi</p>
+                <h2 id="statTotal" class="text-xl sm:text-3xl font-black text-white">0</h2>
             </div>
-            <div class="glass p-5 rounded-2xl text-center">
-                <p class="text-xs text-gray-400 font-bold uppercase mb-1">Berhasil</p>
-                <h2 id="statSuccess" class="text-3xl font-black text-blue-400">0</h2>
+            <div class="glass p-4 sm:p-5 rounded-xl sm:rounded-2xl text-center card-hover">
+                <p class="text-[10px] sm:text-xs text-gray-500 font-bold uppercase mb-0.5 tracking-wider">Berhasil</p>
+                <h2 id="statSuccess" class="text-xl sm:text-3xl font-black text-violet-400">0</h2>
             </div>
-            <div class="glass p-5 rounded-2xl text-center">
-                <p class="text-xs text-gray-400 font-bold uppercase mb-1">Pending</p>
-                <h2 id="statPending" class="text-3xl font-black text-yellow-400">0</h2>
+            <div class="glass p-4 sm:p-5 rounded-xl sm:rounded-2xl text-center card-hover">
+                <p class="text-[10px] sm:text-xs text-gray-500 font-bold uppercase mb-0.5 tracking-wider">Pending</p>
+                <h2 id="statPending" class="text-xl sm:text-3xl font-black text-amber-400">0</h2>
             </div>
-            <div class="glass p-5 rounded-2xl text-center">
-                <p class="text-xs text-gray-400 font-bold uppercase mb-1">Gagal</p>
-                <h2 id="statFailed" class="text-3xl font-black text-red-400">0</h2>
+            <div class="glass p-4 sm:p-5 rounded-xl sm:rounded-2xl text-center card-hover">
+                <p class="text-[10px] sm:text-xs text-gray-500 font-bold uppercase mb-0.5 tracking-wider">Gagal</p>
+                <h2 id="statFailed" class="text-xl sm:text-3xl font-black text-red-400">0</h2>
             </div>
         </div>
 
-        <!-- LOGOUT BUTTON -->
-        <div class="flex justify-end">
-            <button onclick="logout()" class="text-red-400 hover:text-red-300 font-bold text-sm bg-red-400/10 px-4 py-2 rounded-xl transition">
+        <!-- LOGOUT + INFO ROW -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+            <p class="text-[11px] text-gray-600"><i class="fa-regular fa-clock mr-1"></i> Data diperbarui saat login</p>
+            <button onclick="logout()" class="text-red-400 hover:text-red-300 font-semibold text-xs sm:text-sm bg-red-400/10 hover:bg-red-400/20 px-4 py-2 rounded-xl transition-all duration-200">
                 <i class="fa-solid fa-power-off mr-2"></i> Keluar Akun
             </button>
         </div>
 
         <!-- RIWAYAT TRANSAKSI -->
-        <div class="glass p-6 rounded-3xl overflow-hidden mt-2">
-            <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-list-check text-blue-500"></i> Riwayat Transaksi Anda</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-gray-300">
-                    <thead class="bg-slate-800/80 text-gray-400 uppercase text-xs">
+        <div class="glass p-4 sm:p-6 rounded-2xl sm:rounded-3xl mt-1 sm:mt-2">
+            <h3 class="text-sm sm:text-lg font-bold mb-3 sm:mb-4 flex items-center gap-2"><i class="fa-solid fa-list-check text-violet-500"></i> Riwayat Transaksi</h3>
+            <div class="overflow-x-auto -mx-4 sm:mx-0">
+                <table class="w-full text-left text-xs sm:text-sm text-gray-400">
+                    <thead class="text-gray-600 uppercase text-[10px] sm:text-xs tracking-wider">
                         <tr>
-                            <th class="px-4 py-3 rounded-l-lg">ID Pesanan</th>
-                            <th class="px-4 py-3">Produk & Target</th>
-                            <th class="px-4 py-3">Tipe</th>
-                            <th class="px-4 py-3">Untung</th>
-                            <th class="px-4 py-3 rounded-r-lg">Status</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold">ID Pesanan</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold">Produk & Target</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold hidden sm:table-cell">Tipe</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold">Untung</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold">Status</th>
                         </tr>
                     </thead>
-                    <tbody id="historyTable" class="divide-y divide-slate-700/50">
-                        <!-- diisi oleh JS -->
+                    <tbody id="historyTable" class="divide-y divide-violet-900/20">
                     </tbody>
                 </table>
             </div>
@@ -113,20 +129,17 @@
     </div>
 
     <script>
-        // Format Rupiah
         const formatRp = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-        
-        // Cek localStorage saat halaman dibuka
+
         window.onload = () => {
             const savedId = localStorage.getItem('resellerId');
             if (savedId) fetchDashboard(savedId);
         };
 
-        // ======================== LOGIN ========================
         async function loginReseller() {
             const rId = document.getElementById('inputRandomId').value.trim().toUpperCase();
             if (!rId) return Swal.fire('Oops', 'Masukkan Random ID Anda!', 'warning');
-            
+
             Swal.fire({ title: 'Mengecek Akses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             try {
@@ -147,7 +160,6 @@
             } catch (e) { Swal.fire('Error', 'Gagal terhubung ke server', 'error'); }
         }
 
-        // ======================== AMBIL DATA DASHBOARD ========================
         async function fetchDashboard(randomId) {
             try {
                 const res = await fetch('/api/reseller/dashboard', {
@@ -163,7 +175,6 @@
             }
         }
 
-        // ======================== TAMPILKAN DASHBOARD ========================
         function populateDashboard(data, rId) {
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('dashboardSection').classList.remove('hidden');
@@ -180,27 +191,26 @@
             const tbody = document.getElementById('historyTable');
             tbody.innerHTML = '';
             if (!data.history || data.history.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-500">Belum ada transaksi. Ayo mulai jualan!</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-600">Belum ada transaksi. Ayo mulai jualan!</td></tr>';
             } else {
                 data.history.forEach(o => {
-                    let statusColor = o.status === 'SUKSES' ? 'text-green-400 bg-green-400/10' : (o.status === 'GAGAL' ? 'text-red-400 bg-red-400/10' : 'text-yellow-400 bg-yellow-400/10');
+                    let statusColor = o.status === 'SUKSES' ? 'text-green-400 bg-green-400/10' : (o.status === 'GAGAL' ? 'text-red-400 bg-red-400/10' : 'text-amber-400 bg-amber-400/10');
                     tbody.innerHTML += `
-                        <tr class="hover:bg-slate-800/30 transition">
-                            <td class="px-4 py-3 font-mono text-xs text-blue-300">${o.id || '-'}</td>
-                            <td class="px-4 py-3">
-                                <div class="font-bold text-white">${o.product}</div>
-                                <div class="text-xs text-gray-400">${o.target}</div>
+                        <tr class="hover:bg-violet-900/10 transition">
+                            <td class="px-3 sm:px-4 py-2.5 sm:py-3 font-mono text-[10px] sm:text-xs text-violet-400">${o.id || '-'}</td>
+                            <td class="px-3 sm:px-4 py-2.5 sm:py-3">
+                                <div class="font-semibold text-white text-xs sm:text-sm leading-tight">${o.product}</div>
+                                <div class="text-[10px] sm:text-xs text-gray-500 mt-0.5">${o.target}</div>
                             </td>
-                            <td class="px-4 py-3 text-xs text-gray-500">${o.type || 'PREMKU'}</td>
-                            <td class="px-4 py-3 font-bold text-green-400">+${formatRp(o.profit)}</td>
-                            <td class="px-4 py-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${statusColor}">${o.status.replace('_', ' ')}</span></td>
+                            <td class="px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs text-gray-600 hidden sm:table-cell">${o.type || 'PREMKU'}</td>
+                            <td class="px-3 sm:px-4 py-2.5 sm:py-3 font-bold text-green-400 text-xs sm:text-sm">+${formatRp(o.profit)}</td>
+                            <td class="px-3 sm:px-4 py-2.5 sm:py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${statusColor}">${o.status.replace('_', ' ')}</span></td>
                         </tr>
                     `;
                 });
             }
         }
 
-        // ======================== TARIK DANA (WITHDRAW) ========================
         async function tarikDana() {
             const rId = localStorage.getItem('resellerId');
             const { value: formValues } = await Swal.fire({
@@ -226,9 +236,9 @@
                 if (isNaN(formValues.amount) || formValues.amount < 10000) {
                     return Swal.fire('Gagal', 'Minimal penarikan Rp 10.000!', 'error');
                 }
-                
+
                 Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
-                
+
                 try {
                     const res = await fetch('/api/reseller/withdraw', {
                         method: 'POST',
@@ -236,7 +246,7 @@
                         body: JSON.stringify({ randomId: rId, amount: formValues.amount, bankDetails: formValues.bankDetails })
                     });
                     const data = await res.json();
-                    
+
                     if (data.success) {
                         Swal.fire('Berhasil!', data.message, 'success').then(() => fetchDashboard(rId));
                     } else {
@@ -246,7 +256,6 @@
             }
         }
 
-        // ======================== ATUR HARGA JUAL (MARKUP) ========================
         async function aturHarga() {
             const rId = localStorage.getItem('resellerId');
             const { value: formValues } = await Swal.fire({
@@ -287,7 +296,6 @@
             }
         }
 
-        // ======================== LOGOUT ========================
         function logout() {
             localStorage.removeItem('resellerId');
             document.getElementById('loginSection').classList.remove('hidden');

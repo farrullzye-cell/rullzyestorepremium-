@@ -204,6 +204,81 @@ async function notifyDownlineJoined(uplineChatId, downlineName) {
     ).catch(() => {});
 }
 
+// ==================== GROUP SYSTEM ====================
+const getGroupIds = () => {
+    try {
+        const cfg = JSON.parse(fs.readFileSync('./config.json'));
+        return cfg.groupIds || {};
+    } catch(e) { return {}; }
+};
+
+async function sendToGroup(groupKey, message, parseMode = 'Markdown') {
+    if (!bot) return;
+    const groups = getGroupIds();
+    const chatId = groups[groupKey];
+    if (!chatId) return;
+    try {
+        await bot.sendMessage(chatId, message, { parse_mode: parseMode, disable_web_page_preview: true });
+    } catch(e) {
+        console.error(`[GROUP ${groupKey}] Error:`, e.message);
+    }
+}
+
+async function notifyGroupAffiliateNew(user) {
+    await sendToGroup('affiliate', `🎉 *AFFILIATE BARU!*\n\n👤 *Nama:* ${user.affiliateName || user.firstName}\n🆔 *ID:* \`${user.randomId}\`\n📅 *Tanggal:* ${new Date().toLocaleDateString('id-ID')}\n\nSelamat datang di tim affiliate! 🚀`);
+}
+
+async function notifyGroupOrderNew(order) {
+    await sendToGroup('order', `🛒 *ORDER BARU!*\n\n📦 *Produk:* ${order.productName}\n🎯 *Target:* \`${order.targetPhone || '-'}\`\n💰 *Harga:* Rp ${(order.displayPrice || 0).toLocaleString('id-ID')}\n📊 *Status:* ${order.status}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}`);
+}
+
+async function notifyGroupOrderSuccess(order) {
+    await sendToGroup('order', `✅ *ORDER SUKSES!*\n\n📦 *Produk:* ${order.productName}\n🎯 *Target:* \`${order.targetPhone || '-'}\`\n💰 *Harga:* Rp ${(order.displayPrice || 0).toLocaleString('id-ID')}\n📝 *Detail:* ${order.accountDetails || 'Selesai'}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}`);
+}
+
+async function notifyGroupWithdrawNew(wd) {
+    await sendToGroup('withdraw', `📤 *WITHDRAW BARU!*\n\n👤 *User:* ${wd.affiliateName || wd.name}\n🆔 *ID:* \`${wd.randomId}\`\n💰 *Jumlah:* Rp ${(wd.amount || 0).toLocaleString('id-ID')}\n🏦 *Tujuan:* ${wd.bankDetails}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}\n\n⚠️ Segera diproses ya admin!`);
+}
+
+async function notifyGroupWithdrawProcessed(wd, status) {
+    const emoji = status === 'SUKSES' ? '✅' : '❌';
+    await sendToGroup('withdraw', `${emoji} *WITHDRAW ${status === 'SUKSES' ? 'DICAIRKAN' : 'DITOLAK'}!*\n\n👤 *User:* ${wd.affiliateName || wd.name}\n🆔 *ID:* \`${wd.randomId}\`\n💰 *Jumlah:* Rp ${(wd.amount || 0).toLocaleString('id-ID')}\n🏦 *Tujuan:* ${wd.bankDetails}\n📊 *Status:* ${status}`);
+}
+
+async function notifyGroupReport(message) {
+    await sendToGroup('report', `📊 *LAPORAN*\n\n${message}`);
+}
+
+async function notifyGroupError(errorMsg) {
+    await sendToGroup('error', `🚨 *ERROR!*\n\n${errorMsg}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}`);
+}
+
+async function notifyGroupCommission(affiliateName, amount, orderInfo) {
+    await sendToGroup('commission', `💰 *KOMISI BARU!*\n\n👤 *Affiliate:* ${affiliateName}\n💵 *Jumlah:* Rp ${(amount || 0).toLocaleString('id-ID')}\n📦 *Dari:* ${orderInfo}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}`);
+}
+
+async function notifyGroupPromo(message) {
+    await sendToGroup('promo', `🎉 *PROMO!*\n\n${message}\n\n⏰ ${new Date().toLocaleString('id-ID')}`);
+}
+
+async function notifyGroupStockUpdate(products) {
+    const list = Array.isArray(products) ? products.slice(0, 20) : [];
+    if (list.length === 0) return;
+    await sendToGroup('stock', `📦 *UPDATE STOK PRODUK*\n\n${list.map(p => `• ${p.name} — Rp ${(p.price || 0).toLocaleString('id-ID')} ${p.stock === 0 ? '❌ HABIS' : '✅ Stok: ' + p.stock}`).join('\n')}\n\n⏰ ${new Date().toLocaleString('id-ID')}`);
+}
+
+async function notifyGroupBroadcast(message) {
+    await sendToGroup('broadcast', `📢 *BROADCAST*\n\n${message}`);
+}
+
+async function notifyGroupAdmin(message) {
+    await sendToGroup('admin', `🔔 *ADMIN NOTIF*\n\n${message}\n⏰ ${new Date().toLocaleString('id-ID')}`);
+}
+
+async function notifyGroupAffiliateNews(message) {
+    await sendToGroup('affiliate_news', `📰 *BERITA AFFILIATE*\n\n${message}\n⏰ ${new Date().toLocaleString('id-ID')}`);
+}
+
 // ==================== BOT LOGIC ====================
 if (bot) {
     bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
@@ -247,6 +322,16 @@ if (bot) {
             bot.sendMessage(chatId, welcomeMsg, { parse_mode: "Markdown", ...mainKeyboard });
         } else {
             bot.sendMessage(chatId, `👋 Halo *${user.firstName}*!\n\nAda yang bisa kami bantu hari ini? Silakan pilih menu di bawah:`, { parse_mode: "Markdown", ...mainKeyboard });
+        }
+    });
+
+    bot.onText(/\/mygroupid/, async (msg) => {
+        const chatId = msg.chat.id;
+        const chatType = msg.chat.type;
+        if (chatType === 'group' || chatType === 'supergroup') {
+            bot.sendMessage(chatId, `📋 *INFO GRUP*\n\n🆔 *ID Grup:* \`${chatId}\`\n📛 *Nama:* ${msg.chat.title || '-'}\n\nSalin ID di atas dan masukkan ke Panel Admin → Grup Bot untuk mengaktifkan notifikasi grup ini.`, { parse_mode: 'Markdown' });
+        } else {
+            bot.sendMessage(chatId, '❌ Perintah ini hanya bisa digunakan di dalam grup.');
         }
     });
 
@@ -334,8 +419,10 @@ if (bot) {
                     if (cfgData.affiliateAutoApprove) {
                         users[idx].isAffiliate = true;
                         users[idx].affiliatePending = false;
+                        users[idx].affiliateApprovedAt = new Date().toISOString();
                         await saveUsers(users);
                         notifyAffiliateApproved(chatId, users[idx].randomId);
+                        notifyGroupAffiliateNew(users[idx]);
                     } else {
                         users[idx].affiliatePending = true;
                         await saveUsers(users);
@@ -492,5 +579,21 @@ module.exports = {
     notifyWithdrawSuccess,
     notifyWithdrawRejected,
     notifyProfileUpdated,
-    notifyDownlineJoined
+    notifyDownlineJoined,
+    // Group notifications
+    sendToGroup,
+    notifyGroupAffiliateNew,
+    notifyGroupOrderNew,
+    notifyGroupOrderSuccess,
+    notifyGroupWithdrawNew,
+    notifyGroupWithdrawProcessed,
+    notifyGroupReport,
+    notifyGroupError,
+    notifyGroupCommission,
+    notifyGroupPromo,
+    notifyGroupStockUpdate,
+    notifyGroupBroadcast,
+    notifyGroupAdmin,
+    notifyGroupAffiliateNews,
+    getGroupIds
 };

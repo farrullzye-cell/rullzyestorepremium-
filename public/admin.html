@@ -3,56 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel — RullzyeStore</title>
+    <title>Admin Panel — RullzyeStore Premium</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body{font-family:'Plus Jakarta Sans',sans-serif;background:#03050f;color:#e2e8f0;min-height:100vh}
-        .sidebar{background:rgba(15,23,42,0.95);backdrop-filter:blur(12px);border-right:1px solid rgba(255,255,255,0.05);min-height:100vh;position:fixed;left:0;top:0;bottom:0;z-index:40;width:220px}
-        .content{margin-left:220px;min-height:100vh;padding:24px}
-        .menu-item{transition:all 0.2s;cursor:pointer;border-radius:12px;color:#94a3b8}
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#03050f;color:#e2e8f0;min-height:100vh;overflow-x:hidden}
+        .sidebar{background:rgba(15,23,42,0.98);backdrop-filter:blur(16px);border-right:1px solid rgba(255,255,255,0.05);position:fixed;left:0;top:0;bottom:0;z-index:40;width:230px;transform:translateX(-100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);overflow-y:auto;overflow-x:hidden}
+        .sidebar.open{transform:translateX(0)}
+        .sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:35;opacity:0;pointer-events:none;transition:opacity 0.3s ease}
+        .sidebar.open~.sidebar-backdrop{opacity:1;pointer-events:auto}
+        .content{margin-left:0;min-height:100vh;padding:20px 14px;transition:margin-left 0.3s ease}
+        .hamburger{position:fixed;top:12px;left:12px;z-index:45;background:rgba(15,23,42,0.9);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);border-radius:12px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#c084fc;font-size:14px;transition:all 0.2s}
+        .hamburger:hover{background:rgba(124,58,237,0.15)}.hamburger.hidden{display:none}
+        .menu-item{transition:all 0.2s;cursor:pointer;border-radius:10px;color:#94a3b8;user-select:none;position:relative;padding:7px 10px;font-size:11px;display:flex;align-items:center;gap:8px}
         .menu-item:hover{background:rgba(255,255,255,0.05);color:#e2e8f0}
         .menu-item.active{background:rgba(124,58,237,0.15);color:#c084fc;font-weight:700}
-        .card{background:rgba(15,23,42,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:20px}
+        .menu-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;background:#7c3aed;border-radius:0 4px 4px 0}
+        .menu-item i{width:16px;text-align:center;font-size:11px}
+        .card{background:rgba(15,23,42,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:20px}
         .stat-card{transition:all 0.3s}.stat-card:hover{border-color:rgba(124,58,237,0.3);transform:translateY(-2px)}
-        .badge-ok{background:rgba(16,185,129,0.15);color:#34d399;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
-        .badge-warn{background:rgba(245,158,11,0.15);color:#fbbf24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
-        .badge-err{background:rgba(239,68,68,0.15);color:#f87171;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
-        .input-dark{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 14px;color:white;font-size:13px;outline:none;width:100%}
-        .input-dark:focus{border-color:rgba(124,58,237,0.5)}
-        .btn-primary{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;font-weight:700;padding:10px 20px;border-radius:12px;font-size:13px;transition:all 0.2s}
-        .btn-primary:hover{box-shadow:0 8px 20px -6px rgba(124,58,237,0.4)}
-        @media(max-width:768px){.sidebar{width:60px}.sidebar .menu-text{display:none}.sidebar .logo-text{display:none}.content{margin-left:60px}}
+        .badge-ok{background:rgba(16,185,129,0.15);color:#34d399;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;display:inline-block}
+        .badge-warn{background:rgba(245,158,11,0.15);color:#fbbf24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;display:inline-block}
+        .badge-err{background:rgba(239,68,68,0.15);color:#f87171;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;display:inline-block}
+        .input-dark{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 14px;color:white;font-size:13px;outline:none;width:100%;transition:all 0.2s}
+        .input-dark:focus{border-color:rgba(124,58,237,0.5);box-shadow:0 0 0 3px rgba(124,58,237,0.1)}
+        .btn-primary{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;font-weight:700;padding:10px 20px;border-radius:12px;font-size:13px;transition:all 0.2s;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+        .btn-primary:hover{box-shadow:0 8px 20px -6px rgba(124,58,237,0.4);transform:translateY(-1px)}
+        .btn-primary:active{transform:translateY(0)}
+        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(124,58,237,0.3);border-radius:4px}
+        @media(min-width:768px){.sidebar{transform:translateX(0);width:210px}.content{margin-left:210px;padding:24px}.hamburger{display:none!important}.sidebar-backdrop{display:none}}
+        @media(max-width:767px){.sidebar{width:240px}}
     </style>
 </head>
 <body>
 <div id="pinOverlay" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-    <div class="card p-8 max-w-sm w-full text-center">
-        <div class="w-14 h-14 bg-gradient-to-br from-violet-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-shield-halved text-white text-xl"></i></div>
+    <div class="card p-8 max-w-sm w-full text-center" style="border-color:rgba(124,58,237,0.2)">
+        <div class="w-14 h-14 bg-gradient-to-br from-violet-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-600/20">
+            <i class="fa-solid fa-shield-halved text-white text-xl"></i>
+        </div>
         <h2 class="text-xl font-black text-white mb-1">Admin Panel</h2>
         <p class="text-xs text-slate-400 mb-4">Masukkan PIN untuk akses</p>
-        <input type="password" id="pinInput" placeholder="PIN" class="input-dark text-center mb-3" onkeydown="if(event.key==='Enter')checkPin()">
+        <input type="password" id="pinInput" placeholder="PIN Admin" class="input-dark text-center mb-3 text-lg tracking-widest" onkeydown="if(event.key==='Enter')checkPin()">
         <button onclick="checkPin()" class="btn-primary w-full">Masuk</button>
     </div>
 </div>
-<aside class="sidebar p-3 flex flex-col gap-1" id="sidebar" style="display:none">
-    <div class="px-3 py-4 flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-gradient-to-br from-violet-600 to-purple-600 rounded-xl flex items-center justify-center"><i class="fa-solid fa-gem text-white text-xs"></i></div><span class="font-black text-sm text-white logo-text">Admin</span></div>
-    <nav class="flex flex-col gap-0.5" id="sidebarNav">
-        <div class="menu-item active px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="dashboard"><i class="fa-solid fa-chart-pie w-4 text-center"></i><span class="menu-text">Dashboard</span></div>
-        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="users"><i class="fa-solid fa-users w-4 text-center"></i><span class="menu-text">Users</span></div>
-        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="orders"><i class="fa-solid fa-list-check w-4 text-center"></i><span class="menu-text">Orders</span></div>
-        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="affiliate"><i class="fa-solid fa-handshake w-4 text-center"></i><span class="menu-text">Affiliate</span></div>
-        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="affconfig"><i class="fa-solid fa-sliders w-4 text-center"></i><span class="menu-text">Aff Settings</span></div>
-        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="withdraw"><i class="fa-solid fa-money-bill-transfer w-4 text-center"></i><span class="menu-text">Withdraw</span></div>
-        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="config"><i class="fa-solid fa-cog w-4 text-center"></i><span class="menu-text">Config API</span></div>
-        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="banner"><i class="fa-solid fa-images w-4 text-center"></i><span class="menu-text">Banner</span></div>
-        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="database"><i class="fa-solid fa-database w-4 text-center"></i><span class="menu-text">Database</span></div>
-        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="system"><i class="fa-solid fa-server w-4 text-center"></i><span class="menu-text">System</span></div>
-        <div class="menu-item px-3 py-2 flex items-center gap-2.5 text-xs" data-tab="broadcast"><i class="fa-solid fa-bullhorn w-4 text-center"></i><span class="menu-text">Broadcast</span></div>
-    </nav>
+<div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
+<button class="hamburger" onclick="toggleSidebar()" id="hamburgerBtn" style="display:none"><i class="fa-solid fa-bars"></i></button>
+<aside class="sidebar p-2 flex flex-col gap-0.5" id="sidebar" style="display:none">
+    <div class="px-3 py-4 flex items-center gap-2.5 mb-1">
+        <div class="w-8 h-8 bg-gradient-to-br from-violet-600 to-purple-600 rounded-xl flex items-center justify-center shadow-sm shadow-violet-600/20"><i class="fa-solid fa-gem text-white text-xs"></i></div>
+        <div><span class="font-black text-sm text-white">RullzyeAdmin</span><p class="text-[9px] text-slate-500">v3.0 — Full Control</p></div>
+    </div>
+    <div style="overflow-y:auto;flex:1" class="space-y-0.5">
+        <div class="menu-item active" data-tab="dashboard"><i class="fa-solid fa-chart-pie"></i>Dashboard</div>
+        <div class="menu-item" data-tab="users"><i class="fa-solid fa-users"></i>Users</div>
+        <div class="menu-item" data-tab="orders"><i class="fa-solid fa-list-check"></i>Orders</div>
+        <div class="menu-item" data-tab="reports"><i class="fa-solid fa-file-invoice-dollar"></i>Laporan</div>
+        <div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 10px"></div>
+        <div class="menu-item" data-tab="products"><i class="fa-solid fa-box"></i>Produk</div>
+        <div class="menu-item" data-tab="badge"><i class="fa-solid fa-tag"></i>Badge</div>
+        <div class="menu-item" data-tab="smm"><i class="fa-solid fa-chart-simple"></i>SMM Services</div>
+        <div class="menu-item" data-tab="ppob"><i class="fa-solid fa-bolt"></i>PPOB Produk</div>
+        <div class="menu-item" data-tab="celestial"><i class="fa-solid fa-gamepad"></i>TopUp Produk</div>
+        <div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 10px"></div>
+        <div class="menu-item" data-tab="affiliate"><i class="fa-solid fa-handshake"></i>Affiliate</div>
+        <div class="menu-item" data-tab="affconfig"><i class="fa-solid fa-sliders"></i>Aff Settings</div>
+        <div class="menu-item" data-tab="withdraw"><i class="fa-solid fa-money-bill-transfer"></i>Withdraw</div>
+        <div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 10px"></div>
+        <div class="menu-item" data-tab="config"><i class="fa-solid fa-cog"></i>Config API</div>
+        <div class="menu-item" data-tab="api-test"><i class="fa-solid fa-vial"></i>Test API</div>
+        <div class="menu-item" data-tab="security"><i class="fa-solid fa-shield"></i>Keamanan</div>
+        <div class="menu-item" data-tab="audit"><i class="fa-solid fa-clock-rotate-left"></i>Audit Log</div>
+        <div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 10px"></div>
+        <div class="menu-item" data-tab="groups"><i class="fa-solid fa-telegram"></i>Grup Bot</div>
+        <div class="menu-item" data-tab="botstatus"><i class="fa-solid fa-robot"></i>Bot Status</div>
+        <div class="menu-item" data-tab="broadcast"><i class="fa-solid fa-bullhorn"></i>Broadcast</div>
+        <div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 10px"></div>
+        <div class="menu-item" data-tab="banner"><i class="fa-solid fa-images"></i>Banner</div>
+        <div class="menu-item" data-tab="faq"><i class="fa-solid fa-circle-question"></i>FAQ</div>
+        <div class="menu-item" data-tab="content"><i class="fa-solid fa-file"></i>Halaman</div>
+        <div class="menu-item" data-tab="resellers"><i class="fa-solid fa-store"></i>Reseller</div>
+        <div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 10px"></div>
+        <div class="menu-item" data-tab="database"><i class="fa-solid fa-database"></i>Database</div>
+        <div class="menu-item" data-tab="system"><i class="fa-solid fa-server"></i>System</div>
+        <div class="menu-item" data-tab="checkip"><i class="fa-solid fa-network-wired"></i>Cek IP</div>
+    </div>
 </aside>
-<main class="content" id="mainContent" style="display:none"><div id="tab-content"></div></main>
-<script src="/js/admin.js?v=2"></script>
+<main class="content" id="mainContent" style="display:none">
+    <div id="tab-content"></div>
+</main>
+<script src="/js/admin.js?v=4"></script>
 </body>
 </html>

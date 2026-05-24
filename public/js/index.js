@@ -486,113 +486,29 @@ window.applyAffiliate = async function() {
     }
 };
 
-// ==================== ORDER (MODAL) ====================
-let selectedProduct = null;
-
-function openOrder(id, name, price, source) {
-    selectedProduct = { id, name, price, source };
-    const storedUser = getStoredWebUser();
-    const modal = document.createElement('div');
-    modal.id = 'orderModal';
-    modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4';
-    modal.innerHTML = `
-        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl modal-pop relative">
-            <button onclick="document.getElementById('orderModal').remove()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-            <h3 class="text-xl font-black text-slate-800 mb-2 text-center">Konfirmasi Pesanan</h3>
-            <p class="text-sm font-bold text-indigo-600 mb-4 text-center">${name}</p>
-            <div class="mb-4">
-                <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Random ID Web</label>
-                <input type="text" id="modal-randomid" placeholder="ID-ABC123" class="w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm uppercase font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value="${storedUser?.randomId || ''}">
-                <p class="text-[10px] text-slate-400 mt-2">${storedUser ? 'ID ini diambil dari daftar web Anda.' : 'Isi ID web yang sudah dibuat atau buat baru dari tombol atas.'}</p>
-            </div>
-            <div id="modal-target-container" class="mb-4 hidden">
-                <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Nomor Tujuan / UID <span class="text-red-500">*</span></label>
-                <input type="text" id="modal-target" placeholder="08xxx / 12345678" class="w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
-            </div>
-            <button id="btn-order" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl text-sm hover:bg-indigo-700">Lanjut Pembayaran</button>
-        </div>
-    `;
-    document.body.appendChild(modal);
-
-    if (source === 'ppob' || source === 'topup') {
-        document.getElementById('modal-target-container').classList.remove('hidden');
-    }
-
-    document.getElementById('btn-order').onclick = async function() {
-        const randomIdInput = document.getElementById('modal-randomid').value.trim().toUpperCase();
-        const target = document.getElementById('modal-target')?.value.trim();
-        const randomId = randomIdInput || storedUser?.randomId;
-        if (!randomId) return Swal.fire('Perhatian', 'Masukkan Random ID Web atau buat ID terlebih dahulu.', 'warning');
-        if ((source === 'ppob' || source === 'topup') && !target) return Swal.fire('Perhatian', 'Masukkan nomor tujuan / UID.', 'warning');
-
-        let endpoint = '/api/order';
-        const body = {
-            service: selectedProduct.id.replace(/^(PREMKU|PPOB|TOPUP)-/, ''),
-            productName: selectedProduct.name,
-            displayPrice: selectedProduct.price,
-            randomId,
-            target: target || randomId,
-        };
-
-        if (source === 'ppob') {
-            endpoint = '/api/ppob-order';
-            body.productId = selectedProduct.id.replace('PPOB-', '');
-            body.target = target;
-        } else if (source === 'topup') {
-            endpoint = '/api/topup-order';
-            body.service = selectedProduct.id.replace('TOPUP-', '');
-            body.target = target;
-        }
-
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        if (data.status) {
-            addReceiptToCache({
-                orderId: data.invoice.order_id || data.invoice.id || data.invoice.payment_id || new Date().getTime(),
-                invoiceId: data.invoice.id || data.invoice.order_id,
-                paymentId: data.invoice.payment_id,
-                productName: selectedProduct.name,
-                amount: data.invoice.amount,
-                target: body.target,
-                qr_url: data.invoice.qr_url,
-                botLink: data.invoice.botLink,
-                createdAt: new Date().toISOString(),
-            });
-
-            modal.querySelector('.modal-pop').innerHTML = `
-                <h3 class="text-lg font-black mb-4">QRIS Siap</h3>
-                <img src="${data.invoice.qr_url}" class="w-40 h-40 mx-auto rounded-xl mb-4">
-                <p class="font-bold text-slate-800">Rp ${data.invoice.amount.toLocaleString('id-ID')}</p>
-                <a href="${data.invoice.botLink}" target="_blank" class="block mt-4 bg-indigo-600 text-white py-2 rounded-xl text-sm hover:bg-indigo-700">Konfirmasi via Bot</a>
-                <button onclick="document.getElementById('orderModal').remove()" class="mt-2 text-slate-400 text-xs">Tutup</button>
-            `;
-        } else {
-            Swal.fire('Gagal', data.message || 'Gagal membuat pesanan.', 'error');
-            modal.remove();
-        }
-    };
-}
-
-// FOMO
+// ==================== FOMO ====================
 const fomoData = [
     { u: 'Rizky***92', t: 'baru beli Netflix Premium' },
     { u: 'Siti***17', t: 'baru beli Spotify Family' },
+    { u: 'Dewi***45', t: 'baru isi pulsa Telkomsel 50rb' },
+    { u: 'Budi***33', t: 'baru topup MLBB 86 Diamonds' },
+    { u: 'Nina***78', t: 'baru beli paket data 10GB' },
+    { u: 'Fajar***21', t: 'baru beli akun YouTube Premium' }
 ];
 let fi = 0;
 function showFomo() {
-    const el = document.getElementById('fomo-notif'), m = fomoData[fi % fomoData.length];
-    document.getElementById('fomo-user').innerText = m.u;
-    document.getElementById('fomo-text').innerText = m.t;
+    const el = document.getElementById('fomo-notif');
+    if (!el) return;
+    const m = fomoData[fi % fomoData.length];
+    const userEl = document.getElementById('fomo-user');
+    const textEl = document.getElementById('fomo-text');
+    if (userEl) userEl.innerText = m.u;
+    if (textEl) textEl.innerText = m.t;
     fi++;
     el.style.transform = 'translateY(0)'; el.style.opacity = '1';
     setTimeout(() => { el.style.transform = 'translateY(120px)'; el.style.opacity = '0'; }, 3000);
 }
 setTimeout(() => { showFomo(); setInterval(showFomo, 7000); }, 2500);
-setInterval(() => { document.getElementById('live-counter').innerText = (35 + Math.floor(Math.random() * 25)) + ' online'; }, 5000);
 
 // Init
 loadBanners();

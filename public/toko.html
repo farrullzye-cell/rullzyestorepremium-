@@ -3,85 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toko Affiliate</title>
+    <title>Toko Digital Affiliate - RullzyeStore Premium</title>
+    <meta name="description" content="Toko digital affiliate RullzyeStore. Temukan produk pulsa, top up game, akun premium, dan layanan PPOB dengan harga spesial." />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Toko Digital Affiliate - RullzyeStore" />
+    <meta property="og:description" content="Toko digital affiliate dengan produk pulsa, top up game, akun premium." />
+    <meta property="og:url" content="https://rullzyestorepremium.my.id/toko/" />
+    <meta property="og:image" content="https://rullzyestorepremium.my.id/favicon.jpeg" />
+    <meta property="og:site_name" content="RullzyeStore" />
+    <meta property="og:locale" content="id_ID" />
+    <link rel="canonical" href="https://rullzyestorepremium.my.id/" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <meta name="theme-color" content="#6d28d9" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #03050f; color: #e2e8f0; min-height: 100vh;
-            background-image: radial-gradient(circle at 50% 0%, var(--theme, rgba(124,58,237,0.12)) 0%, transparent 50%); }
-        .glass { background: rgba(15,23,42,0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.06); }
-        .product-card { transition: all 0.3s cubic-bezier(0.25,0.8,0.25,1.2); background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; cursor: pointer; overflow: hidden; }
-        .product-card:hover { transform: translateY(-4px); box-shadow: 0 16px 32px -12px var(--glow, rgba(124,58,237,0.3)); border-color: var(--border, rgba(124,58,237,0.4)); }
-        .social-btn { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
-        .social-btn:hover { transform: scale(1.1); background: rgba(255,255,255,0.1); }
-        .avatar-ring { padding: 3px; background: linear-gradient(135deg, var(--accent, #7c3aed), #ec4899); border-radius: 50%; }
-        .search-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
-        .search-box:focus-within { border-color: var(--border, rgba(124,58,237,0.5)); }
-        .cat-pill { transition: all 0.2s; }
-        .cat-pill.active { background: var(--accent, #7c3aed); color: white; border-color: transparent; }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        :root { --accent: #7c3aed; --theme: rgba(124,58,237,0.12); --glow: rgba(124,58,237,0.3); --border: rgba(124,58,237,0.4); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #03050f;
+            color: #e2e8f0;
+            min-height: 100vh;
+            background-image: radial-gradient(ellipse at 50% 0%, var(--theme) 0%, transparent 60%);
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.3); border-radius: 4px; }
+
+        .glass {
+            background: rgba(15,23,42,0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .glass-strong {
+            background: rgba(15,23,42,0.8);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .product-card {
+            transition: all 0.35s cubic-bezier(0.22,1,0.36,1);
+            background: rgba(15,23,42,0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 16px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px -16px var(--glow);
+            border-color: var(--border);
+        }
+        .product-card:active { transform: translateY(-2px); }
+
+        .social-btn {
+            width: 44px; height: 44px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.25s;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.03);
+        }
+        .social-btn:hover {
+            transform: scale(1.12) translateY(-2px);
+            background: rgba(255,255,255,0.08);
+            border-color: var(--border);
+        }
+
+        .avatar-ring {
+            padding: 3px;
+            background: linear-gradient(135deg, var(--accent), #ec4899);
+            border-radius: 50%;
+            box-shadow: 0 0 30px -8px var(--glow);
+        }
+
+        .search-box {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            transition: border-color 0.25s;
+        }
+        .search-box:focus-within { border-color: var(--border); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+
+        .cat-pill {
+            transition: all 0.2s;
+            font-size: 11px; font-weight: 600;
+            padding: 5px 16px; border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #64748b; white-space: nowrap; cursor: pointer;
+            background: transparent;
+        }
+        .cat-pill:hover { color: #e2e8f0; border-color: rgba(255,255,255,0.12); }
+        .cat-pill.active { background: var(--accent); color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(124,58,237,0.3); }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
         .fade-up { animation: fadeUp 0.5s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .modal-bg { animation: fadeIn 0.2s ease; }
-        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
         #loading { position: fixed; inset: 0; background: #03050f; z-index: 999; display: flex; align-items: center; justify-content: center; }
-        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent, #7c3aed); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.06); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        .view-btn { transition: all 0.2s; cursor: pointer; padding: 6px; border-radius: 8px; }
+        .view-btn:hover { background: rgba(255,255,255,0.05); }
+
+        @media (max-width: 380px) {
+            .product-card { border-radius: 12px; }
+            .avatar-ring { width: 72px; height: 72px; }
+            #shopName { font-size: 1.25rem; }
+        }
     </style>
 </head>
 <body>
 
 <div id="loading"><div class="spinner"></div></div>
 
-<!-- Profile Section -->
-<div id="app" class="max-w-lg mx-auto px-4 py-8 hidden">
+<div id="app" class="max-w-lg mx-auto px-4 sm:px-6 py-6 hidden">
 
-    <!-- Avatar + Name -->
-    <div class="text-center mb-6 fade-up">
-        <div class="avatar-ring w-24 h-24 mx-auto mb-4">
+    <!-- Header / Profile -->
+    <div class="text-center mb-8 fade-up">
+        <div class="avatar-ring w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-5">
             <div id="avatarImg" class="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
                 <i class="fa-solid fa-store text-3xl text-slate-500"></i>
             </div>
         </div>
-        <h1 id="shopName" class="text-2xl font-black text-white"></h1>
-        <p id="shopBio" class="text-sm text-slate-400 mt-1 max-w-xs mx-auto"></p>
-        <p class="text-[10px] text-slate-500 mt-2">Powered by <a href="/" class="text-violet-400 hover:underline" id="poweredBy">RullzyeStore</a></p>
+        <h1 id="shopName" class="text-2xl sm:text-3xl font-black text-white tracking-tight"></h1>
+        <p id="shopBio" class="text-sm text-slate-400 mt-1.5 max-w-xs mx-auto leading-relaxed"></p>
+        <p class="text-[10px] text-slate-500 mt-3">Powered by <a href="/" class="text-violet-400 hover:underline hover:text-violet-300 transition-colors" id="poweredBy">RullzyeStore</a></p>
     </div>
 
     <!-- Social Links -->
-    <div id="socialBar" class="flex justify-center gap-3 mb-6 fade-up" style="animation-delay:0.1s"></div>
+    <div id="socialBar" class="flex justify-center gap-3 mb-8 fade-up" style="animation-delay:0.08s"></div>
 
     <!-- CTA Button -->
-    <div class="mb-6 fade-up" style="animation-delay:0.15s">
-        <a id="ctaTelegram" href="#" target="_blank" class="block w-full text-center py-3.5 rounded-2xl font-bold text-sm text-white transition hover:scale-[1.02] hover:shadow-lg" style="background:var(--accent,#7c3aed)">
-            <i class="fa-brands fa-telegram mr-2"></i>Gabung via Telegram
+    <div class="mb-8 fade-up" style="animation-delay:0.12s">
+        <a id="ctaTelegram" href="#" target="_blank"
+           class="group relative block w-full text-center py-3.5 rounded-2xl font-bold text-sm text-white overflow-hidden transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
+           style="background:var(--accent)">
+            <span class="relative z-10"><i class="fa-brands fa-telegram mr-2"></i>Gabung via Telegram</span>
+            <span class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
         </a>
     </div>
 
-    <!-- Search + Filter -->
-    <div class="mb-4 fade-up" style="animation-delay:0.2s">
-        <div class="search-box rounded-2xl flex items-center px-4 py-3 gap-2">
+    <!-- Search -->
+    <div class="mb-4 fade-up" style="animation-delay:0.16s">
+        <div class="search-box flex items-center px-4 py-3 gap-3">
             <i class="fa-solid fa-search text-slate-500 text-sm"></i>
-            <input type="text" id="searchInput" placeholder="Cari produk..." class="bg-transparent outline-none text-sm text-white flex-grow placeholder-slate-500">
+            <input type="text" id="searchInput" placeholder="Cari produk..."
+                   class="bg-transparent outline-none text-sm text-white flex-1 placeholder-slate-500 min-w-0">
         </div>
     </div>
-    <div id="categoryBar" class="flex gap-2 overflow-x-auto pb-3 mb-4 fade-up" style="animation-delay:0.25s"></div>
 
-    <!-- Product Count -->
-    <div class="flex justify-between items-center mb-3">
-        <p id="productCount" class="text-xs text-slate-400 font-bold"></p>
-        <div class="flex gap-2">
-            <button onclick="setView('grid')" id="btnGrid" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-grid-2"></i></button>
-            <button onclick="setView('list')" id="btnList" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-list"></i></button>
+    <!-- Categories -->
+    <div id="categoryBar" class="flex gap-2 overflow-x-auto pb-3 mb-5 fade-up" style="animation-delay:0.2s"></div>
+
+    <!-- Product Count + View Toggle -->
+    <div class="flex justify-between items-center mb-4 fade-up" style="animation-delay:0.24s">
+        <p id="productCount" class="text-xs text-slate-400 font-semibold"></p>
+        <div class="flex gap-1">
+            <button onclick="setView('grid')" id="btnGrid" class="view-btn text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-grid-2"></i></button>
+            <button onclick="setView('list')" id="btnList" class="view-btn text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-list"></i></button>
         </div>
     </div>
 
     <!-- Products -->
-    <div id="productGrid" class="grid grid-cols-2 gap-3 mb-8"></div>
+    <div id="productGrid" class="grid grid-cols-2 gap-3 mb-8 fade-up" style="animation-delay:0.28s"></div>
 
     <!-- Footer -->
-    <div class="text-center py-4 border-t border-white/5">
-        <p class="text-[10px] text-slate-600">&copy; 2026 <span id="footerName"></span> &middot; <a href="/" class="text-violet-400 hover:underline">RullzyeStore</a></p>
+    <div class="text-center py-5 border-t border-white/5 mt-4">
+        <p class="text-[10px] text-slate-600">&copy; 2026 <span id="footerName"></span> &middot; <a href="/" class="text-violet-400 hover:text-violet-300 transition-colors hover:underline">RullzyeStore</a></p>
     </div>
 </div>
 
@@ -169,9 +267,9 @@ function renderCategories() {
     const cats = new Set();
     allProducts.forEach(p => cats.add(p.category || p.source || 'Lainnya'));
     const bar = document.getElementById('categoryBar');
-    let html = `<button onclick="filterCat('all')" class="cat-pill active text-[11px] font-bold px-4 py-1.5 rounded-full border border-white/10 whitespace-nowrap">Semua</button>`;
+    let html = `<button onclick="filterCat('all')" class="cat-pill active">Semua</button>`;
     cats.forEach(c => {
-        html += `<button onclick="filterCat('${c}')" class="cat-pill text-[11px] font-bold px-4 py-1.5 rounded-full border border-white/10 text-slate-400 whitespace-nowrap">${c}</button>`;
+        html += `<button onclick="filterCat('${c}')" class="cat-pill">${c}</button>`;
     });
     bar.innerHTML = html;
 }
@@ -225,7 +323,7 @@ function renderProducts() {
         if (viewMode === 'list') {
             return `<div class="product-card p-3 flex items-center gap-3" onclick="openOrder('${p.id}','${p.name.replace(/'/g,"\\'")}',${p.price},'${p.source}')">
                 <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">${getIcon(p.name)}</div>
-                <div class="flex-grow min-w-0"><h3 class="font-bold text-white text-xs truncate">${p.name}</h3><p class="text-[10px] text-slate-500">${p.category||p.source||''}</p></div>
+                <div class="flex-1 min-w-0"><h3 class="font-bold text-white text-xs truncate">${p.name}</h3><p class="text-[10px] text-slate-500">${p.category||p.source||''}</p></div>
                 <p class="text-xs font-black whitespace-nowrap" style="color:var(--accent)">Rp ${p.price.toLocaleString('id-ID')}</p>
             </div>`;
         }
@@ -244,10 +342,10 @@ function openOrder(id, name, price, source) {
     modal.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-bg';
     modal.style.background = 'rgba(0,0,0,0.7)';
     modal.innerHTML = `
-        <div class="glass rounded-3xl w-full max-w-md p-6 fade-up">
+        <div class="glass-strong rounded-3xl w-full max-w-md p-6 fade-up">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-black text-white">Pesan Produk</h3>
-                <button onclick="document.getElementById('orderModal').className='fixed inset-0 z-50 hidden'" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="document.getElementById('orderModal').className='fixed inset-0 z-50 hidden'" class="text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <div class="bg-white/5 rounded-xl p-3 mb-4 flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:var(--accent,#7c3aed)">${getIcon(name)}</div>
@@ -255,12 +353,15 @@ function openOrder(id, name, price, source) {
             </div>
             <div class="space-y-3">
                 <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Random ID Telegram</label>
-                <input type="text" id="m-rid" placeholder="ID-ABC123" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm uppercase font-bold text-white mt-1 outline-none focus:border-violet-500"></div>
+                <input type="text" id="m-rid" placeholder="ID-ABC123" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm uppercase font-bold text-white mt-1 outline-none focus:border-violet-500 transition-colors"></div>
                 ${needTarget ? `<div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nomor / UID Tujuan</label>
-                <input type="text" id="m-target" placeholder="08xxx / 12345" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white mt-1 outline-none focus:border-violet-500"></div>` : ''}
+                <input type="text" id="m-target" placeholder="08xxx / 12345" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white mt-1 outline-none focus:border-violet-500 transition-colors"></div>` : ''}
             </div>
-            <button onclick="submitOrder('${id}','${name.replace(/'/g,"\\'")}',${price},'${source}')" class="w-full mt-4 py-3.5 rounded-2xl font-bold text-sm text-white transition hover:shadow-lg" style="background:var(--accent,#7c3aed)">
-                <i class="fa-solid fa-lock mr-1"></i> Bayar Sekarang
+            <button onclick="submitOrder('${id}','${name.replace(/'/g,"\\'")}',${price},'${source}')"
+                    class="relative w-full mt-4 py-3.5 rounded-2xl font-bold text-sm text-white overflow-hidden transition-all duration-300 hover:shadow-lg"
+                    style="background:var(--accent,#7c3aed)">
+                <span class="relative z-10"><i class="fa-solid fa-lock mr-1"></i> Bayar Sekarang</span>
+                <span class="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity duration-300"></span>
             </button>
         </div>`;
 }
@@ -280,14 +381,14 @@ async function submitOrder(id, name, price, source) {
         const data = await res.json();
         const modal = document.getElementById('orderModal');
         if (data.status && data.invoice) {
-            modal.querySelector('.glass').innerHTML = `<div class="text-center fade-up">
+            modal.querySelector('.glass-strong').innerHTML = `<div class="text-center fade-up">
                 <div class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style="background:var(--accent)"><i class="fa-solid fa-qrcode text-white text-xl"></i></div>
                 <h3 class="text-lg font-black text-white mb-1">Scan QRIS</h3>
                 <p class="text-xs text-slate-400 mb-4">Scan QR di bawah untuk membayar</p>
                 <img src="${data.invoice.qr_url}" class="w-44 h-44 mx-auto rounded-2xl border border-white/10 mb-3">
                 <p class="text-xl font-black text-white">Rp ${data.invoice.amount.toLocaleString('id-ID')}</p>
-                <a href="${data.invoice.botLink}" target="_blank" class="block mt-4 py-3 rounded-xl text-sm font-bold text-white" style="background:var(--accent)"><i class="fa-brands fa-telegram mr-1"></i>Konfirmasi via Bot</a>
-                <button onclick="document.getElementById('orderModal').className='fixed inset-0 z-50 hidden'" class="mt-3 text-xs text-slate-400 hover:text-white">Tutup</button>
+                <a href="${data.invoice.botLink}" target="_blank" class="block mt-4 py-3 rounded-xl text-sm font-bold text-white transition-all hover:shadow-lg" style="background:var(--accent)"><i class="fa-brands fa-telegram mr-1"></i>Konfirmasi via Bot</a>
+                <button onclick="document.getElementById('orderModal').className='fixed inset-0 z-50 hidden'" class="mt-3 text-xs text-slate-400 hover:text-white transition-colors">Tutup</button>
             </div>`;
         } else {
             alert(data.message || 'Gagal membuat pesanan');

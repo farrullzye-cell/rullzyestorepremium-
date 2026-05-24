@@ -4,10 +4,21 @@ const fs = require('fs');
 const cors = require("cors");
 const crypto = require('crypto');
 
+const security = require('./anti_fraud.js');
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+const getAdminPin = () => { const cfg = getConfig(); return cfg.adminPin || '858486'; };
+
+// Admin auth middleware
+const adminAuth = (req, res, next) => {
+    const pin = req.headers['x-admin-pin'];
+    const validPin = getAdminPin();
+    if (pin !== validPin) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    next();
+};
 
 const PORT = process.env.PORT || 3000;
 
@@ -39,10 +50,23 @@ const getCelestialSignature = (apiKey, secret) => crypto.createHash('md5').updat
 const ppob = require('./ppob.js');
 
 // ================= 3. LOAD BOT SYSTEM =================
-const { bot, sendBroadcast, notifyAffiliateApproved, notifyAffiliateRejected, notifyWithdrawSuccess, notifyWithdrawRejected } = require('./bot.js');
+const { bot, sendBroadcast, notifyAffiliateApproved, notifyAffiliateRejected, notifyWithdrawSuccess, notifyWithdrawRejected, notifyGroupAffiliateNew, notifyGroupOrderNew, notifyGroupOrderSuccess, notifyGroupWithdrawNew, notifyGroupWithdrawProcessed, notifyGroupError, notifyGroupCommission, notifyGroupStockUpdate } = require('./bot.js');
 
 // Load affiliate API
 require('./affiliate_api.js')(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL);
+
+// ================= ADMIN: AUTH ENDPOINT =================
+app.post('/api/admin/auth', (req, res) => {
+    const { pin } = req.body;
+    if (pin === getAdminPin()) return res.json({ success: true });
+    res.json({ success: false, message: 'PIN salah!' });
+});
+
+// Apply admin auth to all /api/admin routes below
+app.use('/api/admin', (req, res, next) => {
+    if (req.path === '/auth') return next();
+    adminAuth(req, res, next);
+});
 
 // ================= 4. API ADMIN DASHBOARD =================
 app.get('/api/admin/users', async (req, res) => { res.json(await getUsers()); });
@@ -129,10 +153,10 @@ app.post('/api/admin/affiliate/approve', async (req, res) => {
         users[idx].affiliatePending = false;
         users[idx].affiliateApprovedAt = new Date().toISOString();
         await saveUsers(users);
-        // Notif ke user via bot (dengan link toko)
         if (bot && notifyAffiliateApproved) {
             notifyAffiliateApproved(users[idx].chatId, users[idx].randomId).catch(() => {});
         }
+        notifyGroupAffiliateNew(users[idx]).catch(() => {});
     }
     res.json({ success: true });
 });
@@ -201,6 +225,18 @@ app.post('/api/admin/affiliate-config', (req, res) => {
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
+// ================= ADMIN: AUDIT LOGS =================
+app.get('/api/admin/audit-logs', async (req, res) => {
+    try {
+        const r = await axios.get(`${FIREBASE_URL}/audit_logs.json`);
+        const logs = r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : [];
+        res.json({ success: true, logs: logs.reverse().slice(0, 200) });
+    } catch(e) { res.json({ success: false, logs: [] }); }
+});
+
+// Bersihkan rate limiter setiap 10 menit
+setInterval(() => security.cleanupRateLimitStore(), 600000);
+
 // ================= ADMIN: DATABASE STATS =================
 app.get('/api/admin/database/stats', async (req, res) => {
     try {
@@ -231,7 +267,6 @@ app.get('/api/admin/database/stats', async (req, res) => {
         });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
-
 // ================= ADMIN: CHECK OUTBOUND IP =================
 app.get('/api/admin/check-ip', async (req, res) => {
     try {
@@ -357,12 +392,14 @@ app.post('/api/admin/withdraw/process', async (req, res) => {
                 await saveUsers(users);
                 if (bot && users[uIdx].chatId) notifyWithdrawRejected(users[uIdx].chatId, wds[idx].amount);
             }
+            notifyGroupWithdrawProcessed(wds[idx], 'DITOLAK').catch(() => {});
         } else if (status === 'SUKSES') {
             let users = await getUsers();
             const uIdx = users.findIndex(u => u.randomId === wds[idx].randomId);
             if (uIdx !== -1 && bot && users[uIdx].chatId) {
                 notifyWithdrawSuccess(users[uIdx].chatId, wds[idx].amount);
             }
+            notifyGroupWithdrawProcessed(wds[idx], 'SUKSES').catch(() => {});
         }
         await saveWithdraws(wds);
         res.json({ success: true });
@@ -532,7 +569,9 @@ app.get('/api/store-info', (req, res) => {
 
 app.post('/api/cek-nickname', async (req, res) => {
     const { service, target, targetZone } = req.body;
-    const merchantId = "M260509ODXD2721YR"; const secretKey = "1acc0d975e70085616865c54b144f15fd1c1405cfe1d0197c5abd8ec8d23b41b";
+    const cfg = getConfig();
+    const merchantId = cfg.apigamesMerchantId || ""; const secretKey = cfg.apigamesSecretKey || "";
+    if (!merchantId || !secretKey) return res.json({ success: false, message: "Cek nickname tidak tersedia." });
     try {
         let gameSlug = ""; let sku = service.toLowerCase();
         if (sku.includes('ml') || sku.includes('mobile')) gameSlug = "mobilelegend";
@@ -745,6 +784,7 @@ app.post('/api/ppob-order', async (req, res) => {
             productStatus: 'Aktif'
         });
         await saveOrders(orders);
+        notifyGroupOrderNew(orders[orders.length - 1]).catch(() => {});
 
         const invoiceAmount = deposit.data.amount_total || finalAmount;
         const qrUrl = deposit.data.qr_image || deposit.data.pay_url || '';
@@ -1022,6 +1062,158 @@ async function autoProc() {
 }
 setInterval(autoProc, 10000);
 
+// ================= RESELLER API ENDPOINTS =================
+app.post('/api/reseller/dashboard', async (req, res) => {
+    try {
+        const { randomId } = req.body;
+        if (!randomId) return res.json({ success: false, message: 'Random ID diperlukan.' });
+        const users = await getUsers();
+        const user = users.find(u => u.randomId === randomId && u.isReseller);
+        if (!user) return res.json({ success: false, message: 'Reseller tidak ditemukan.' });
+        const orders = (await getOrders()).filter(o => o.buyerRandomId === randomId);
+        const totalSales = orders.filter(o => o.status === 'SUKSES').length;
+        const totalRevenue = orders.filter(o => o.status === 'SUKSES').reduce((s, o) => s + (o.displayPrice || 0), 0);
+        res.json({
+            success: true,
+            profile: { name: user.firstName || 'Reseller', balance: user.balance || 0, randomId: user.randomId },
+            stats: { totalOrders: orders.length, totalSales, totalRevenue, markup: user.markup || 0 },
+            recentOrders: orders.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 20)
+        });
+    } catch (e) { res.json({ success: false, message: e.message }); }
+});
+
+app.post('/api/reseller/withdraw', async (req, res) => {
+    try {
+        const { randomId, amount, bankDetails } = req.body;
+        if (!randomId || !amount || !bankDetails) return res.json({ success: false, message: 'Data tidak lengkap.' });
+        let users = await getUsers();
+        const idx = users.findIndex(u => u.randomId === randomId && u.isReseller);
+        if (idx === -1) return res.json({ success: false, message: 'Reseller tidak ditemukan.' });
+        if ((users[idx].balance || 0) < amount) return res.json({ success: false, message: 'Saldo tidak mencukupi.' });
+        users[idx].balance -= amount;
+        await saveUsers(users);
+        let wds = await getWithdraws();
+        wds.push({ id: 'WD-R-' + Date.now(), randomId, amount: parseInt(amount), bankDetails, status: 'PENDING', date: new Date().toISOString(), type: 'RESELLER' });
+        await saveWithdraws(wds);
+        res.json({ success: true, message: 'Permintaan withdraw diajukan. Tunggu konfirmasi admin.' });
+    } catch (e) { res.json({ success: false, message: e.message }); }
+});
+
+app.post('/api/reseller/set-markup', async (req, res) => {
+    try {
+        const { randomId, markup } = req.body;
+        if (!randomId || markup === undefined) return res.json({ success: false, message: 'Data tidak lengkap.' });
+        let users = await getUsers();
+        const idx = users.findIndex(u => u.randomId === randomId && u.isReseller);
+        if (idx === -1) return res.json({ success: false, message: 'Reseller tidak ditemukan.' });
+        users[idx].markup = parseInt(markup) || 0;
+        await saveUsers(users);
+        res.json({ success: true, message: 'Markup berhasil diperbarui.' });
+    } catch (e) { res.json({ success: false, message: e.message }); }
+});
+
+// ================= STOCK UPDATE NOTIFICATION =================
+app.post('/api/admin/notify-stock', async (req, res) => {
+    try {
+        const mixedRes = await axios.get(`http://localhost:${PORT}/api/mixed-products`);
+        if (mixedRes.data?.success) {
+            const products = mixedRes.data.products;
+            const lowStock = products.filter(p => p.stock !== undefined && p.stock < 10);
+            const outOfStock = products.filter(p => p.stock === 0);
+            const msg = `📊 *LAPORAN STOK PRODUK*\n\n✅ Total Produk: ${products.length}\n⚠️ Stok Menipis (<10): ${lowStock.length}\n❌ Habis: ${outOfStock.length}`;
+            await notifyGroupStockUpdate(products).catch(() => {});
+            res.json({ success: true, message: msg });
+        } else {
+            res.json({ success: false, message: 'Gagal mengambil produk.' });
+        }
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+// ================= ADMIN: NEW ENDPOINTS =================
+app.post('/api/admin/users/edit', async (req, res) => {
+    try {
+        const { randomId, name, balance, affiliateBalance } = req.body;
+        let users = await getUsers();
+        const idx = users.findIndex(u => u.randomId === randomId);
+        if (idx === -1) return res.json({ success: false, message: 'User tidak ditemukan.' });
+        if (name !== undefined) users[idx].firstName = name;
+        if (balance !== undefined) users[idx].balance = parseInt(balance);
+        if (affiliateBalance !== undefined) users[idx].affiliateBalance = parseInt(affiliateBalance);
+        await saveUsers(users);
+        res.json({ success: true });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+app.post('/api/admin/order/force-status', async (req, res) => {
+    try {
+        const { id, status } = req.body;
+        let orders = await getOrders();
+        const idx = orders.findIndex(o => o.idDeposit === id || o.idOrder === id);
+        if (idx === -1) return res.json({ success: false, message: 'Order tidak ditemukan.' });
+        orders[idx].status = status;
+        orders[idx].accountDetails = orders[idx].accountDetails || `Manual: ${status}`;
+        await saveOrders(orders);
+        if (status === 'SUKSES' && app.processAffiliateCommission) {
+            app.processAffiliateCommission(orders[idx]).catch(()=>{});
+        }
+        res.json({ success: true });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+app.post('/api/admin/affiliate/add-balance', async (req, res) => {
+    try {
+        const { randomId, amount } = req.body;
+        let users = await getUsers();
+        const idx = users.findIndex(u => u.randomId === randomId && u.isAffiliate);
+        if (idx === -1) return res.json({ success: false, message: 'Affiliate tidak ditemukan.' });
+        users[idx].affiliateBalance = (users[idx].affiliateBalance || 0) + parseInt(amount);
+        await saveUsers(users);
+        res.json({ success: true, message: `Saldo komisi ditambahkan Rp ${parseInt(amount).toLocaleString('id-ID')}` });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+app.post('/api/admin/change-pin', async (req, res) => {
+    try {
+        const { oldPin, newPin } = req.body;
+        if (oldPin !== getAdminPin()) return res.json({ success: false, message: 'PIN lama salah.' });
+        if (!newPin || newPin.length < 4) return res.json({ success: false, message: 'PIN baru minimal 4 karakter.' });
+        const cfg = getConfig();
+        cfg.adminPin = newPin;
+        saveConfig(cfg);
+        res.json({ success: true, message: 'PIN berhasil diganti!' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+app.post('/api/admin/save-groups', async (req, res) => {
+    try {
+        const { groupIds } = req.body;
+        const cfg = getConfig();
+        cfg.groupIds = groupIds;
+        saveConfig(cfg);
+        res.json({ success: true });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+app.post('/api/admin/test-group', async (req, res) => {
+    try {
+        const { groupId } = req.body;
+        if (!bot) return res.json({ success: false, message: 'Bot tidak aktif.' });
+        await bot.sendMessage(groupId, '🧪 *Test Notifikasi*\n\nPesan ini adalah test. Jika kamu melihat ini, grup berhasil terhubung! ✅', { parse_mode: 'Markdown' });
+        res.json({ success: true, message: 'Pesan test terkirim!' });
+    } catch(e) { res.json({ success: false, message: 'Gagal: ' + e.message }); }
+});
+
+app.post('/api/admin/database/reset', async (req, res) => {
+    try {
+        await saveUsers([]);
+        await saveOrders([]);
+        const wds = await getWithdraws();
+        const processed = wds.filter(w => w.status !== 'PENDING');
+        await saveWithdraws(processed);
+        res.json({ success: true, message: 'Database direset. Data pending withdrawal dipertahankan.' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
 // ================= 13. DOWNLOAD SKU =================
 app.get('/api/reseller/download-sku', async (req, res) => {
     const cfg = getConfig();
@@ -1053,5 +1245,8 @@ app.get('/api/topup-products-debug', async (req, res) => {
     }
 });
 
-process.on('uncaughtException', (err) => console.error('Error:', err));
+process.on('uncaughtException', (err) => {
+    console.error('Error:', err);
+    notifyGroupError(`Uncaught Exception: ${err.message}`).catch(() => {});
+});
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server berjalan di port ${PORT}`));
