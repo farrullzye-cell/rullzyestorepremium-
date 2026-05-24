@@ -581,6 +581,37 @@ async function loadTab(tab){
             <button onclick="saveBanners()" class="btn-primary w-full">Simpan Banner</button></div>`;
             c.innerHTML=h;
         }
+        // =============== 22b. TESTIMONI ===============
+        else if(tab==='testimoni'){
+            const r=await api('/api/admin/testimonials').then(r=>r.json());
+            const testimoni=r.testimonials||[];
+            let h=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Testimoni Pelanggan (${testimoni.length})</h2><button onclick="loadTab('testimoni')" class="text-violet-400"><i class="fa-solid fa-rotate"></i></button></div>
+            <div class="card p-4 mb-4">
+                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-plus mr-2"></i>Tambah Testimoni</h3>
+                <div class="grid sm:grid-cols-3 gap-3 mb-3">
+                    <div><label class="text-[10px] text-slate-400 block">Nama Pelanggan</label><input id="tm-name" class="input-dark" placeholder="Budi Santoso"></div>
+                    <div><label class="text-[10px] text-slate-400 block">Layanan</label><input id="tm-service" class="input-dark" placeholder="Top Up ML"></div>
+                    <div><label class="text-[10px] text-slate-400 block">Rating (1-5)</label><input id="tm-rating" class="input-dark" type="number" min="1" max="5" value="5"></div>
+                </div>
+                <div class="mb-3"><label class="text-[10px] text-slate-400 block">Testimoni</label><textarea id="tm-content" class="input-dark" rows="2" placeholder="Tuliskan pengalaman pelanggan..."></textarea></div>
+                <button onclick="saveTestimoni()" class="btn-primary text-xs"><i class="fa-solid fa-save"></i> Simpan Testimoni</button>
+            </div>
+            <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
+                <tr><th class="p-2 text-[10px]">Nama</th><th class="p-2 text-[10px]">Layanan</th><th class="p-2 text-[10px]">Rating</th><th class="p-2 text-[10px]">Testimoni</th><th class="p-2 text-[10px] text-center">Aktif</th><th class="p-2 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
+            testimoni.forEach(t=>{
+                h+=`<tr class="border-b border-white/5"><td class="p-2 text-xs font-bold">${t.name}</td>
+                <td class="p-2 text-[10px]">${t.service||'-'}</td>
+                <td class="p-2">${'<i class="fa-solid fa-star text-amber-400 text-[9px]"></i>'.repeat(Math.min(t.rating||5,5))}</td>
+                <td class="p-2 text-[10px] text-slate-400 max-w-[250px] truncate">"${t.content}"</td>
+                <td class="p-2 text-center">${t.approved!==false?'<span class="badge-ok">Ya</span>':'<span class="badge-err">Tidak</span>'}</td>
+                <td class="p-2 text-center">
+                    <button onclick="toggleTestimoni('${t.id}')" class="text-[10px] ${t.approved!==false?'bg-amber-600':'bg-emerald-600'} px-2 py-0.5 rounded mr-1">${t.approved!==false?'Sembunyi':'Tampilkan'}</button>
+                    <button onclick="deleteTestimoni('${t.id}')" class="text-[10px] bg-red-600 px-2 py-0.5 rounded">Hapus</button>
+                </td></tr>`;
+            });
+            h+=`</tbody></table></div>`;
+            c.innerHTML=h;
+        }
         // =============== 23. CONTENT PAGES ===============
         else if(tab==='content'){
             c.innerHTML=`<h2 class="text-xl font-black mb-4">Manajemen Halaman Konten</h2>
@@ -821,6 +852,36 @@ async function testSMM(){
     try{const r=await fetch('/api/smm-products').then(r=>r.json());document.getElementById('smm-test').innerHTML=r.success?`<span class="text-emerald-400 font-bold">✅ ${r.data?.length||0} services</span>`:'<span class="text-red-400">❌ Gagal</span>';}catch(e){document.getElementById('smm-test').innerHTML='<span class="text-red-400">Error</span>';}
 }
 
+// Testimoni functions
+window.saveTestimoni=async function(){
+    const name=document.getElementById('tm-name').value.trim();
+    const service=document.getElementById('tm-service').value.trim();
+    const rating=parseInt(document.getElementById('tm-rating').value)||5;
+    const content=document.getElementById('tm-content').value.trim();
+    if(!name||!content) return alert('Nama dan testimoni wajib diisi');
+    const r=await api('/api/admin/testimonials',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,service,rating,content})});
+    const d=await r.json();
+    alert(d.message);
+    if(d.success){document.getElementById('tm-name').value='';document.getElementById('tm-service').value='';document.getElementById('tm-content').value='';}
+    loadTab('testimoni');
+};
+window.toggleTestimoni=async function(id){
+    const r=await api('/api/admin/testimonials').then(r=>r.json());
+    const t=(r.testimonials||[]).find(x=>x.id===id);
+    if(!t) return alert('Testimoni tidak ditemukan');
+    const newVal=t.approved!==false?false:true;
+    const r2=await api('/api/admin/testimonials/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({approved:newVal})});
+    const d=await r2.json();
+    alert(d.message);
+    loadTab('testimoni');
+};
+window.deleteTestimoni=async function(id){
+    if(!confirm('Hapus testimoni ini?')) return;
+    const r=await api('/api/admin/testimonials/'+id,{method:'DELETE'});
+    const d=await r.json();
+    alert(d.message);
+    loadTab('testimoni');
+};
 // Panel functions
 let editingPanelId = null;
 let deliveringPanelId = null;

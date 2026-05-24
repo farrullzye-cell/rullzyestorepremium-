@@ -44,6 +44,9 @@ const saveWithdraws = async (wds) => { try { await axios.put(`${FIREBASE_URL}/wi
 const getWebUsers = async () => { try { const res = await axios.get(`${FIREBASE_URL}/webUsers.json`); return res.data ? (Array.isArray(res.data) ? res.data : Object.values(res.data)) : []; } catch (e) { return []; } };
 const saveWebUsers = async (users) => { try { await axios.put(`${FIREBASE_URL}/webUsers.json`, users); } catch (e) { } };
 
+const getTestimonials = async () => { try { const r = await axios.get(`${FIREBASE_URL}/testimonials.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
+const saveTestimonials = async (data) => { try { await axios.put(`${FIREBASE_URL}/testimonials.json`, data); } catch(e) {} };
+
 const getPanelProducts = async () => { try { const r = await axios.get(`${FIREBASE_URL}/panel_products.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const savePanelProducts = async (data) => { try { await axios.put(`${FIREBASE_URL}/panel_products.json`, data); } catch(e) {} };
 const getPanelOrders = async () => { try { const r = await axios.get(`${FIREBASE_URL}/panel_orders.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
@@ -1312,6 +1315,45 @@ app.post('/api/admin/panel/deliver/:id', async (req, res) => {
             bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' }).catch(()=>{});
         }
         res.json({ success: true, message: 'Panel berhasil dikirim ke pembeli' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+// Testimoni CRUD endpoints
+app.get('/api/testimonials', async (req, res) => {
+    const testimonials = await getTestimonials();
+    res.json({ success: true, testimonials: testimonials.filter(t => t.approved !== false) });
+});
+app.post('/api/admin/testimonials', async (req, res) => {
+    try {
+        const testimonials = await getTestimonials();
+        const { name, service, rating, content } = req.body;
+        if (!name || !content) return res.json({ success: false, message: 'Nama dan konten wajib diisi' });
+        const id = 'T-' + Date.now().toString(36).toUpperCase();
+        testimonials.push({
+            id, name: name.trim(), service: service||'Produk Digital',
+            rating: parseInt(rating)||5, content: content.trim(),
+            approved: true, createdAt: new Date().toISOString()
+        });
+        await saveTestimonials(testimonials);
+        res.json({ success: true, id, message: 'Testimoni berhasil ditambahkan' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+app.put('/api/admin/testimonials/:id', async (req, res) => {
+    try {
+        let testimonials = await getTestimonials();
+        const idx = testimonials.findIndex(t => t.id === req.params.id);
+        if (idx === -1) return res.json({ success: false, message: 'Testimoni tidak ditemukan' });
+        Object.keys(req.body).forEach(k => { if (k !== 'id') testimonials[idx][k] = req.body[k]; });
+        await saveTestimonials(testimonials);
+        res.json({ success: true, message: 'Testimoni diupdate' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+app.delete('/api/admin/testimonials/:id', async (req, res) => {
+    try {
+        let testimonials = await getTestimonials();
+        testimonials = testimonials.filter(t => t.id !== req.params.id);
+        await saveTestimonials(testimonials);
+        res.json({ success: true, message: 'Testimoni dihapus' });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 

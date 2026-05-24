@@ -510,7 +510,38 @@ function showFomo() {
 }
 setTimeout(() => { showFomo(); setInterval(showFomo, 7000); }, 2500);
 
+// Testimoni
+async function loadTestimonials() {
+    try {
+        const r = await fetch('/api/testimonials');
+        const d = await r.json();
+        const list = document.getElementById('testimoni-list');
+        if (!list) return;
+        if (!d.success || !d.testimonials || d.testimonials.length === 0) {
+            list.innerHTML = '<div class="col-span-full text-center py-8 text-slate-500"><i class="fa-solid fa-comment-slash text-3xl mb-2"></i><p class="text-sm">Belum ada testimoni.</p></div>';
+            return;
+        }
+        list.innerHTML = d.testimonials.map(t => `
+            <div class="card-premium p-4 sm:p-5">
+                <div class="flex items-center gap-2 mb-2 sm:mb-3">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-black text-xs sm:text-sm flex-shrink-0">${t.name.charAt(0).toUpperCase()}</div>
+                    <div class="min-w-0">
+                        <p class="text-xs sm:text-sm font-bold text-white truncate">${t.name}</p>
+                        <p class="text-[9px] sm:text-[10px] text-slate-500 truncate">${t.service||'Produk Digital'}</p>
+                    </div>
+                    <div class="ml-auto flex gap-0.5">${'<i class="fa-solid fa-star text-amber-400 text-[9px] sm:text-[10px]"></i>'.repeat(Math.min(t.rating||5,5))}</div>
+                </div>
+                <p class="text-[11px] sm:text-xs text-slate-400 leading-relaxed">"${t.content}"</p>
+            </div>
+        `).join('');
+    } catch(e) {
+        const list = document.getElementById('testimoni-list');
+        if (list) list.innerHTML = '<div class="col-span-full text-center py-8 text-slate-500">Gagal memuat testimoni.</div>';
+    }
+}
+
 // Init
 loadBanners();
 loadProducts();
+loadTestimonials();
 updateWebUserButton();
