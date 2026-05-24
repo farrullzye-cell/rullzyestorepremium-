@@ -230,9 +230,9 @@ async function loadTab(tab){
         else if(tab==='affiliate'){
             const [users,stats]=await Promise.all([api('/api/admin/users').then(r=>r.json()),api('/api/affiliate/stats').then(r=>r.json())]);
             const aff=users.filter(u=>u.isAffiliate||u.affiliatePending);
-            let h=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Affiliate (${stats.totalAffiliate||0})</h2></div>`;
+            let ah=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Affiliate (${stats.totalAffiliate||0})</h2></div>`;
             if(stats.success){
-                h+=`<div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
+                ah+=`<div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
                     <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Aktif</p><h3 class="text-xl font-black mt-1 text-indigo-400">${stats.totalAffiliate}</h3></div>
                     <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Pending</p><h3 class="text-xl font-black mt-1 text-amber-400">${stats.pendingAffiliate}</h3></div>
                     <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Komisi Terbayar</p><h3 class="text-sm font-black mt-1 text-emerald-400">${formatRp(stats.totalCommissionPaid)}</h3></div>
@@ -240,10 +240,10 @@ async function loadTab(tab){
                     <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Menunggu Cair</p><h3 class="text-sm font-black mt-1 text-rose-400">${formatRp(stats.totalCommissionGenerated-stats.totalCommissionPaid)}</h3></div>
                 </div>`;
             }
-            h+=`<div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
+            ah+=`<div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
                 <tr><th class="p-2 text-[10px]">Nama</th><th class="p-2 text-[10px] text-center">Status</th><th class="p-2 text-[10px] text-right">Saldo</th><th class="p-2 text-[10px] text-right">Earned</th><th class="p-2 text-[10px] text-center">PPOB</th><th class="p-2 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
             aff.forEach(a=>{
-                h+=`<tr class="border-b border-white/5"><td class="p-2 font-bold text-xs">${a.affiliateName||a.firstName||'-'}<br><code class="text-[10px] text-slate-400 font-normal">${a.randomId}</code></td>
+                ah+=`<tr class="border-b border-white/5"><td class="p-2 font-bold text-xs">${a.affiliateName||a.firstName||'-'}<br><code class="text-[10px] text-slate-400 font-normal">${a.randomId}</code></td>
                 <td class="p-2 text-center">${a.isAffiliate?'<span class="badge-ok">Aktif</span>':a.affiliatePending?'<span class="badge-warn">Pending</span>':'<span class="badge-err">Ditolak</span>'}</td>
                 <td class="p-2 text-right font-bold text-emerald-400 text-xs">${formatRp(a.affiliateBalance)}</td>
                 <td class="p-2 text-right font-bold text-violet-400 text-xs">${formatRp(a.totalEarned)}</td>
@@ -254,8 +254,8 @@ async function loadTab(tab){
                     <button onclick="addAffiliateBalance('${a.randomId}')" class="text-[10px] bg-amber-600 px-2 py-0.5 rounded">TopUp</button>`:''}
                 </td></tr>`;
             });
-            h+=`</tbody></table></div>`;
-            c.innerHTML=h;
+            ah+=`</tbody></table></div>`;
+            c.innerHTML=ah;
         }
         // =============== 11. AFFILIATE CONFIG ===============
         else if(tab==='affconfig'){
@@ -369,17 +369,17 @@ async function loadTab(tab){
         else if(tab==='audit'){
             const r=await api('/api/affiliate/audit-logs').then(r=>r.json());
             const logs=r.logs||[];
-            c.innerHTML=`<h2 class="text-xl font-black mb-4">Audit Log (${logs.length})</h2>
+            let ah=`<h2 class="text-xl font-black mb-4">Audit Log (${logs.length})</h2>
             <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
                 <tr><th class="p-2.5 text-[10px]">Waktu</th><th class="p-2.5 text-[10px]">Aksi</th><th class="p-2.5 text-[10px]">User</th><th class="p-2.5 text-[10px]">IP</th><th class="p-2.5 text-[10px]">Detail</th></tr></thead><tbody>`;
             logs.forEach(l=>{
-                h+=`<tr class="border-b border-white/5 text-xs"><td class="p-2.5 text-[10px] text-slate-400">${l.timestamp?.substring(0,19).replace('T',' ')||'-'}</td>
+                ah+=`<tr class="border-b border-white/5 text-xs"><td class="p-2.5 text-[10px] text-slate-400">${l.timestamp?.substring(0,19).replace('T',' ')||'-'}</td>
                 <td class="p-2.5 font-bold">${l.action||'-'}</td><td class="p-2.5 text-violet-300">${l.randomId||l.data?.randomId||'-'}</td>
                 <td class="p-2.5 text-slate-500 font-mono text-[10px]">${l.ip||l.data?.ip||'-'}</td>
                 <td class="p-2.5 text-slate-400 max-w-[200px] truncate">${JSON.stringify(l.data||l.amount||l.bankDetails||'')}</td></tr>`;
             });
-            h+=`</tbody></table></div>`;
-            c.innerHTML=h;
+            ah+=`</tbody></table></div>`;
+            c.innerHTML=ah;
         }
         // =============== 17. GROUPS ===============
         else if(tab==='groups'){
@@ -609,6 +609,14 @@ async function saveAffConfig(){
     await api('/api/admin/affiliate-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
     alert('Pengaturan Affiliate disimpan!');
 }
+
+window.filterUserTable=async function(q){
+    const div=document.getElementById('userSearchResults');
+    if(!q.trim()){div.innerHTML='';return;}
+    const users=await api('/api/admin/users').then(r=>r.json());
+    const f=users.filter(u=>(u.firstName||'').toLowerCase().includes(q.toLowerCase())||(u.randomId||'').toLowerCase().includes(q.toLowerCase()));
+    div.innerHTML=f.length?`<table class="w-full text-sm"><tbody>${f.slice(0,20).map(u=>`<tr class="border-b border-white/5"><td class="p-2 text-xs font-bold">${u.firstName||'-'}</td><td class="p-2"><code class="text-[10px] text-violet-300">${u.randomId||'-'}</code></td><td class="p-2 text-right text-xs">${formatRp(u.balance)}</td></tr>`).join('')}</tbody></table>`:'<p class="text-xs text-slate-500 py-4 text-center">Tidak ditemukan</p>';
+};
 
 window.deleteUser=async function(rid){
     if(!confirm('Yakin hapus user ini?')) return;

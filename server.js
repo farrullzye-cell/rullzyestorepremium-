@@ -85,10 +85,7 @@ app.post('/api/admin/withdraws/acc', async (req, res) => {
     if(index !== -1) { wds[index].status = 'SUKSES'; await saveWithdraws(wds); }
     res.json({success: true});
 });
-app.post('/api/admin/broadcast', async (req, res) => {
-    await sendBroadcast(req.body.message);
-    res.json({ success: true });
-});
+// Broadcast handler di baris 329
 
 app.post('/api/web-user/register', async (req, res) => {
     try {
@@ -331,16 +328,8 @@ app.post('/api/admin/broadcast', async (req, res) => {
         const { message } = req.body;
         if (!message) return res.json({ success: false, message: 'Pesan kosong.' });
         if (!bot) return res.json({ success: false, message: 'Bot tidak aktif.' });
-        
-        const users = await getUsers();
-        let count = 0;
-        for (const u of users) {
-            if (u.chatId) {
-                bot.sendMessage(u.chatId, `📢 *PENGUMUMAN*\n\n${message}`, { parse_mode: 'Markdown' }).catch(()=>{});
-                count++;
-            }
-        }
-        res.json({ success: true, message: `Pesan berhasil dikirim ke ${count} pengguna.` });
+        await sendBroadcast(message);
+        res.json({ success: true, message: 'Broadcast berhasil dikirim ke semua user.' });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
@@ -367,14 +356,14 @@ app.post('/api/admin/withdraw/process', async (req, res) => {
             if (uIdx !== -1) {
                 users[uIdx].affiliateBalance = (users[uIdx].affiliateBalance || 0) + wds[idx].amount;
                 await saveUsers(users);
-                if (bot && users[uIdx].chatId) notifyWithdrawRejected(users[uIdx].chatId, wds[idx].amount);
+                if (bot && users[uIdx].chatId) notifyWithdrawRejected(users[uIdx].chatId, wds[idx], '');
             }
             notifyGroupWithdrawProcessed(wds[idx], 'DITOLAK').catch(() => {});
         } else if (status === 'SUKSES') {
             let users = await getUsers();
             const uIdx = users.findIndex(u => u.randomId === wds[idx].randomId);
             if (uIdx !== -1 && bot && users[uIdx].chatId) {
-                notifyWithdrawSuccess(users[uIdx].chatId, wds[idx].amount);
+                notifyWithdrawSuccess(users[uIdx].chatId, wds[idx]);
             }
             notifyGroupWithdrawProcessed(wds[idx], 'SUKSES').catch(() => {});
         }
