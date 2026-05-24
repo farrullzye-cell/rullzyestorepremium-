@@ -609,7 +609,8 @@ async function loadTab(tab){
                     <button onclick="deleteTestimoni('${t.id}')" class="text-[10px] bg-red-600 px-2 py-0.5 rounded">Hapus</button>
                 </td></tr>`;
             });
-            h+=`</tbody></table></div>`;
+            h+=`</tbody></table></div>
+            <button onclick="seedTestimoni()" class="mt-3 text-[10px] bg-amber-600/30 text-amber-400 px-3 py-1.5 rounded-xl hover:bg-amber-600 hover:text-white transition"><i class="fa-solid fa-database mr-1"></i> Seed 10 Testimoni Dummy</button>`;
             c.innerHTML=h;
         }
         // =============== 23. CONTENT PAGES ===============
@@ -878,6 +879,13 @@ window.toggleTestimoni=async function(id){
 window.deleteTestimoni=async function(id){
     if(!confirm('Hapus testimoni ini?')) return;
     const r=await api('/api/admin/testimonials/'+id,{method:'DELETE'});
+    const d=await r.json();
+    alert(d.message);
+    loadTab('testimoni');
+};
+window.seedTestimoni=async function(){
+    if(!confirm('Tambahkan 10 testimoni dummy? Testimoni yang sudah ada TIDAK akan dihapus.')) return;
+    const r=await api('/api/admin/testimonials/seed',{method:'POST'});
     const d=await r.json();
     alert(d.message);
     loadTab('testimoni');

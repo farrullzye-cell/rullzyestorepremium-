@@ -1328,6 +1328,22 @@ app.get('/api/testimonials', async (req, res) => {
         res.status(500).json({ success: false, message: e.message });
     }
 });
+app.post('/api/testimonials/submit', async (req, res) => {
+    try {
+        const { name, service, rating, content } = req.body;
+        if (!name || !content || content.length < 10) return res.json({ success: false, message: 'Nama wajib diisi, testimoni minimal 10 karakter' });
+        let testimonials = await getTestimonials();
+        const id = 'T-' + Date.now().toString(36).toUpperCase();
+        testimonials.push({
+            id, name: name.trim(), service: service||'Produk Digital',
+            rating: Math.min(parseInt(rating)||5,5), content: content.trim(),
+            approved: false, screenshot: '',
+            createdAt: new Date().toISOString()
+        });
+        await saveTestimonials(testimonials);
+        res.json({ success: true, message: 'Testimoni terkirim! Menunggu verifikasi admin.' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
 app.post('/api/admin/testimonials', async (req, res) => {
     try {
         const testimonials = await getTestimonials();
@@ -1359,6 +1375,30 @@ app.delete('/api/admin/testimonials/:id', async (req, res) => {
         testimonials = testimonials.filter(t => t.id !== req.params.id);
         await saveTestimonials(testimonials);
         res.json({ success: true, message: 'Testimoni dihapus' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+app.post('/api/admin/testimonials/seed', async (req, res) => {
+    try {
+        const dummies = [
+            { name: 'Rizky Pratama', service: 'Top Up Mobile Legends 86 DM', rating: 5, content: 'Beli diamond ML di sini udah 3 kali. Proses cepat banget, bayar QRIS langsung masuk. Recomended banget buat yang butuh top up game murah dan cepat!', screenshot: 'https://i.imgur.com/placeholder1.jpg' },
+            { name: 'Siti Nurhaliza', service: 'Netflix Premium 4K', rating: 5, content: 'Udah 2 bulan langganan Netflix dari sini. Akun masih aman, streaming lancar jaya. Admin fast respon juga pas tanya-tanya. Makasih RullzyeStore!', screenshot: '' },
+            { name: 'Dimas Ardiansyah', service: 'Paket Data Telkomsel 30GB', rating: 5, content: 'Butuh kuota darurat buat meeting, langsung order di sini. 1 menit langsung masuk. Gak nyangka semudah ini. Pasti bakal order lagi!', screenshot: '' },
+            { name: 'Ayu Lestari', service: 'Spotify Premium 1 Tahun', rating: 5, content: 'Dapat spotify premium setahun dengan harga murah banget. Prosesnya cepet, dikirim ke email. Udah rekomen ke temen-temen semua. Mantap!', screenshot: '' },
+            { name: 'Fajar Ramadhan', service: 'Free Fire 140 Diamonds', rating: 4, content: 'Top up FF lumayan sering di sini. Harganya bersaing sama yang lain, kadang lebih murah. Proses otomatis jadi gampang. 4 bintang aja karena kadang agak lama pas jam sibuk.', screenshot: '' },
+            { name: 'Dewi Sartika', service: 'Panel Pterodactyl 4GB', rating: 5, content: 'Beli panel server minecraft buat main bareng temen. Dapat akses panel lengkap, tinggal install server. Harganya juga murah meriah. Puas banget!', screenshot: '' },
+            { name: 'Budi Hartono', service: 'Token Listrik PLN 200rb', rating: 5, content: 'Biasanya beli token listrik lewat sini karena prosesnya cepet dan bisa bayar QRIS. Gak perlu antri, tinggal order langsung masuk. Sangat praktis!', screenshot: '' },
+            { name: 'Rina Melati', service: 'Youtube Premium 3 Bulan', rating: 5, content: 'Nonton youtube tanpa iklan jadi lebih nyaman. Harga lebih murah dari langganan resmi. Udah repeat order 2 kali, selalu puas dengan pelayanannya.', screenshot: '' },
+            { name: 'Andi Saputra', service: 'Top Up PUBG UC', rating: 4, content: 'Top up UC PUBG lumayan sering. Harganya ok dan prosesnya cepat. Cuma kadang suka khawatir aja karena ini barang digital, tapi sejauh ini aman terus.', screenshot: '' },
+            { name: 'Mega Wulandari', service: 'SMM Panel Instagram Followers', rating: 5, content: 'Beli followers instagram untuk bisnis online. Turunnya bertahap jadi kelihatan natural. Pelayanannya ramah dan harganya murah. Recommended buat yang butuh sosmed!', screenshot: '' },
+        ];
+        let testimonials = await getTestimonials();
+        const startId = Date.now();
+        dummies.forEach((d, i) => {
+            const id = 'T-SEED-' + (startId + i).toString(36).toUpperCase();
+            testimonials.push({ ...d, id, approved: true, createdAt: new Date(Date.now() - (dummies.length - i) * 86400000).toISOString() });
+        });
+        await saveTestimonials(testimonials);
+        res.json({ success: true, message: `${dummies.length} testimoni dummy berhasil ditambahkan!` });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 

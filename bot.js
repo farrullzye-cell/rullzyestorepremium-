@@ -20,6 +20,8 @@ if (BOT_TOKEN) {
 
 const getUsers = async () => { try { const r = await axios.get(`${FIREBASE_URL}/users.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const saveUsers = async (u) => { try { await axios.put(`${FIREBASE_URL}/users.json`, u); } catch(e) {} };
+const getTestimonials = async () => { try { const r = await axios.get(`${FIREBASE_URL}/testimonials.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
+const saveTestimonials = async (data) => { try { await axios.put(`${FIREBASE_URL}/testimonials.json`, data); } catch(e) {} };
 
 const mainKeyboard = {
     reply_markup: {
@@ -373,6 +375,94 @@ if (bot) {
                 { parse_mode: "Markdown" }
             );
         } else bot.sendMessage(msg.chat.id, `Halo! Sepertinya kamu belum terdaftar. Ketik /start untuk mendaftar di *${cfg.storeName || 'Rullzye Store Premium'}* 😊`, { parse_mode: "Markdown" });
+    });
+
+    // Testimoni conversation state
+    const testimoniState = {};
+    bot.onText(/\/testimoni(?:\s+(.+))?/, async (msg, match) => {
+        const chatId = msg.chat.id;
+        const existing = match && match[1] ? match[1].trim() : null;
+        if (existing) {
+            // Format: Nama|Layanan|Rating|Teks
+            const parts = existing.split('|').map(s => s.trim());
+            if (parts.length >= 4) {
+                const [name, service, ratingStr, ...textParts] = parts;
+                const content = textParts.join('|');
+                let testimonials = await getTestimonials();
+                const id = 'T-' + Date.now().toString(36).toUpperCase();
+                testimonials.push({
+                    id, name, service: service||'Produk Digital',
+                    rating: Math.min(parseInt(ratingStr)||5,5),
+                    content, approved: true,
+                    screenshot: msg.photo ? (await bot.getFileLink(msg.photo[msg.photo.length-1].file_id)).catch(()=>'') : '',
+                    createdAt: new Date().toISOString()
+                });
+                await saveTestimonials(testimonials);
+                bot.sendMessage(chatId, `✅ *Testimoni berhasil ditambahkan!*\n\n👤 ${name}\n📦 ${service}\n⭐ ${'⭐'.repeat(Math.min(parseInt(ratingStr)||5,5))}\n💬 "${content}"`, { parse_mode: 'Markdown' });
+                return;
+            }
+        }
+        testimoniState[chatId] = { step: 'nama' };
+        bot.sendMessage(chatId,
+            `📝 *Buat Testimoni Baru*\n\nSilakan kirim *Nama* kamu:`,
+            { parse_mode: 'Markdown' }
+        );
+        setTimeout(() => { delete testimoniState[chatId]; }, 120000);
+    });
+
+    bot.on('message', async (msg) => {
+        if (!msg.text && !msg.photo) return;
+        const chatId = msg.chat.id;
+        const state = testimoniState[chatId];
+        if (!state) return;
+
+        if (state.step === 'nama') {
+            state.nama = msg.text.trim();
+            state.step = 'layanan';
+            bot.sendMessage(chatId, `👤 Nama: *${state.nama}*\n\nSekarang, kirim *Layanan* yang dibeli (contoh: Top Up ML, Netflix, Panel):`, { parse_mode: 'Markdown' });
+        } else if (state.step === 'layanan') {
+            state.layanan = msg.text.trim();
+            state.step = 'rating';
+            bot.sendMessage(chatId, `📦 Layanan: *${state.layanan}*\n\nKirim *Rating* (1-5):`, { parse_mode: 'Markdown' });
+        } else if (state.step === 'rating') {
+            const rating = parseInt(msg.text);
+            if (isNaN(rating) || rating < 1 || rating > 5) {
+                return bot.sendMessage(chatId, '❌ Rating harus angka 1-5. Coba lagi:');
+            }
+            state.rating = rating;
+            state.step = 'teks';
+            bot.sendMessage(chatId, `⭐ Rating: *${'⭐'.repeat(rating)}*\n\nSekarang kirim *Teks testimoni* (pengalaman kamu):`, { parse_mode: 'Markdown' });
+        } else if (state.step === 'teks') {
+            state.teks = msg.text ? msg.text.trim() : '';
+            state.step = 'foto';
+            bot.sendMessage(chatId, `💬 Teks: *${state.teks.substring(0,50)}${state.teks.length>50?'...':''}*\n\nTerakhir, kirim *Screenshot* (opsional) atau ketik *skip* jika tidak ada:`, { parse_mode: 'Markdown' });
+        } else if (state.step === 'foto') {
+            let screenshot = '';
+            if (msg.photo) {
+                try {
+                    screenshot = await bot.getFileLink(msg.photo[msg.photo.length-1].file_id);
+                } catch(e) {}
+            } else if (msg.text && msg.text.toLowerCase() === 'skip') {
+                // no screenshot
+            } else {
+                return bot.sendMessage(chatId, '❌ Kirim foto screenshot atau ketik *skip*:', { parse_mode: 'Markdown' });
+            }
+            // Simpan testimoni
+            let testimonials = await getTestimonials();
+            const id = 'T-' + Date.now().toString(36).toUpperCase();
+            testimonials.push({
+                id, name: state.nama, service: state.layanan,
+                rating: state.rating, content: state.teks,
+                approved: true, screenshot,
+                createdAt: new Date().toISOString()
+            });
+            await saveTestimonials(testimonials);
+            delete testimoniState[chatId];
+            bot.sendMessage(chatId,
+                `✅ *Testimoni berhasil ditambahkan!* Terima kasih 🎉\n\n👤 *${state.nama}*\n📦 ${state.layanan}\n⭐ ${'⭐'.repeat(state.rating)}\n💬 "${state.teks}"${screenshot ? '\n📸 + Screenshot' : ''}`,
+                { parse_mode: 'Markdown' }
+            );
+        }
     });
 
     bot.on('callback_query', async (query) => {

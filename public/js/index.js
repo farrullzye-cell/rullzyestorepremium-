@@ -531,6 +531,7 @@ async function loadTestimonials() {
                     </div>
                     <div class="ml-auto flex gap-0.5">${'<i class="fa-solid fa-star text-amber-400 text-[9px] sm:text-[10px]"></i>'.repeat(Math.min(t.rating||5,5))}</div>
                 </div>
+                ${t.screenshot ? `<img src="${t.screenshot}" alt="Screenshot testimoni" class="w-full rounded-xl mb-2 border border-white/10" loading="lazy" onerror="this.style.display='none'">` : ''}
                 <p class="text-[11px] sm:text-xs text-slate-400 leading-relaxed">"${t.content}"</p>
             </div>
         `).join('');
@@ -540,6 +541,56 @@ async function loadTestimonials() {
         console.warn('Testimoni load error:', e.message);
     }
 }
+
+let selectedRating = 5;
+window.openTestimoniForm = function() {
+    document.getElementById('testimoniModal').style.display = 'flex';
+    document.getElementById('tf-name').value = '';
+    document.getElementById('tf-service').value = '';
+    document.getElementById('tf-content').value = '';
+    selectedRating = 5;
+    document.querySelectorAll('.star-select').forEach((el, i) => {
+        el.className = `fa-solid fa-star ${i < selectedRating ? 'text-amber-400' : 'text-slate-600'} cursor-pointer hover:text-amber-400 transition star-select`;
+    });
+};
+window.closeTestimoniForm = function() {
+    document.getElementById('testimoniModal').style.display = 'none';
+};
+window.submitTestimoni = async function() {
+    const name = document.getElementById('tf-name').value.trim();
+    const service = document.getElementById('tf-service').value.trim();
+    const content = document.getElementById('tf-content').value.trim();
+    if (!name) return Swal.fire('Oops', 'Nama kamu wajib diisi', 'warning');
+    if (!content || content.length < 10) return Swal.fire('Oops', 'Testimoni minimal 10 karakter', 'warning');
+    const btn = document.querySelector('#testimoniModal .btn-primary');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+    try {
+        const r = await fetch('/api/testimonials/submit', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ name, service: service||'Produk Digital', rating: selectedRating, content })
+        });
+        const d = await r.json();
+        if (d.success) {
+            Swal.fire('Terima Kasih! 🎉', 'Testimoni kamu akan ditampilkan setelah diverifikasi admin.', 'success');
+            closeTestimoniForm();
+        } else {
+            Swal.fire('Gagal', d.message||'Coba lagi nanti', 'error');
+        }
+    } catch(e) {
+        Swal.fire('Error', 'Gagal mengirim testimoni', 'error');
+    }
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Testimoni';
+};
+// Star rating listener
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('star-select')) {
+        selectedRating = parseInt(e.target.dataset.val);
+        document.querySelectorAll('.star-select').forEach((el, i) => {
+            el.className = `fa-solid fa-star ${i < selectedRating ? 'text-amber-400' : 'text-slate-600'} cursor-pointer hover:text-amber-400 transition star-select`;
+        });
+    }
+});
 
 // Init
 loadBanners();
