@@ -68,15 +68,17 @@ const bankKeyboard = (page = 0) => {
 // ==================== FUNGSI NOTIFIKASI ====================
 async function notifyAffiliateApproved(chatId, randomId) {
     if (!bot) return;
+    const store = cfg.storeName || 'Rullzye Store Premium';
     bot.sendMessage(chatId, 
         `🎉 *SELAMAT! AKUN AFFILIATE DISETUJUI* 🎉\n\n` +
-        `Permohonan Anda untuk bergabung menjadi Affiliate telah disetujui.\n\n` +
-        `Sekarang Anda sudah bisa membagikan link toko Anda dan mendapatkan komisi! 👇`,
+        `Halo kak! Permohonan Anda untuk bergabung sebagai *Affiliate ${store}* telah disetujui oleh admin ✅\n\n` +
+        `Sekarang Anda sudah bisa membagikan link toko dan mulai mendapatkan komisi dari setiap transaksi! 💰\n\n` +
+        `👇 *Yuk atur tampilan toko kamu:*`,
         {
             parse_mode: 'Markdown',
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "🛠️ Edit Tampilan Toko", url: "https://rullzyestorepremium.my.id/affiliate.html" }],
+                    [{ text: "🎨 Edit Tampilan Toko", url: "https://rullzyestorepremium.my.id/affiliate.html" }],
                     [{ text: "🌐 Lihat Toko Saya", url: `https://rullzyestorepremium.my.id/toko/${randomId}` }]
                 ]
             }
@@ -86,7 +88,7 @@ async function notifyAffiliateApproved(chatId, randomId) {
 async function notifyAffiliateRejected(chatId, reason = '') {
     if (!bot) return;
     bot.sendMessage(chatId, 
-        `❌ *PENGAJUAN DITOLAK*\n\nMaaf, permohonan Affiliate Anda belum disetujui oleh admin.${reason ? `\n📝 *Alasan:* _${reason}_` : ''}\n\nSilakan hubungi admin untuk informasi lebih lanjut.`,
+        `❌ *PENGAJUAN AFFILIATE DITOLAK*\n\nMaaf kak, permohonan Affiliate Anda belum dapat disetujui oleh admin.${reason ? `\n📝 *Alasan:* ${reason}` : ''}\n\nSilakan hubungi Customer Service untuk informasi lebih lanjut atau ajukan ulang setelah memperbaiki data.`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
@@ -94,24 +96,29 @@ async function notifyAffiliateRejected(chatId, reason = '') {
 async function notifyAffiliateNewOrder(uplineChatId, order) {
     if (!bot) return;
     bot.sendMessage(uplineChatId,
-        `💰 *YEY! ADA KOMISI BARU MASUK!* 💰\n\n` +
-        `👤 *Downline:* ${order.buyerName || 'Someone'}\n` +
+        `💰 *KOMISI BARU MASUK!* 💰\n\n` +
+        `Horee! Downline kamu baru saja bertransaksi 🎉\n\n` +
+        `👤 *Downline:* ${order.buyerName || 'Member'}\n` +
         `📦 *Produk:* ${order.productName}\n` +
         `🎯 *Target:* \`${order.targetPhone || '-'}\`\n\n` +
-        `💸 *Komisi Diterima:* *+Rp ${(order.commission || 0).toLocaleString('id-ID')}*\n` +
-        `💳 *Total Saldo:* Rp ${(order.newBalance || 0).toLocaleString('id-ID')}`,
+        `💸 *Komisi:* *+Rp ${(order.commission || 0).toLocaleString('id-ID')}*\n` +
+        `💳 *Saldo Komisi:* Rp ${(order.newBalance || 0).toLocaleString('id-ID')}\n\n` +
+        `Terus semangat promosi! 🔥`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
 
 async function notifyOrderSuccess(chatId, order) {
     if (!bot) return;
+    const store = cfg.storeName || 'Rullzye Store Premium';
     bot.sendMessage(chatId,
         `✅ *TRANSAKSI BERHASIL* ✅\n\n` +
+        `Alhamdulillah, pesanan kamu berhasil diproses 🎉\n\n` +
         `📦 *Produk:* ${order.productName}\n` +
         `🎯 *Target:* \`${order.targetPhone || '-'}\`\n` +
-        `📝 *Status/SN:* \`${order.accountDetails || 'Berhasil'}\`\n\n` +
-        `Terima kasih telah berbelanja di *${cfg.storeName || 'Rullzye Store'}*! 🙏`,
+        `📝 *Detail:* \`${order.accountDetails || 'Berhasil'}\`\n\n` +
+        `Terima kasih telah berbelanja di *${store}*! 🙏\n` +
+        `Jangan lupa kasih review ya kak 😊`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
@@ -120,10 +127,12 @@ async function notifyOrderFailed(chatId, order) {
     if (!bot) return;
     bot.sendMessage(chatId,
         `❌ *TRANSAKSI GAGAL* ❌\n\n` +
+        `Maaf kak, pesanan kamu gagal diproses 😔\n\n` +
         `📦 *Produk:* ${order.productName}\n` +
         `🎯 *Target:* \`${order.targetPhone || '-'}\`\n` +
-        `📝 *Alasan:* _${order.accountDetails || 'Gagal diproses dari server pusat'}_\n\n` +
-        `💡 _Tips: Gunakan tombol *Ulangi Transaksi Gagal* di menu utama untuk mencoba lagi._`,
+        `📝 *Alasan:* ${order.accountDetails || 'Gagal diproses dari server pusat'}\n\n` +
+        `💡 Gunakan tombol *🔄 Ulangi Transaksi Gagal* di menu utama untuk mencoba lagi.\n` +
+        `Atau hubungi CS jika masih terkendala.`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
@@ -134,7 +143,8 @@ async function notifyOrderProcessing(chatId, order) {
         `⏳ *PESANAN SEDANG DIPROSES* ⏳\n\n` +
         `📦 *Produk:* ${order.productName}\n` +
         `🎯 *Target:* \`${order.targetPhone || '-'}\`\n\n` +
-        `Tunggu sebentar ya! Sistem kami sedang memproses pesanan Anda ke server pusat. Notifikasi akan dikirim jika sudah selesai.`,
+        `Tunggu bentar ya kak, sistem kami sedang memproses pesanan ke server pusat... 🔄\n\n` +
+        `Notifikasi akan dikirim otomatis kalau sudah selesai ✅`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
@@ -142,10 +152,12 @@ async function notifyOrderProcessing(chatId, order) {
 async function notifyPaymentReceived(chatId, order) {
     if (!bot) return;
     bot.sendMessage(chatId,
-        `✅ *PEMBAYARAN BERHASIL DITERIMA* ✅\n\n` +
+        `✅ *PEMBAYARAN DITERIMA* ✅\n\n` +
         `📦 *Produk:* ${order.productName}\n` +
         `🎯 *Target:* \`${order.targetPhone || '-'}\`\n\n` +
-        `Pesanan Anda sedang dalam antrean proses... ⏳`,
+        `Pembayaran berhasil diverifikasi! 🎉\n` +
+        `Pesanan kamu sekarang dalam antrean proses... ⏳\n\n` +
+        `Kami akan kirim notifikasi kalau sudah selesai 👍`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
@@ -153,11 +165,12 @@ async function notifyPaymentReceived(chatId, order) {
 async function notifyWithdrawPending(chatId, wd) {
     if (!bot) return;
     bot.sendMessage(chatId,
-        `📩 *PENGAJUAN WITHDRAW BARU*\n\n` +
+        `📩 *WITHDRAW DIAJUKAN* 📩\n\n` +
+        `Permintaan penarikan dana kamu sudah masuk ya!\n\n` +
         `💰 *Jumlah:* Rp ${wd.amount.toLocaleString('id-ID')}\n` +
-        `🏦 *Bank/E-Wallet:* ${wd.bankDetails}\n` +
-        `⏳ *Status:* _Menunggu Review Admin_\n\n` +
-        `Permintaan penarikan dana Anda sedang ditinjau. Harap tunggu ya!`,
+        `🏦 *Tujuan:* ${wd.bankDetails}\n` +
+        `⏳ *Status:* Menunggu Review Admin\n\n` +
+        `Admin akan memproses dalam waktu 1x24 jam. Harap tunggu dan pantau terus notifikasinya ya! 😊`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
@@ -166,10 +179,12 @@ async function notifyWithdrawSuccess(chatId, wd) {
     if (!bot) return;
     bot.sendMessage(chatId,
         `✅ *WITHDRAW BERHASIL DICAIRKAN* ✅\n\n` +
+        `Selamat! Dana kamu sudah berhasil dicairkan 🎉💰\n\n` +
         `💰 *Jumlah:* Rp ${wd.amount.toLocaleString('id-ID')}\n` +
-        `🏦 *Bank/E-Wallet:* ${wd.bankDetails}\n` +
-        `✨ *Status:* SUKSES\n\n` +
-        `Dana telah ditransfer ke rekening Anda. Cek mutasi bank/e-wallet Anda sekarang!`,
+        `🏦 *Tujuan:* ${wd.bankDetails}\n` +
+        `📊 *Status:* SUKSES ✅\n\n` +
+        `Cek mutasi rekening/e-wallet kamu sekarang ya!\n` +
+        `Terima kasih telah menjadi bagian dari *${cfg.storeName || 'Rullzye Store Premium'}* 🙏`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
@@ -178,10 +193,11 @@ async function notifyWithdrawRejected(chatId, wd, reason = '') {
     if (!bot) return;
     bot.sendMessage(chatId,
         `❌ *WITHDRAW DITOLAK* ❌\n\n` +
+        `Maaf kak, permintaan withdraw kamu ditolak oleh admin 😔\n\n` +
         `💰 *Jumlah:* Rp ${wd.amount.toLocaleString('id-ID')}\n` +
-        `🏦 *Bank/E-Wallet:* ${wd.bankDetails}\n` +
-        `${reason ? `📝 *Alasan:* _${reason}_\n\n` : '\n'}` +
-        `Dana telah dikembalikan ke Saldo Komisi Anda. Silakan periksa kembali detail rekening dan ajukan ulang.`,
+        `🏦 *Tujuan:* ${wd.bankDetails}\n` +
+        `${reason ? `📝 *Alasan:* ${reason}\n\n` : '\n'}` +
+        `💡 Dana sudah dikembalikan ke Saldo Komisi kamu. Silakan perbaiki data rekening dan ajukan ulang ya!`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
@@ -189,7 +205,7 @@ async function notifyWithdrawRejected(chatId, wd, reason = '') {
 async function notifyProfileUpdated(chatId) {
     if (!bot) return;
     bot.sendMessage(chatId,
-        `✅ *PROFIL TOKO DIPERBARUI*\n\nData toko, bio, warna tema, atau markup Anda telah berhasil disimpan! 🎨`,
+        `✅ *PROFIL TOKO DIPERBARUI*\n\nData toko, bio, warna tema, atau markup kamu berhasil disimpan! 🎨\n\nCek tampilan toko kamu di:\nhttps://rullzyestorepremium.my.id/affiliate.html`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
@@ -197,9 +213,10 @@ async function notifyProfileUpdated(chatId) {
 async function notifyDownlineJoined(uplineChatId, downlineName) {
     if (!bot) return;
     bot.sendMessage(uplineChatId,
-        `🎉 *DOWNLINE BARU BERGABUNG!* 🎉\n\n` +
-        `Kak *${downlineName}* baru saja bergabung menggunakan Link Affiliate Anda.\n\n` +
-        `Jika dia melakukan transaksi sukses, Anda akan langsung mendapatkan komisi! Terus semangat promosinya! 🔥`,
+        `🎉 *DOWNLINE BARU!* 🎉\n\n` +
+        `Kak *${downlineName}* baru saja mendaftar pakai Link Affiliate kamu.\n\n` +
+        `Kalau dia transaksi, kamu langsung dapat komisi otomatis! 💰\n\n` +
+        `Terus semangat promosi, makin banyak downline makin cuan! 🔥🚀`,
         { parse_mode: 'Markdown' }
     ).catch(() => {});
 }
@@ -225,24 +242,25 @@ async function sendToGroup(groupKey, message, parseMode = 'Markdown') {
 }
 
 async function notifyGroupAffiliateNew(user) {
-    await sendToGroup('affiliate', `🎉 *AFFILIATE BARU!*\n\n👤 *Nama:* ${user.affiliateName || user.firstName}\n🆔 *ID:* \`${user.randomId}\`\n📅 *Tanggal:* ${new Date().toLocaleDateString('id-ID')}\n\nSelamat datang di tim affiliate! 🚀`);
+    await sendToGroup('affiliate', `🎉 *AFFILIATE BARU!*\n\n👤 *Nama:* ${user.affiliateName || user.firstName}\n🆔 *ID:* \`${user.randomId}\`\n📅 *Tanggal:* ${new Date().toLocaleDateString('id-ID')}\n📊 *Total Member:* ${/* akan diisi */ '—'}\n\nSelamat datang di tim affiliate! Semangat cuan! 🚀💰`);
 }
 
 async function notifyGroupOrderNew(order) {
-    await sendToGroup('order', `🛒 *ORDER BARU!*\n\n📦 *Produk:* ${order.productName}\n🎯 *Target:* \`${order.targetPhone || '-'}\`\n💰 *Harga:* Rp ${(order.displayPrice || 0).toLocaleString('id-ID')}\n📊 *Status:* ${order.status}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}`);
+    await sendToGroup('order', `🛒 *ORDER BARU MASUK!*\n\n📦 *Produk:* ${order.productName}\n🎯 *Target:* \`${order.targetPhone || '-'}\`\n💰 *Harga:* Rp ${(order.displayPrice || 0).toLocaleString('id-ID')}\n📊 *Status:* ${order.status}\n👤 *User:* \`${order.randomId || order.targetPhone || '-'}\`\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}\n\n⚠️ Segera diproses!`);
 }
 
 async function notifyGroupOrderSuccess(order) {
-    await sendToGroup('order', `✅ *ORDER SUKSES!*\n\n📦 *Produk:* ${order.productName}\n🎯 *Target:* \`${order.targetPhone || '-'}\`\n💰 *Harga:* Rp ${(order.displayPrice || 0).toLocaleString('id-ID')}\n📝 *Detail:* ${order.accountDetails || 'Selesai'}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}`);
+    await sendToGroup('order', `✅ *ORDER SUKSES!*\n\n📦 *Produk:* ${order.productName}\n🎯 *Target:* \`${order.targetPhone || '-'}\`\n💰 *Harga:* Rp ${(order.displayPrice || 0).toLocaleString('id-ID')}\n📝 *Detail:* ${(order.accountDetails || 'Selesai').substring(0, 100)}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}\n\nAlhamdulillah, order berhasil ✅`);
 }
 
 async function notifyGroupWithdrawNew(wd) {
-    await sendToGroup('withdraw', `📤 *WITHDRAW BARU!*\n\n👤 *User:* ${wd.affiliateName || wd.name}\n🆔 *ID:* \`${wd.randomId}\`\n💰 *Jumlah:* Rp ${(wd.amount || 0).toLocaleString('id-ID')}\n🏦 *Tujuan:* ${wd.bankDetails}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}\n\n⚠️ Segera diproses ya admin!`);
+    await sendToGroup('withdraw', `📤 *WITHDRAW BARU!*\n\n👤 *Affiliate:* ${wd.affiliateName || wd.name || '-'}\n🆔 *ID:* \`${wd.randomId || '-'}\`\n💰 *Jumlah:* Rp ${(wd.amount || 0).toLocaleString('id-ID')}\n🏦 *Tujuan:* ${wd.bankDetails || '-'}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}\n\n⚠️ Segera diproses ya admin!`);
 }
 
 async function notifyGroupWithdrawProcessed(wd, status) {
     const emoji = status === 'SUKSES' ? '✅' : '❌';
-    await sendToGroup('withdraw', `${emoji} *WITHDRAW ${status === 'SUKSES' ? 'DICAIRKAN' : 'DITOLAK'}!*\n\n👤 *User:* ${wd.affiliateName || wd.name}\n🆔 *ID:* \`${wd.randomId}\`\n💰 *Jumlah:* Rp ${(wd.amount || 0).toLocaleString('id-ID')}\n🏦 *Tujuan:* ${wd.bankDetails}\n📊 *Status:* ${status}`);
+    const label = status === 'SUKSES' ? 'DICAIRKAN' : 'DITOLAK';
+    await sendToGroup('withdraw', `${emoji} *WITHDRAW ${label}!*\n\n👤 *Affiliate:* ${wd.affiliateName || wd.name || '-'}\n🆔 *ID:* \`${wd.randomId || '-'}\`\n💰 *Jumlah:* Rp ${(wd.amount || 0).toLocaleString('id-ID')}\n🏦 *Tujuan:* ${wd.bankDetails || '-'}\n📊 *Status:* ${status}\n⏰ *Diproses:* ${new Date().toLocaleString('id-ID')}`);
 }
 
 async function notifyGroupReport(message) {
@@ -250,33 +268,35 @@ async function notifyGroupReport(message) {
 }
 
 async function notifyGroupError(errorMsg) {
-    await sendToGroup('error', `🚨 *ERROR!*\n\n${errorMsg}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}`);
+    await sendToGroup('error', `🚨 *ERROR SISTEM*\n\n${errorMsg}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}\n\n⚠️ Segera cek server!`);
 }
 
 async function notifyGroupCommission(affiliateName, amount, orderInfo) {
-    await sendToGroup('commission', `💰 *KOMISI BARU!*\n\n👤 *Affiliate:* ${affiliateName}\n💵 *Jumlah:* Rp ${(amount || 0).toLocaleString('id-ID')}\n📦 *Dari:* ${orderInfo}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}`);
+    await sendToGroup('commission', `💰 *KOMISI BARU!*\n\n👤 *Affiliate:* ${affiliateName}\n💵 *Jumlah:* Rp ${(amount || 0).toLocaleString('id-ID')}\n📦 *Dari:* ${orderInfo}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}\n\nSemangat terus affiliate kita! 🔥`);
 }
 
 async function notifyGroupPromo(message) {
-    await sendToGroup('promo', `🎉 *PROMO!*\n\n${message}\n\n⏰ ${new Date().toLocaleString('id-ID')}`);
+    await sendToGroup('promo', `🎉 *PROMO SPESIAL!*\n\n${message}\n\n⏰ *Berlaku:* ${new Date().toLocaleString('id-ID')}\n\nJangan sampai kelewatan! 🔥`);
 }
 
 async function notifyGroupStockUpdate(products) {
     const list = Array.isArray(products) ? products.slice(0, 20) : [];
     if (list.length === 0) return;
-    await sendToGroup('stock', `📦 *UPDATE STOK PRODUK*\n\n${list.map(p => `• ${p.name} — Rp ${(p.price || 0).toLocaleString('id-ID')} ${p.stock === 0 ? '❌ HABIS' : '✅ Stok: ' + p.stock}`).join('\n')}\n\n⏰ ${new Date().toLocaleString('id-ID')}`);
+    const habis = list.filter(p => p.stock === 0).length;
+    const tersedia = list.length - habis;
+    await sendToGroup('stock', `📦 *UPDATE STOK PRODUK*\n\n📊 *Ringkasan:* ${tersedia} tersedia, ${habis} habis\n\n${list.map(p => `• ${p.name.substring(0, 40)} — Rp ${(p.price || 0).toLocaleString('id-ID')} ${p.stock === 0 ? '❌ HABIS' : '✅ Stok: ' + p.stock}`).join('\n')}\n\n⏰ ${new Date().toLocaleString('id-ID')}`);
 }
 
 async function notifyGroupBroadcast(message) {
-    await sendToGroup('broadcast', `📢 *BROADCAST*\n\n${message}`);
+    await sendToGroup('broadcast', `📢 *BROADCAST PENGUMUMAN*\n\n${message}\n\n— *${cfg.storeName || 'Rullzye Store Premium'}*`);
 }
 
 async function notifyGroupAdmin(message) {
-    await sendToGroup('admin', `🔔 *ADMIN NOTIF*\n\n${message}\n⏰ ${new Date().toLocaleString('id-ID')}`);
+    await sendToGroup('admin', `🔔 *NOTIFIKASI ADMIN*\n\n${message}\n⏰ ${new Date().toLocaleString('id-ID')}`);
 }
 
 async function notifyGroupAffiliateNews(message) {
-    await sendToGroup('affiliate_news', `📰 *BERITA AFFILIATE*\n\n${message}\n⏰ ${new Date().toLocaleString('id-ID')}`);
+    await sendToGroup('affiliate_news', `📰 *KABAR AFFILIATE*\n\n${message}\n⏰ ${new Date().toLocaleString('id-ID')}\n\nTetap semangat cuan! 💪💰`);
 }
 
 // ==================== BOT LOGIC ====================
@@ -315,13 +335,15 @@ if (bot) {
                 }
             }
 
-            let welcomeMsg = `🎉 *PENDAFTARAN BERHASIL!*\n\nSelamat datang di *${cfg.storeName || 'Rullzye Store'}*, kak *${user.firstName}*! 🥳\n\n` +
-                             `🔑 *Random ID Anda:* \`${randomId}\`\n\n` +
-                             `*Random ID* ini digunakan untuk mengidentifikasi akun Anda saat melakukan pesanan di website kami. Simpan baik-baik ya!\n\n` +
-                             `💡 *Ingin dapat penghasilan tambahan?*\nDaftar menjadi *Affiliate* dan dapatkan komisi dari setiap transaksi teman yang Anda ajak.\n\n👇 Pilih menu di bawah ini untuk memulai:`;
+            let welcomeMsg = `🎉 *SELAMAT DATANG!* 🎉\n\n` +
+                             `Halo *${user.firstName}*! Terima kasih sudah bergabung di *${cfg.storeName || 'Rullzye Store Premium'}* 🥳\n\n` +
+                             `🔑 *Random ID kamu:* \`${randomId}\`\n\n` +
+                             `Gunakan ID di atas setiap kali checkout di website ya! Simpan baik-baik 😉\n\n` +
+                             `💡 *Mau cuan tambahan?*\nDaftar jadi *Affiliate* dan dapatkan komisi dari setiap transaksi teman yang kamu ajak. Gampang banget!\n\n` +
+                             `👇 *Pilih menu di bawah:*`;
             bot.sendMessage(chatId, welcomeMsg, { parse_mode: "Markdown", ...mainKeyboard });
         } else {
-            bot.sendMessage(chatId, `👋 Halo *${user.firstName}*!\n\nAda yang bisa kami bantu hari ini? Silakan pilih menu di bawah:`, { parse_mode: "Markdown", ...mainKeyboard });
+            bot.sendMessage(chatId, `👋 Halo lagi *${user.firstName}*!\n\nAda yang bisa kami bantu hari ini? Silakan pilih menu di bawah 😊`, { parse_mode: "Markdown", ...mainKeyboard });
         }
     });
 
@@ -329,7 +351,7 @@ if (bot) {
         const chatId = msg.chat.id;
         const chatType = msg.chat.type;
         if (chatType === 'group' || chatType === 'supergroup') {
-            bot.sendMessage(chatId, `📋 *INFO GRUP*\n\n🆔 *ID Grup:* \`${chatId}\`\n📛 *Nama:* ${msg.chat.title || '-'}\n\nSalin ID di atas dan masukkan ke Panel Admin → Grup Bot untuk mengaktifkan notifikasi grup ini.`, { parse_mode: 'Markdown' });
+            bot.sendMessage(chatId, `📋 *INFO GRUP*\n\n🆔 *ID Grup:* \`${chatId}\`\n📛 *Nama:* ${msg.chat.title || '-'}\n👥 *Tipe:* ${chatType === 'supergroup' ? 'Supergroup' : 'Group'}\n\n📌 Salin ID di atas dan masukkan ke *Panel Admin → Grup Bot* untuk mengaktifkan notifikasi grup ini.\n\nContoh:\n\`\`\`\n"affiliate": "${chatId}"\n\`\`\``, { parse_mode: 'Markdown' });
         } else {
             bot.sendMessage(chatId, '❌ Perintah ini hanya bisa digunakan di dalam grup.');
         }
@@ -340,14 +362,17 @@ if (bot) {
         const user = users.find(u => u.chatId === msg.chat.id);
         if (user) {
             bot.sendMessage(msg.chat.id,
-                `🔑 *INFORMASI AKUN*\n\n` +
-                `👤 Nama: *${user.firstName}*\n` +
-                `🆔 Random ID: \`${user.randomId}\`\n` +
-                `💎 Status: *${user.isAffiliate ? 'Affiliate' : 'Member'}*\n\n` +
-                `Gunakan *Random ID* di atas saat memesan di website ya!`,
+                `🔑 *INFO AKUN* 🔑\n\n` +
+                `👤 *Nama:* ${user.firstName}\n` +
+                `🆔 *Random ID:* \`${user.randomId}\`\n` +
+                `💎 *Status:* ${user.isAffiliate ? '✅ Affiliate Aktif' : '👤 Member'}\n` +
+                `💰 *Saldo:* Rp ${(user.balance || 0).toLocaleString('id-ID')}\n` +
+                `${user.isAffiliate ? `💳 *Komisi:* Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}` : ''}\n\n` +
+                `🔗 *Link Toko:* https://rullzyestorepremium.my.id/toko/${user.randomId}\n\n` +
+                `Gunakan *Random ID* ini setiap checkout di website kami ya!`,
                 { parse_mode: "Markdown" }
             );
-        } else bot.sendMessage(msg.chat.id, "Ketik /start dulu.");
+        } else bot.sendMessage(msg.chat.id, `Halo! Sepertinya kamu belum terdaftar. Ketik /start untuk mendaftar di *${cfg.storeName || 'Rullzye Store Premium'}* 😊`, { parse_mode: "Markdown" });
     });
 
     bot.on('callback_query', async (query) => {
@@ -366,7 +391,7 @@ if (bot) {
         }
         if (data.startsWith('wd_bank_')) {
             const bank = data.replace('wd_bank_', '');
-            bot.sendMessage(chatId, `🏦 Anda memilih: *${bank}*\n\nSilakan balas pesan ini dengan *Nominal* dan *Nomor Rekening/E-Wallet* Anda.\n\n*Contoh Format:*\n\`50000\`\n\`08123456789 a.n Budi\`\n\n_(Ketik nominal angka saja di baris pertama, lalu nomor & nama di baris kedua)_`, { parse_mode: 'Markdown' });
+            bot.sendMessage(chatId, `🏦 Kamu memilih: *${bank}*\n\nSekarang kirimkan *Nominal* dan *Data Rekening* kamu.\n\n📝 *Format balasan (2 baris):*\n\`\`\`\n50000\n08123456789 a.n Budi\n\`\`\`\n\n*Baris 1:* Nominal (min Rp 10.000)\n*Baris 2:* No. Rekening a.n Nama\n\nKetik *BATAL* kapan saja untuk membatalkan.`, { parse_mode: 'Markdown' });
             // Simpan state sementara
             user._wdState = { step: 'amount', bank: bank };
             await saveUsers(users);
@@ -377,7 +402,7 @@ if (bot) {
         if (data === 'wd_cancel') {
             user._wdState = null;
             await saveUsers(users);
-            bot.sendMessage(chatId, "❌ *Withdraw dibatalkan.*");
+            bot.sendMessage(chatId, "❌ *Withdraw dibatalkan.*\n\nSilakan menu lagi kapan saja kalau mau withdraw 😊");
             bot.answerCallbackQuery(query.id);
             return;
         }
@@ -389,32 +414,35 @@ if (bot) {
                     `👤 *PROFIL & SALDO*\n\n` +
                     `📝 *Nama:* ${user.firstName}\n` +
                     `🆔 *Random ID:* \`${user.randomId}\`\n` +
-                    `💎 *Status Akun:* ${user.isAffiliate ? '✅ Affiliate Aktif' : '👤 Member Reguler'}\n\n` +
-                    `👥 *Total Downline:* ${downlineCount} Orang\n` +
-                    `💰 *Saldo Komisi:* Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}\n` +
-                    `💳 *Total Pendapatan:* Rp ${(user.totalEarned || 0).toLocaleString('id-ID')}\n\n` +
-                    `${user.isAffiliate ? `Cek Dashboard: https://rullzyestorepremium.my.id/affiliate.html` : `Mau penghasilan tambahan? Klik tombol *Daftar Affiliate*!`}`,
-                    { parse_mode: "Markdown" }
+                    `💎 *Status:* ${user.isAffiliate ? '✅ Affiliate Aktif' : '👤 Member'}\n` +
+                    `💰 *Saldo Utama:* Rp ${(user.balance || 0).toLocaleString('id-ID')}\n` +
+                    `${user.isAffiliate ? `💳 *Saldo Komisi:* Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}\n` : ''}` +
+                    `👥 *Downline:* ${downlineCount} Orang\n\n` +
+                    `${user.isAffiliate ?
+                        `🔗 *Link Toko:* https://rullzyestorepremium.my.id/toko/${user.randomId}\n🎨 *Dashboard:* https://rullzyestorepremium.my.id/affiliate.html` :
+                        `💡 Mau penghasilan tambahan? Klik *Daftar Affiliate* sekarang!`}`,
+                    { parse_mode: "Markdown", disable_web_page_preview: true }
                 );
                 break;
             }
             case "menu_id":
                 bot.sendMessage(chatId,
-                    `🔑 *INFORMASI AKUN*\n\n` +
-                    `👤 Nama: *${user.firstName}*\n` +
-                    `🆔 Random ID: \`${user.randomId}\`\n\n` +
-                    `Gunakan Random ID ini setiap kali Anda checkout di website kami.`,
+                    `🔑 *RANDOM ID KAMU*\n\n` +
+                    `👤 *Nama:* ${user.firstName}\n` +
+                    `🆔 *Random ID:* \`${user.randomId}\`\n\n` +
+                    `Gunakan ID ini setiap checkout di website:\n` +
+                    `🌐 https://rullzyestorepremium.my.id`,
                     { parse_mode: "Markdown" }
                 );
                 break;
 
             case "menu_apply_affiliate": {
-                if (user.isAffiliate) return bot.sendMessage(chatId, "✅ *Anda sudah menjadi Affiliate Aktif.*");
-                if (user.affiliatePending) return bot.sendMessage(chatId, "⏳ *Permintaan Anda sedang ditinjau.* Mohon tunggu persetujuan dari admin.");
+                if (user.isAffiliate) return bot.sendMessage(chatId, "✅ *Kamu sudah menjadi Affiliate Aktif!*\n\nCek menu *🤝 Affiliate System* untuk lihat link dan stats kamu.");
+                if (user.affiliatePending) return bot.sendMessage(chatId, "⏳ *Permintaan kamu sedang ditinjau admin.*\n\nMohon tunggu ya, admin akan review dalam 1x24 jam. Kami notifikasi kalau sudah disetujui ✅");
                 const idx = users.findIndex(u => u.chatId === chatId);
                 if (idx !== -1) {
                     const cfgData = getConfig();
-                    if (cfgData.affiliateEnabled === false) return bot.sendMessage(chatId, "❌ Pendaftaran Affiliate saat ini sedang ditutup.");
+                    if (cfgData.affiliateEnabled === false) return bot.sendMessage(chatId, "❌ *Pendaftaran Affiliate ditutup*\n\nMaaf, program affiliate sedang tidak aktif. Silakan hubungi CS untuk info lebih lanjut.");
                     
                     if (cfgData.affiliateAutoApprove) {
                         users[idx].isAffiliate = true;
@@ -426,41 +454,42 @@ if (bot) {
                     } else {
                         users[idx].affiliatePending = true;
                         await saveUsers(users);
-                        bot.sendMessage(chatId, "📩 *Permintaan Berhasil Dikirim!*\n\nAdmin akan meninjau akun Anda dalam waktu 1x24 jam. Kami akan mengirimkan notifikasi setelah disetujui.");
+                        bot.sendMessage(chatId, `📩 *Permintaan Affiliate Dikirim!* 📩\n\nTerima kasih sudah mendaftar jadi Affiliate *${cfg.storeName || 'Rullzye Store Premium'}*!\n\nAdmin akan meninjau akun kamu dalam 1x24 jam. Kami kabari kalau sudah disetujui ya 😊👍`);
                     }
                 }
                 break;
             }
 
             case "menu_affiliate": {
-                if (!user.isAffiliate) return bot.sendMessage(chatId, "❌ *Akses Ditolak*\n\nAnda belum menjadi Affiliate. Silakan klik tombol *Daftar Affiliate* terlebih dahulu.", { parse_mode: "Markdown" });
+                if (!user.isAffiliate) return bot.sendMessage(chatId, `❌ *Akses Ditolak*\n\nKamu belum terdaftar sebagai Affiliate.\nKlik *Daftar Affiliate* dulu yuk! 😊`, { parse_mode: "Markdown" });
                 const dCount = users.filter(u => u.referredBy === user.randomId).length;
                 const linkT = `https://t.me/${cfg.botUsername}?start=${user.randomId}`;
                 const linkW = `https://rullzyestorepremium.my.id/toko/${user.randomId}`;
                 bot.sendMessage(chatId,
                     `🤝 *AFFILIATE SYSTEM*\n\n` +
-                    `Bagikan link di bawah ini ke teman atau sosial media Anda. Jika ada yang mendaftar atau membeli melalui link tersebut, Anda akan mendapatkan komisi otomatis!\n\n` +
-                    `🔗 *Link Bot Telegram (Pendaftaran):*\n\`${linkT}\`\n\n` +
-                    `🌐 *Link Toko Anda (Website):*\n${linkW}\n\n` +
-                    `👥 *Statistik Anda:*\n` +
-                    `- Downline Aktif: *${dCount} Orang*\n` +
-                    `- Saldo Komisi: *Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}*\n` +
-                    `- Komisi per trx: *${user.customCommission || cfg.affiliateCommissionPercent || 20}%* dari profit\n\n` +
-                    `🛠️ Edit tampilan toko Anda di: [Dashboard Affiliate](https://rullzyestorepremium.my.id/affiliate.html)`,
+                    `Yuk bagikan link di bawah ke teman-teman kamu! 🚀\n\n` +
+                    `🔗 *Link Telegram:*\n\`${linkT}\`\n\n` +
+                    `🌐 *Link Toko Online:*\n${linkW}\n\n` +
+                    `📊 *Statistik Kamu:*\n` +
+                    `• 👥 Downline: *${dCount} Orang*\n` +
+                    `• 💰 Saldo Komisi: *Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}*\n` +
+                    `• 📈 Komisi: *${user.customCommission || cfg.affiliateCommissionPercent || 20}%* dari profit\n\n` +
+                    `🎨 Atur tampilan toko: [Dashboard Affiliate](https://rullzyestorepremium.my.id/affiliate.html)\n` +
+                    `💸 Tarik saldo: klik menu *Withdraw*`,
                     { parse_mode: "Markdown", disable_web_page_preview: true }
                 );
                 break;
             }
 
             case "menu_withdraw_affiliate": {
-                if (!user.isAffiliate) return bot.sendMessage(chatId, "❌ Anda belum menjadi Affiliate.");
-                if ((user.affiliateBalance || 0) < 10000) return bot.sendMessage(chatId, `❌ Saldo minimal untuk withdraw adalah Rp 10.000. Saldo Anda: Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}`);
-                bot.sendMessage(chatId, "🏦 *Pilih Bank / E-Wallet tujuan:*", { ...bankKeyboard(0), parse_mode: 'Markdown' });
+                if (!user.isAffiliate) return bot.sendMessage(chatId, "❌ *Akses Ditolak*\n\nKamu belum menjadi Affiliate. Daftar dulu yuk!", { parse_mode: "Markdown" });
+                if ((user.affiliateBalance || 0) < 10000) return bot.sendMessage(chatId, `❌ *Saldo Kurang*\n\nMinimal withdraw Rp 10.000\n💰 Saldo kamu: Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}\n\nAjak lebih banyak downline biar saldo cepat terkumpul! 🔥`);
+                bot.sendMessage(chatId, `💰 *Saldo Komisi:* Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}\n\n🏦 *Pilih Bank / E-Wallet tujuan:*`, { ...bankKeyboard(0), parse_mode: 'Markdown' });
                 break;
             }
 
             case "menu_retry": {
-                if (!cfg.flowixApiKey || !cfg.flowixMerchantId) return bot.sendMessage(chatId, "❌ PPOB belum dikonfigurasi admin.");
+                if (!cfg.flowixApiKey || !cfg.flowixMerchantId) return bot.sendMessage(chatId, "❌ *PPOB Tidak Aktif*\n\nLayanan PPOB belum dikonfigurasi oleh admin. Silakan hubungi CS.");
                 try {
                     const ordersRes = await axios.get(`${FIREBASE_URL}/orders.json`);
                     const all = ordersRes.data ? Object.entries(ordersRes.data).map(([k, v]) => ({ ...v, _id: k })) : [];
@@ -470,11 +499,11 @@ if (bot) {
                     const processing = myFlowix.find(o => o.status === 'PROSES_PUSAT');
                     
                     if (pending) {
-                        bot.sendMessage(chatId, `⏳ *MENUNGGU PEMBAYARAN*\n\n🔖 *ID Order:* \`${pending.idDeposit}\`\n📦 *Produk:* ${pending.productName}\n\nMohon selesaikan pembayaran agar pesanan diproses.`, { parse_mode: "Markdown" });
+                        bot.sendMessage(chatId, `⏳ *MENUNGGU PEMBAYARAN*\n\n🔖 *ID:* \`${pending.idDeposit}\`\n📦 *Produk:* ${pending.productName}\n💰 *Total:* Rp ${(pending.displayPrice || 0).toLocaleString('id-ID')}\n\nMohon selesaikan pembayaran agar pesanan segera diproses ✅`, { parse_mode: "Markdown" });
                     } else if (processing) {
-                        bot.sendMessage(chatId, `⏳ *SEDANG DIPROSES*\n\n🔖 *ID Order:* \`${processing.idOrder}\`\n📦 *Produk:* ${processing.productName}\n\nTransaksi Anda sedang berjalan di server pusat. Harap tunggu notifikasi selanjutnya.`, { parse_mode: "Markdown" });
+                        bot.sendMessage(chatId, `⏳ *SEDANG DIPROSES*\n\n🔖 *ID:* \`${processing.idOrder || processing.idDeposit}\`\n📦 *Produk:* ${processing.productName}\n\nTransaksi kamu sedang berjalan di server pusat. Tunggu notifikasi selanjutnya ya! 🔄`, { parse_mode: "Markdown" });
                     } else if (failed) {
-                        bot.sendMessage(chatId, `🔄 *MENGULANG TRANSAKSI GAGAL*\n\n📦 *Produk:* ${failed.productName}\n🎯 *Target:* \`${failed.targetPhone}\`\n\nMembuat pesanan baru...`, { parse_mode: "Markdown" });
+                        bot.sendMessage(chatId, `🔄 *MENGULANG TRANSAKSI GAGAL*\n\n📦 *Produk:* ${failed.productName}\n🎯 *Target:* \`${failed.targetPhone}\`\n💰 *Harga:* Rp ${(failed.displayPrice || 0).toLocaleString('id-ID')}\n\nMembuat ulang pesanan... ⏳`, { parse_mode: "Markdown" });
                         const PORT = process.env.PORT || 3000;
                         const resp = await axios.post(`http://localhost:${PORT}/api/ppob-retry`, {
                             productId: failed.productId,
@@ -484,21 +513,21 @@ if (bot) {
                             randomId: user.randomId
                         });
                         if (resp.data.status) {
-                            bot.sendMessage(chatId, `✅ *BERHASIL MENGULANG TRANSAKSI*\n\n🔖 *ID Referensi Baru:* \`${resp.data.reff_id}\`\nSilakan cek notifikasi proses selanjutnya.`, { parse_mode: "Markdown" });
+                            bot.sendMessage(chatId, `✅ *TRANSAKSI DIULANG!*\n\n🔖 *ID Baru:* \`${resp.data.reff_id}\`\n\nPesananmu sudah masuk antrian. Pantau notifikasi untuk info selanjutnya ✅`, { parse_mode: "Markdown" });
                         } else {
-                            bot.sendMessage(chatId, `❌ *GAGAL MENGULANG*\n\nAlasan: ${resp.data.message}`, { parse_mode: "Markdown" });
+                            bot.sendMessage(chatId, `❌ *GAGAL MENGULANG*\n\n${resp.data.message}\n\nHubungi CS jika masih terkendala.`, { parse_mode: "Markdown" });
                         }
                     } else {
                         const success = myFlowix.find(o => o.status === 'SUKSES');
-                        if (success) bot.sendMessage(chatId, "✅ *Semua transaksi terakhir Anda berstatus SUKSES.*", { parse_mode: "Markdown" });
-                        else bot.sendMessage(chatId, "📭 *Belum ada riwayat transaksi.*", { parse_mode: "Markdown" });
+                        if (success) bot.sendMessage(chatId, "✅ *Semua transaksi terakhirmu berhasil!*\n\nTidak ada transaksi yang perlu diulang 😊", { parse_mode: "Markdown" });
+                        else bot.sendMessage(chatId, "📭 *Belum ada riwayat transaksi PPOB.*\n\nSilakan belanja di website kami dulu ya!", { parse_mode: "Markdown" });
                     }
-                } catch (e) { bot.sendMessage(chatId, "❌ Gagal mengambil data transaksi."); }
+                } catch (e) { bot.sendMessage(chatId, "❌ *Gagal memuat data transaksi.*\n\nCoba lagi nanti ya."); }
                 break;
             }
 
             case "menu_cs":
-                bot.sendMessage(chatId, "👨‍💻 *HUBUNGI CUSTOMER SERVICE*\n\nJika Anda memiliki kendala, silakan chat CS kami:\n📞 *WhatsApp:* 085848651208\n💬 *Telegram:* @arulfaathir", { parse_mode: "Markdown" });
+                bot.sendMessage(chatId, `👨‍💻 *CUSTOMER SERVICE*\n\nAda kendala? Jangan ragu hubungi kami ya!\n\n📞 *WhatsApp:* 085848651208\n💬 *Telegram:* @arulfaathir\n🌐 *Website:* https://rullzyestorepremium.my.id\n\nJam operasional: 08.00 - 22.00 WIB 🕐`, { parse_mode: "Markdown" });
                 break;
         }
     });
@@ -517,10 +546,13 @@ if (bot) {
             const amount = parseInt(parts[0].replace(/\D/g, ''));
             const account = parts[1]?.trim() || '';
             if (!amount || amount < 10000) {
-                return bot.sendMessage(chatId, "❌ Minimal withdraw Rp 10.000. Masukkan ulang nominal:");
+                return bot.sendMessage(chatId, "❌ *Nominal tidak valid*\n\nMinimal withdraw Rp 10.000.\nKetik ulang nominalnya ya 😊");
+            }
+            if (amount > (user.affiliateBalance || 0)) {
+                return bot.sendMessage(chatId, `❌ *Saldo tidak cukup*\n\nSaldo komisi kamu: Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}\nKetik ulang nominal yang lebih kecil.`);
             }
             if (!account) {
-                return bot.sendMessage(chatId, "❌ Masukkan nomor rekening dan nama pemilik.\nContoh: `1234567890 a.n. Budi`");
+                return bot.sendMessage(chatId, "❌ *Data rekening belum diisi*\n\nContoh format:\n\`\`\`\n50000\n1234567890 a.n Budi\n\`\`\`\nBaris 1: nominal\nBaris 2: no.rek a.n nama");
             }
             state.amount = amount;
             state.account = account;
@@ -528,14 +560,15 @@ if (bot) {
             await saveUsers(users);
             bot.sendMessage(chatId,
                 `📋 *KONFIRMASI WITHDRAW*\n\n` +
-                `Bank: *${state.bank}*\n` +
-                `Jumlah: *Rp ${amount.toLocaleString('id-ID')}*\n` +
-                `Rekening: \`${account}\`\n\n` +
+                `🏦 *Bank:* ${state.bank}\n` +
+                `💰 *Jumlah:* Rp ${amount.toLocaleString('id-ID')}\n` +
+                `📝 *Rekening:* \`${account}\`\n\n` +
                 `Ketik *YA* untuk konfirmasi, atau *BATAL* untuk membatalkan.`,
                 { parse_mode: 'Markdown' }
             );
         } else if (state.step === 'confirm') {
             if (msg.text.toUpperCase() === 'YA') {
+                bot.sendMessage(chatId, "⏳ *Memproses permintaan withdraw...*");
                 const wdRes = await axios.post(`http://localhost:${process.env.PORT || 3000}/api/affiliate/withdraw`, {
                     randomId: user.randomId,
                     amount: state.amount,
@@ -543,12 +576,12 @@ if (bot) {
                 });
                 if (wdRes.data.success) {
                     await notifyWithdrawPending(chatId, { amount: state.amount, bankDetails: `${state.bank} - ${state.account}` });
-                    bot.sendMessage(chatId, "✅ Permintaan withdraw berhasil diajukan! Admin akan meninjau permintaan Anda.");
+                    bot.sendMessage(chatId, `✅ *Withdraw Berhasil Diajukan!*\n\n💰 Rp ${state.amount.toLocaleString('id-ID')}\n🏦 ${state.bank} - ${state.account}\n\nAdmin akan memproses dalam 1x24 jam. Pantau terus notifikasinya ya! 😊`);
                 } else {
-                    bot.sendMessage(chatId, `❌ Gagal: ${wdRes.data.message}`);
+                    bot.sendMessage(chatId, `❌ *Gagal:* ${wdRes.data.message}\n\nCoba lagi atau hubungi CS.`);
                 }
             } else {
-                bot.sendMessage(chatId, "Withdraw dibatalkan.");
+                bot.sendMessage(chatId, "❌ *Withdraw dibatalkan.*\n\nSilakan menu lagi kapan saja 😊");
             }
             user._wdState = null;
             await saveUsers(users);
@@ -559,10 +592,16 @@ if (bot) {
 // ==================== FUNGSI NOTIFIKASI EKSTERNAL ====================
 async function sendBroadcast(text) {
     if (!bot) return;
+    const store = cfg.storeName || 'Rullzye Store Premium';
     const users = await getUsers();
+    let sent = 0;
     for (const u of users) {
-        await bot.sendMessage(u.chatId, `📢 *INFO PENTING*\n\n${text}`, { parse_mode: "Markdown" }).catch(() => {});
+        try {
+            await bot.sendMessage(u.chatId, `📢 *PENGUMUMAN ${store.toUpperCase()}* 📢\n\n${text}\n\n— *${store}* 💜`, { parse_mode: "Markdown" });
+            sent++;
+        } catch(e) {}
     }
+    console.log(`📢 Broadcast terkirim ke ${sent}/${users.length} user`);
 }
 
 module.exports = {
