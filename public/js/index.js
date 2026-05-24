@@ -536,7 +536,8 @@ async function loadTestimonials() {
         `).join('');
     } catch(e) {
         const list = document.getElementById('testimoni-list');
-        if (list) list.innerHTML = '<div class="col-span-full text-center py-8 text-slate-500">Gagal memuat testimoni.</div>';
+        if (list) list.innerHTML = '<div class="col-span-full text-center py-8 text-slate-500">Belum ada testimoni. <button onclick="loadTestimonials()" class="text-violet-400 underline ml-1">Muat ulang</button></div>';
+        console.warn('Testimoni load error:', e.message);
     }
 }
 

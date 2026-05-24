@@ -1320,8 +1320,13 @@ app.post('/api/admin/panel/deliver/:id', async (req, res) => {
 
 // Testimoni CRUD endpoints
 app.get('/api/testimonials', async (req, res) => {
-    const testimonials = await getTestimonials();
-    res.json({ success: true, testimonials: testimonials.filter(t => t.approved !== false) });
+    try {
+        const testimonials = await getTestimonials();
+        const filtered = testimonials.filter(t => t.approved !== false);
+        res.json({ success: true, testimonials: filtered });
+    } catch(e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
 });
 app.post('/api/admin/testimonials', async (req, res) => {
     try {
