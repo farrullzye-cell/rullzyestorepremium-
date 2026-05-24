@@ -419,7 +419,7 @@ async function loadTab(tab){
         }
         // =============== 19. SYSTEM STATUS ===============
         else if(tab==='system'){
-            const s=await fetch('/api/admin/system').then(r=>r.json());
+            const s=await api('/api/admin/system').then(r=>r.json());
             const hrs=Math.floor(s.uptime/3600);const mins=Math.floor((s.uptime%3600)/60);
             c.innerHTML=`<h2 class="text-xl font-black mb-4">Status Sistem</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -560,7 +560,7 @@ async function loadTab(tab){
         }
         // =============== 26. BOT STATUS ===============
         else if(tab==='botstatus'){
-            const sys=await fetch('/api/admin/system').then(r=>r.json());
+            const sys=await api('/api/admin/system').then(r=>r.json());
             c.innerHTML=`<h2 class="text-xl font-black mb-4">Status Bot Telegram</h2>
             <div class="card p-6 max-w-2xl">
                 <div class="flex justify-between items-center py-3 border-b border-white/5"><span class="text-slate-400 text-sm">Status Bot</span>${sys.botActive?'<span class="badge-ok">Online & Polling</span>':'<span class="badge-err">Offline</span>'}</div>
@@ -591,7 +591,7 @@ async function saveConfig() {
             apigamesMerchantId: document.getElementById('cfg-api-merchant')?.value||'',
             apigamesSecretKey: document.getElementById('cfg-api-secret')?.value||'',
         };
-        const res=await fetch('/api/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+        const res=await api('/api/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
         const json=await res.json();
         alert(json.message||'Konfigurasi disimpan!');
     } catch(e){ alert("Gagal: "+e.message); }
