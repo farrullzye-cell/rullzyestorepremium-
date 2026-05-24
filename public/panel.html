@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Pterodactyl - Rullzye Store Premium</title>
+<meta name="description" content="Beli Panel Pterodactyl murah dengan spesifikasi kustom. Bayar via QRIS, delivery otomatis via Telegram.">
+<meta name="theme-color" content="#0f0b1e">
+<link rel="canonical" href="https://rullzyestorepremium.my.id/panel.html">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0b1e;color:#e2e8f0;min-height:100vh}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+.header{background:linear-gradient(135deg,#1a1040,#2d1b69);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:100}
+.header h1{font-size:18px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .back-btn{color:#a78bfa;font-size:18px;text-decoration:none}
+.hero{text-align:center;padding:40px 20px;background:radial-gradient(ellipse at center,#1e1050 0%,transparent 70%)}
+.hero h2{font-size:28px;font-weight:900;background:linear-gradient(135deg,#c084fc,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.hero p{color:#94a3b8;font-size:14px;max-width:500px;margin:0 auto 16px}
+.filter-bar{display:flex;gap:8px;overflow-x:auto;padding:4px 0;margin-bottom:24px;-webkit-overflow-scrolling:touch}
+.filter-bar button{white-space:nowrap;padding:6px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#94a3b8;font-size:12px;cursor:pointer;transition:all .2s;flex-shrink:0}
+.filter-bar button.active,.filter-bar button:hover{background:#7c3aed;color:#fff;border-color:#7c3aed}
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:40px}
+.card{background:linear-gradient(145deg,#1a1140,#231654);border-radius:16px;border:1px solid rgba(255,255,255,.06);overflow:hidden;transition:all .3s;cursor:pointer}
+.card:hover{border-color:rgba(124,58,237,.4);transform:translateY(-2px);box-shadow:0 8px 30px rgba(124,58,237,.15)}
+.card-body{padding:20px}
+.card-badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:8px}
+.card-badge.hot{background:#ef444420;color:#ef4444}
+.card-badge.new{background:#10b98120;color:#10b981}
+.card-badge.popular{background:#f59e0b20;color:#f59e0b}
+.card h3{font-size:16px;font-weight:800;color:#fff;margin-bottom:4px}
+.card .price{font-size:22px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:8px 0}
+.card .specs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0;font-size:12px}
+.card .specs span{display:flex;align-items:center;gap:4px;color:#94a3b8}
+.card .specs i{width:14px;color:#7c3aed}
+.card .desc{font-size:12px;color:#94a3b8;line-height:1.5;margin:8px 0 12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .stock{font-size:11px;color:#64748b}
+.card .stock.ready{color:#10b981}
+.card .stock.habis{color:#ef4444}
+.card-footer{padding:12px 20px;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center}
+.card-footer .btn-buy{padding:8px 20px;border-radius:10px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.card-footer .btn-buy:hover{transform:scale(1.05)}
+.card-footer .btn-buy:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.stok-badge{padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700}
+.stok-badge.ready{background:#10b98120;color:#10b981}
+.stok-badge.limited{background:#f59e0b20;color:#f59e0b}
+.stok-badge.habis{background:#ef444420;color:#ef4444}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.active{display:flex}
+.modal{background:linear-gradient(145deg,#1a1140,#231654);border-radius:20px;border:1px solid rgba(255,255,255,.08);max-width:520px;width:100%;max-height:90vh;overflow-y:auto;padding:28px}
+.modal h2{font-size:20px;font-weight:900;color:#fff;margin-bottom:4px}
+.modal .close-btn{float:right;background:none;border:none;color:#64748b;font-size:22px;cursor:pointer}
+.modal .specs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;padding:16px;background:rgba(0,0,0,.2);border-radius:12px}
+.modal .specs-grid div{text-align:center}
+.modal .specs-grid .val{font-size:18px;font-weight:900;color:#c084fc}
+.modal .specs-grid .lbl{font-size:10px;color:#64748b;text-transform:uppercase}
+.modal .features{margin:12px 0 16px}
+.modal .features li{list-style:none;padding:6px 0;font-size:13px;color:#cbd5e1}
+.modal .features li i{color:#10b981;margin-right:8px;font-size:12px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:4px}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:10px 14px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:14px;outline:none;transition:border .2s}
+.form-group input:focus,.form-group textarea:focus{border-color:#7c3aed}
+.btn-order{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;margin-top:8px}
+.btn-order:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(124,58,237,.4)}
+.btn-order:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.qris-display{text-align:center;padding:16px;background:rgba(0,0,0,.2);border-radius:12px;margin:16px 0}
+.qris-display img{width:200px;height:200px;border-radius:12px;margin:12px auto;display:block}
+.qris-display .amount{font-size:24px;font-weight:900;color:#c084fc}
+.qris-display .countdown{font-size:12px;color:#f59e0b;margin-top:8px}
+.loading{text-align:center;padding:60px 20px;color:#64748b}
+.loading i{font-size:40px;margin-bottom:12px;color:#7c3aed}
+.search-box{position:relative;margin-bottom:20px}
+.search-box input{width:100%;padding:12px 16px 12px 44px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.08);border-radius:12px;color:#fff;font-size:14px;outline:none}
+.search-box i{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#64748b}
+@media(max-width:640px){.products-grid{grid-template-columns:1fr}.hero h2{font-size:22px}.modal{padding:20px}}
+@media(prefers-reduced-motion:reduce){.card,.btn-order,.btn-buy{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="header">
+<a href="/" class="back-btn"><i class="fa-solid fa-arrow-left"></i></a>
+<h1><i class="fa-solid fa-server mr-2"></i>Panel Pterodactyl</h1>
+<a href="/checkout.html" class="back-btn" title="Cek Order"><i class="fa-solid fa-receipt"></i></a>
+</div>
+
+<div class="hero">
+<h2>Hosting Panel Game Server</h2>
+<p>Panel Pterodactyl dengan spesifikasi kustom. Bayar via QRIS, delivery otomatis via Telegram.</p>
+</div>
+
+<div class="container" id="app">
+<div class="search-box">
+<i class="fa-solid fa-search"></i>
+<input type="text" id="searchInput" placeholder="Cari panel..." oninput="renderProducts()">
+</div>
+<div class="filter-bar" id="filterBar"></div>
+<div id="productList" class="products-grid"></div>
+</div>
+
+<!-- Modal Detail + Checkout -->
+<div class="modal-overlay" id="modalOverlay">
+<div class="modal">
+<button class="close-btn" onclick="closeModal()">&times;</button>
+<div id="modalContent"></div>
+</div>
+</div>
+
+<script>
+const API = '/api/panel';
+const STORE = 'Rullzye Store Premium';
+
+let products = [];
+
+async function loadProducts() {
+    const el = document.getElementById('productList');
+    try {
+        const r = await fetch(`${API}/products`);
+        const d = await r.json();
+        products = d.products || [];
+        renderProducts();
+    } catch(e) {
+        el.innerHTML = `<div class="loading"><i class="fa-solid fa-exclamation-triangle"></i><p>Gagal memuat produk</p></div>`;
+    }
+}
+
+function renderProducts() {
+    const q = (document.getElementById('searchInput')?.value||'').toLowerCase();
+    const flt = document.querySelector('.filter-bar .active')?.dataset?.filter||'all';
+    const filtered = products.filter(p => {
+        if (flt !== 'all' && p.category !== flt) return false;
+        if (q && !p.name.toLowerCase().includes(q) && !p.description?.toLowerCase().includes(q)) return false;
+        return p.active !== false;
+    });
+    const el = document.getElementById('productList');
+    if (!filtered.length) {
+        el.innerHTML = `<div class="loading" style="grid-column:1/-1"><i class="fa-solid fa-box-open"></i><p>Tidak ada panel tersedia</p></div>`;
+        return;
+    }
+    el.innerHTML = filtered.map(p => {
+        const hot = p.stock <= 3 && p.stock > 0 ? 'hot' : p.stock > 20 ? 'popular' : 'new';
+        const stokClass = p.stock <= 0 ? 'habis' : p.stock <= 5 ? 'limited' : 'ready';
+        const stokLabel = p.stock <= 0 ? 'Habis' : p.stock <= 5 ? 'Sisa '+p.stock : 'Stok '+p.stock;
+        return `<div class="card" onclick="showDetail('${p.id}')">
+            <div class="card-body">
+                <span class="card-badge ${hot}">${hot === 'hot' ? '🔥 Terbatas' : hot === 'popular' ? '⭐ Populer' : '🆕 Baru'}</span>
+                <h3>${p.name}</h3>
+                <div class="price">Rp ${(p.price||0).toLocaleString('id-ID')}</div>
+                <div class="specs">
+                    <span><i class="fa-solid fa-microchip"></i> ${p.cpu||0}% CPU</span>
+                    <span><i class="fa-solid fa-memory"></i> ${(p.ram||0) >= 1024 ? (p.ram/1024)+' GB' : p.ram+' MB'} RAM</span>
+                    <span><i class="fa-solid fa-database"></i> ${(p.storage||0) >= 1024 ? (p.storage/1024)+' GB' : p.storage+' MB'}</span>
+                    <span><i class="fa-solid fa-globe"></i> ${p.bandwidth||'Unlimited'} GB</span>
+                </div>
+                <div class="desc">${p.shortDesc||p.description?.substring(0,120)||''}</div>
+                <span class="stok-badge ${stokClass}"><i class="fa-solid fa-${p.stock<=0?'times-circle':p.stock<=5?'exclamation-circle':'check-circle'}"></i> ${stokLabel}</span>
+            </div>
+            <div class="card-footer">
+                <span class="text-xs text-slate-500"><i class="fa-solid fa-server mr-1"></i>${p.servers||1} Server</span>
+                <button class="btn-buy" ${p.stock<=0?'disabled':''} onclick="event.stopPropagation();showDetail('${p.id}')"><i class="fa-solid fa-${p.stock<=0?'ban':'cart-plus'} mr-1"></i>${p.stock<=0?'Habis':'Pesan'}</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderFilters() {
+    const cats = [...new Set(products.filter(p=>p.active!==false).map(p=>p.category||'Umum'))];
+    const bar = document.getElementById('filterBar');
+    bar.innerHTML = `<button class="active" data-filter="all" onclick="setFilter(this,'all')">Semua</button>` +
+        cats.map(c => `<button data-filter="${c}" onclick="setFilter(this,'${c}')">${c}</button>`).join('');
+}
+
+function setFilter(btn, f) {
+    document.querySelectorAll('.filter-bar button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderProducts();
+}
+
+async function showDetail(id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    const el = document.getElementById('modalContent');
+    const stokLabel = p.stock <= 0 ? '<span class="text-red-400 font-bold">HABIS</span>' :
+        p.stock <= 5 ? `<span class="text-amber-400 font-bold">Sisa ${p.stock}</span>` :
+        `<span class="text-emerald-400 font-bold">Tersedia</span>`;
+    el.innerHTML = `
+        <h2>${p.name}</h2>
+        <p class="text-sm text-slate-400 mt-1">${p.shortDesc||''}</p>
+        <div class="price text-2xl font-black mt-3" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Rp ${(p.price||0).toLocaleString('id-ID')}</div>
+        <div class="text-xs mt-1">Stok: ${stokLabel}</div>
+        <div class="specs-grid">
+            <div><div class="val">${p.cpu||0}%</div><div class="lbl">CPU</div></div>
+            <div><div class="val">${(p.ram||0) >= 1024 ? (p.ram/1024)+' GB' : p.ram+' MB'}</div><div class="lbl">RAM</div></div>
+            <div><div class="val">${(p.storage||0) >= 1024 ? (p.storage/1024)+' GB' : p.storage+' MB'}</div><div class="lbl">Penyimpanan</div></div>
+            <div><div class="val">${p.bandwidth||'Unlimited'}</div><div class="lbl">Bandwidth</div></div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center text-xs text-slate-500 mb-3">
+            <div><i class="fa-solid fa-database text-violet-400"></i> ${p.databases||0} DB</div>
+            <div><i class="fa-solid fa-copy text-violet-400"></i> ${p.backups||0} Backup</div>
+            <div><i class="fa-solid fa-server text-violet-400"></i> ${p.servers||1} Server</div>
+        </div>
+        ${p.features?.length ? `<ul class="features">${p.features.map(f => `<li><i class="fa-solid fa-check-circle"></i>${f}</li>`).join('')}</ul>` : ''}
+        <div class="text-sm text-slate-300 leading-relaxed mb-4">${p.description||''}</div>
+        ${p.stock > 0 ? `
+        <div class="form-group">
+            <label><i class="fa-solid fa-key mr-1"></i>Random ID / Telegram ID</label>
+            <input type="text" id="buyerId" placeholder="Contoh: ID-8D74CE atau chat ID Telegram" value="">
+        </div>
+        <div class="form-group">
+            <label><i class="fa-solid fa-tag mr-1"></i>Domain Panel (opsional)</label>
+            <input type="text" id="panelDomain" placeholder="panel.domainmu.com">
+        </div>
+        <button class="btn-order" id="btnOrder" onclick="placeOrder('${p.id}')"><i class="fa-solid fa-qrcode mr-2"></i>Bayar QRIS Rp ${(p.price||0).toLocaleString('id-ID')}</button>
+        ` : '<p class="text-red-400 text-sm text-center py-4"><i class="fa-solid fa-exclamation-circle mr-1"></i>Stok habis, tunggu restock ya!</p>'}
+    `;
+    document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+}
+
+async function placeOrder(productId) {
+    const btn = document.getElementById('btnOrder');
+    const buyerId = document.getElementById('buyerId').value.trim();
+    const domain = document.getElementById('panelDomain').value.trim();
+    if (!buyerId) return Swal.fire('Error', 'Masukkan Random ID atau Chat ID Telegram kamu', 'error');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Memproses...';
+    
+    try {
+        const r = await fetch(`${API}/order`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ productId, buyerId, domain })
+        });
+        const d = await r.json();
+        if (d.success) {
+            showQRIS(d);
+        } else {
+            Swal.fire('Gagal', d.message||'Terjadi kesalahan', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-qrcode mr-2"></i>Coba Lagi';
+        }
+    } catch(e) {
+        Swal.fire('Error', e.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-qrcode mr-2"></i>Coba Lagi';
+    }
+}
+
+function showQRIS(data) {
+    const el = document.getElementById('modalContent');
+    el.innerHTML = `
+        <h2 class="text-center">Pembayaran QRIS</h2>
+        <div class="qris-display">
+            <p class="text-sm text-slate-400 mb-1">Total Pembayaran</p>
+            <div class="amount">Rp ${(data.amount||0).toLocaleString('id-ID')}</div>
+            <img src="${data.qrUrl}" alt="QRIS" id="qrisImg" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect fill=%22%23333%22 width=%22200%22 height=%22200%22/><text fill=%22%23fff%22 font-size=%2214%22 x=%2250%22 y=%22100%22>QRIS Tidak Tersedia</text></svg>'">
+            <p class="text-xs text-slate-400">Scan QRIS di atas menggunakan <strong class="text-white">GoPay, OVO, DANA, ShopeePay,</strong> atau <strong class="text-white">Mobile Banking</strong></p>
+            <div class="countdown mt-3" id="countdown">Menunggu pembayaran...</div>
+        </div>
+        <button class="btn-order" onclick="checkPayment('${data.invoice}')" id="btnCek"><i class="fa-solid fa-rotate mr-2"></i>Cek Status Pembayaran</button>
+        <p class="text-xs text-slate-500 text-center mt-3">Setelah bayar, klik tombol di atas. Panel akan dikirim via Telegram otomatis.</p>
+    `;
+    // Auto-check every 5s
+    if (window._payTimer) clearInterval(window._payTimer);
+    window._payTimer = setInterval(() => checkPayment(data.invoice, true), 5000);
+    window._currentInvoice = data.invoice;
+}
+
+async function checkPayment(invoice, silent=false) {
+    try {
+        const r = await fetch(`${API}/order/${invoice}`);
+        const d = await r.json();
+        if (d.status === 'SUKSES' || d.status === 'DELIVERED' || d.status === 'MENUNGGU_PENGIRIMAN') {
+            if (window._payTimer) clearInterval(window._payTimer);
+            const el = document.getElementById('modalContent');
+            const isDelivered = d.status === 'DELIVERED' || d.status === 'SUKSES';
+            const deliveryHtml = isDelivered && d.delivery ? `
+                <div class="bg-white/5 rounded-xl p-4 text-left space-y-2 mt-4">
+                    <p class="text-xs text-slate-400"><i class="fa-solid fa-link mr-1"></i>URL Panel: <code class="text-emerald-400 bg-white/5 px-1 rounded">${d.delivery.url}</code></p>
+                    <p class="text-xs text-slate-400"><i class="fa-solid fa-envelope mr-1"></i>Email: <code class="text-emerald-400 bg-white/5 px-1 rounded">${d.delivery.email}</code></p>
+                    <p class="text-xs text-slate-400"><i class="fa-solid fa-lock mr-1"></i>Password: <code class="text-emerald-400 bg-white/5 px-1 rounded">${d.delivery.password}</code></p>
+                    <p class="text-[9px] text-amber-400 mt-2">Jangan bagikan data ini ke siapa pun!</p>
+                </div>` : `<p class="text-slate-400">Panel akan dikirim ke Telegram kamu dalam beberapa saat.</p>`;
+            el.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fa-solid fa-check-circle text-6xl text-emerald-400 mb-4"></i>
+                    <h2 class="text-2xl font-black text-white mb-2">PEMBAYARAN BERHASIL! 🎉</h2>
+                    ${deliveryHtml}
+                    <p class="text-xs text-slate-500 mt-3">Cek chat Telegram kamu untuk detail login panel.</p>
+                    <button class="btn-order mt-4" onclick="closeModal()"><i class="fa-solid fa-check mr-2"></i>Selesai</button>
+                </div>
+            `;
+        }
+        return d;
+    } catch(e) {
+        if (!silent) Swal.fire('Error', 'Gagal cek status', 'error');
+    }
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+loadProducts();
+</script>
+</body>
+</html>

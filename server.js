@@ -44,6 +44,11 @@ const saveWithdraws = async (wds) => { try { await axios.put(`${FIREBASE_URL}/wi
 const getWebUsers = async () => { try { const res = await axios.get(`${FIREBASE_URL}/webUsers.json`); return res.data ? (Array.isArray(res.data) ? res.data : Object.values(res.data)) : []; } catch (e) { return []; } };
 const saveWebUsers = async (users) => { try { await axios.put(`${FIREBASE_URL}/webUsers.json`, users); } catch (e) { } };
 
+const getPanelProducts = async () => { try { const r = await axios.get(`${FIREBASE_URL}/panel_products.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
+const savePanelProducts = async (data) => { try { await axios.put(`${FIREBASE_URL}/panel_products.json`, data); } catch(e) {} };
+const getPanelOrders = async () => { try { const r = await axios.get(`${FIREBASE_URL}/panel_orders.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
+const savePanelOrders = async (data) => { try { await axios.put(`${FIREBASE_URL}/panel_orders.json`, data); } catch(e) {} };
+
 const config = getConfig();
 let isProcessing = false;
 
@@ -53,7 +58,7 @@ const getCelestialSignature = (apiKey, secret) => crypto.createHash('md5').updat
 const ppob = require('./ppob.js');
 
 // ================= 3. BOT SYSTEM VARS (dideklarasikan dulu, di-load setelah config) =================
-let bot, sendBroadcast, notifyAffiliateApproved, notifyAffiliateRejected, notifyWithdrawSuccess, notifyWithdrawRejected, notifyGroupAffiliateNew, notifyGroupOrderNew, notifyGroupOrderSuccess, notifyGroupWithdrawNew, notifyGroupWithdrawProcessed, notifyGroupError, notifyGroupCommission, notifyGroupStockUpdate;
+let bot, sendBroadcast, notifyAffiliateApproved, notifyAffiliateRejected, notifyWithdrawSuccess, notifyWithdrawRejected, notifyGroupAffiliateNew, notifyGroupOrderNew, notifyGroupOrderSuccess, notifyGroupWithdrawNew, notifyGroupWithdrawProcessed, notifyGroupError, notifyGroupCommission, notifyGroupStockUpdate, notifyGroupAdmin;
 
 // ================= ADMIN: AUTH ENDPOINT =================
 app.post('/api/admin/auth', (req, res) => {
@@ -1023,6 +1028,7 @@ async function autoProc() {
             }
         }
         if (changed) await saveOrders(orders);
+        await autoProcPanel();
     } finally { isProcessing = false; }
 }
 setInterval(autoProc, 10000);
@@ -1179,6 +1185,159 @@ app.post('/api/admin/database/reset', async (req, res) => {
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
+// ================= 13. PANEL PTERODACTYL =================
+// Public: get active panel products
+app.get('/api/panel/products', async (req, res) => {
+    const products = await getPanelProducts();
+    res.json({ success: true, products });
+});
+
+// Admin: CRUD panel products
+app.get('/api/admin/panel/products', async (req, res) => {
+    res.json({ success: true, products: await getPanelProducts() });
+});
+
+app.post('/api/admin/panel/products', async (req, res) => {
+    try {
+        const products = await getPanelProducts();
+        const { name, description, shortDesc, price, stock, ram, cpu, storage, bandwidth, databases, backups, servers, features, category, image } = req.body;
+        const id = 'PANEL-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2,5).toUpperCase();
+        products.push({
+            id, name, description: description||'', shortDesc: shortDesc||'',
+            price: parseInt(price)||0, stock: parseInt(stock)||0,
+            ram: parseInt(ram)||0, cpu: parseInt(cpu)||0, storage: parseInt(storage)||0,
+            bandwidth: parseInt(bandwidth)||0, databases: parseInt(databases)||0,
+            backups: parseInt(backups)||0, servers: parseInt(servers)||1,
+            features: features||[], category: category||'Umum', image: image||'',
+            active: true, createdAt: new Date().toISOString()
+        });
+        await savePanelProducts(products);
+        res.json({ success: true, id, message: 'Produk panel berhasil ditambahkan' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+app.put('/api/admin/panel/products/:id', async (req, res) => {
+    try {
+        let products = await getPanelProducts();
+        const idx = products.findIndex(p => p.id === req.params.id);
+        if (idx === -1) return res.json({ success: false, message: 'Produk tidak ditemukan' });
+        Object.keys(req.body).forEach(k => { if (k !== 'id') products[idx][k] = req.body[k]; });
+        await savePanelProducts(products);
+        res.json({ success: true, message: 'Produk diupdate' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+app.delete('/api/admin/panel/products/:id', async (req, res) => {
+    try {
+        let products = await getPanelProducts();
+        products = products.filter(p => p.id !== req.params.id);
+        await savePanelProducts(products);
+        res.json({ success: true, message: 'Produk dihapus' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+// Panel order: create via Premku QRIS
+app.post('/api/panel/order', async (req, res) => {
+    try {
+        const { productId, buyerId, domain } = req.body;
+        if (!productId || !buyerId) return res.json({ success: false, message: 'Product ID dan Buyer ID wajib diisi' });
+        const products = await getPanelProducts();
+        const product = products.find(p => p.id === productId && p.active !== false);
+        if (!product) return res.json({ success: false, message: 'Produk tidak ditemukan' });
+        if (product.stock <= 0) return res.json({ success: false, message: 'Stok habis' });
+        
+        const cfg = getConfig();
+        const amount = parseInt(product.price);
+        const payRes = await axios.post('https://premku.com/api/pay', { api_key: cfg.apiKey, amount });
+        if (!payRes.data || !payRes.data.success) return res.json({ success: false, message: 'Gagal membuat QRIS' });
+        
+        const invoice = payRes.data.data.invoice;
+        let orders = await getPanelOrders();
+        orders.push({
+            id: invoice,
+            productId, productName: product.name, price: amount,
+            buyerId, domain: domain||'', status: 'MENUNGGU_BAYAR',
+            qrUrl: payRes.data.data.qr_image || '',
+            invoice, createdAt: new Date().toISOString()
+        });
+        await savePanelOrders(orders);
+        
+        // Kurangi stok
+        products.find(p => p.id === productId).stock--;
+        await savePanelProducts(products);
+        
+        res.json({ success: true, invoice, amount, qrUrl: payRes.data.data.qr_image });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+// Check panel order status
+app.get('/api/panel/order/:invoice', async (req, res) => {
+    try {
+        const orders = await getPanelOrders();
+        const order = orders.find(o => o.invoice === req.params.invoice);
+        if (!order) return res.json({ status: 'NOT_FOUND' });
+        res.json({ status: order.status, delivery: order.deliveryDetails || null });
+    } catch(e) { res.json({ status: 'ERROR' }); }
+});
+
+// Admin: list panel orders
+app.get('/api/admin/panel/orders', async (req, res) => {
+    const orders = await getPanelOrders();
+    res.json({ success: true, orders: orders.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)) });
+});
+
+// Admin: deliver panel (send credentials to buyer)
+app.post('/api/admin/panel/deliver/:id', async (req, res) => {
+    try {
+        const { url, email, password } = req.body;
+        if (!url || !email || !password) return res.json({ success: false, message: 'URL, Email, dan Password wajib diisi' });
+        let orders = await getPanelOrders();
+        const idx = orders.findIndex(o => o.id === req.params.id);
+        if (idx === -1) return res.json({ success: false, message: 'Order tidak ditemukan' });
+        orders[idx].status = 'DELIVERED';
+        orders[idx].deliveryDetails = { url, email, password };
+        orders[idx].deliveredAt = new Date().toISOString();
+        await savePanelOrders(orders);
+        // Kirim ke Telegram
+        const users = await getUsers();
+        const buyer = users.find(u => u.randomId === orders[idx].buyerId || String(u.chatId) === orders[idx].buyerId);
+        if (bot && (buyer?.chatId || /^\d+$/.test(orders[idx].buyerId))) {
+            const chatId = buyer?.chatId || orders[idx].buyerId;
+            const msg = `🎉 *PESANAN PANEL SELESAI!* 🎉\n\n` +
+                `📦 *Produk:* ${orders[idx].productName}\n` +
+                `🔗 *URL Panel:* ${url}\n` +
+                `📧 *Email:* \`${email}\`\n` +
+                `🔑 *Password:* \`${password}\`\n\n` +
+                `Simpan baik-baik ya! Jangan bagikan ke siapa pun.`;
+            bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' }).catch(()=>{});
+        }
+        res.json({ success: true, message: 'Panel berhasil dikirim ke pembeli' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+// Auto-process: check panel payments
+async function autoProcPanel() {
+    const cfg = getConfig();
+    if (!cfg.apiKey) return;
+    let orders = await getPanelOrders();
+    let changed = false;
+    for (let i = 0; i < orders.length; i++) {
+        if (orders[i].status === 'MENUNGGU_BAYAR') {
+            try {
+                const cek = await axios.post('https://premku.com/api/pay_status', { api_key: cfg.apiKey, invoice: orders[i].invoice });
+                if (cek.data?.data?.status === 'success' || cek.data?.status === 'success') {
+                    orders[i].status = 'MENUNGGU_PENGIRIMAN';
+                    orders[i].paidAt = new Date().toISOString();
+                    changed = true;
+                    // Notifikasi admin group
+                    notifyGroupAdmin(`💳 *Pembayaran Panel*\n\n📦 *${orders[i].productName}*\n👤 *Buyer:* \`${orders[i].buyerId}\`\n💰 *Rp ${(orders[i].price||0).toLocaleString('id-ID')}*\n🔖 *Invoice:* \`${orders[i].invoice}\`\n\nSegera kirim panel!`).catch(()=>{});
+                }
+            } catch(e) {}
+        }
+    }
+    if (changed) await savePanelOrders(orders);
+}
+
 // ================= 13. DOWNLOAD SKU =================
 app.get('/api/reseller/download-sku', async (req, res) => {
     const cfg = getConfig();
@@ -1250,6 +1409,7 @@ async function initConfigFromFirebase() {
     notifyGroupError = botModule.notifyGroupError;
     notifyGroupCommission = botModule.notifyGroupCommission;
     notifyGroupStockUpdate = botModule.notifyGroupStockUpdate;
+    notifyGroupAdmin = botModule.notifyGroupAdmin;
 
     // Load affiliate API routes
     require('./affiliate_api.js')(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL);

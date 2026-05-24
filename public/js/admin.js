@@ -226,6 +226,81 @@ async function loadTab(tab){
             h+=`</tbody></table></div>`;
             c.innerHTML=h;
         }
+        // =============== 9b. PANEL PRODUK ===============
+        else if(tab==='panel'){
+            const [prodRes, orderRes] = await Promise.all([
+                api('/api/admin/panel/products').then(r=>r.json()),
+                api('/api/admin/panel/orders').then(r=>r.json())
+            ]);
+            const products = prodRes.products||[];
+            const orders = orderRes.orders||[];
+            let phtml = `<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Panel Produk</h2><button onclick="loadTab('panel')" class="text-violet-400"><i class="fa-solid fa-rotate"></i></button></div>`;
+            phtml += `<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div class="card stat-card p-3"><p class="text-[10px] text-slate-400 uppercase font-bold">Total Produk</p><h3 class="text-2xl font-black mt-1 text-white">${products.length}</h3></div>
+                <div class="card stat-card p-3"><p class="text-[10px] text-slate-400 uppercase font-bold">Total Order</p><h3 class="text-2xl font-black mt-1 text-white">${orders.length}</h3></div>
+                <div class="card stat-card p-3"><p class="text-[10px] text-slate-400 uppercase font-bold">Menunggu Kirim</p><h3 class="text-2xl font-black mt-1 text-amber-400">${orders.filter(o=>o.status==='MENUNGGU_PENGIRIMAN').length}</h3></div>
+                <div class="card stat-card p-3"><p class="text-[10px] text-slate-400 uppercase font-bold">Terkirim</p><h3 class="text-2xl font-black mt-1 text-emerald-400">${orders.filter(o=>o.status==='DELIVERED').length}</h3></div>
+            </div>`;
+            phtml += `<div class="card p-4 mb-4"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-box mr-2"></i>Daftar Produk</h3>
+            <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
+                <tr><th class="p-2 text-[10px]">Nama</th><th class="p-2 text-[10px] text-right">Harga</th><th class="p-2 text-[10px] text-right">Stok</th><th class="p-2 text-[10px] text-center">RAM</th><th class="p-2 text-[10px] text-center">CPU</th><th class="p-2 text-[10px] text-center">Disk</th><th class="p-2 text-[10px] text-center">Aktif</th><th class="p-2 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
+            products.forEach(p=>{
+                phtml += `<tr class="border-b border-white/5"><td class="p-2 text-xs font-bold">${p.name||'-'}</td>
+                <td class="p-2 text-right text-xs">${formatRp(p.price)}</td>
+                <td class="p-2 text-right text-xs">${p.stock}</td>
+                <td class="p-2 text-center text-xs">${p.ram||0} GB</td>
+                <td class="p-2 text-center text-xs">${p.cpu||0}%</td>
+                <td class="p-2 text-center text-xs">${p.storage||0} GB</td>
+                <td class="p-2 text-center">${p.active!==false?'<span class="badge-ok">Ya</span>':'<span class="badge-err">Tidak</span>'}</td>
+                <td class="p-2 text-center"><button onclick="editPanelProduct('${p.id}')" class="text-[10px] bg-sky-600 px-2 py-0.5 rounded mr-1">Edit</button><button onclick="deletePanelProduct('${p.id}')" class="text-[10px] bg-red-600 px-2 py-0.5 rounded">Hapus</button></td></tr>`;
+            });
+            phtml += `</tbody></table></div>
+            <button onclick="showAddPanelProduct()" class="btn-primary mt-3 text-xs"><i class="fa-solid fa-plus"></i> Tambah Produk Panel</button></div>`;
+            // Order list with delivery
+            phtml += `<div class="card p-4"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-list-check mr-2"></i>Order Panel</h3>
+            <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
+                <tr><th class="p-2 text-[10px]">Invoice</th><th class="p-2 text-[10px]">Produk</th><th class="p-2 text-[10px] text-right">Total</th><th class="p-2 text-[10px]">Buyer</th><th class="p-2 text-[10px]">Status</th><th class="p-2 text-[10px] text-center">Kirim</th></tr></thead><tbody>`;
+            orders.forEach(o=>{
+                const st = o.status;
+                let badge = st==='DELIVERED'?'<span class="badge-ok">Terkirim</span>':st==='MENUNGGU_PENGIRIMAN'?'<span class="badge-warn">Lunas, Kirim!</span>':st==='MENUNGGU_BAYAR'?'<span class="badge-err">Belum Bayar</span>':'<span class="badge-warn">'+st+'</span>';
+                const canDeliver = st==='MENUNGGU_PENGIRIMAN';
+                phtml += `<tr class="border-b border-white/5"><td class="p-2 text-[10px] font-mono">${o.invoice||o.id}</td>
+                <td class="p-2 text-xs font-bold">${o.productName||'-'}</td>
+                <td class="p-2 text-right text-xs">${formatRp(o.price)}</td>
+                <td class="p-2 text-[10px]">${o.buyerId||'-'}</td>
+                <td class="p-2">${badge}</td>
+                <td class="p-2 text-center">${canDeliver?`<button onclick="deliverPanel('${o.id}')" class="text-[10px] bg-emerald-600 px-2 py-0.5 rounded">Kirim</button>`:'-'}</td></tr>`;
+            });
+            phtml += `</tbody></table></div></div>`;
+            // Hidden form tambah produk
+            phtml += `<div id="addPanelForm" class="card p-4 mt-4" style="display:none"><h3 class="font-bold text-sm text-white mb-3">Tambah Produk Panel</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                <div><label class="text-[10px] text-slate-400 block">Nama Produk</label><input id="ap-name" class="input-dark" placeholder="Panel Gaming 4GB"></div>
+                <div><label class="text-[10px] text-slate-400 block">Harga</label><input id="ap-price" class="input-dark" type="number" placeholder="15000"></div>
+                <div><label class="text-[10px] text-slate-400 block">Stok</label><input id="ap-stock" class="input-dark" type="number" placeholder="10"></div>
+                <div><label class="text-[10px] text-slate-400 block">Kategori</label><input id="ap-category" class="input-dark" placeholder="Minecraft"></div>
+            </div>
+            <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-3">
+                <div><label class="text-[10px] text-slate-400 block">RAM (GB)</label><input id="ap-ram" class="input-dark" type="number" placeholder="4"></div>
+                <div><label class="text-[10px] text-slate-400 block">CPU (%)</label><input id="ap-cpu" class="input-dark" type="number" placeholder="100"></div>
+                <div><label class="text-[10px] text-slate-400 block">Storage (GB)</label><input id="ap-storage" class="input-dark" type="number" placeholder="20"></div>
+                <div><label class="text-[10px] text-slate-400 block">Bandwidth (GB)</label><input id="ap-bandwidth" class="input-dark" type="number" placeholder="0"></div>
+                <div><label class="text-[10px] text-slate-400 block">Databases</label><input id="ap-databases" class="input-dark" type="number" placeholder="1"></div>
+                <div><label class="text-[10px] text-slate-400 block">Backups</label><input id="ap-backups" class="input-dark" type="number" placeholder="1"></div>
+            </div>
+            <div class="mb-3"><label class="text-[10px] text-slate-400 block">Deskripsi Singkat</label><input id="ap-short-desc" class="input-dark" placeholder="Server gaming 4GB RAM dengan performa tinggi"></div>
+            <div class="mb-3"><label class="text-[10px] text-slate-400 block">Deskripsi Lengkap</label><textarea id="ap-desc" class="input-dark" rows="2" placeholder="Detail spesifikasi server..."></textarea></div>
+            <div class="flex gap-2"><button onclick="savePanelProduct()" class="btn-primary text-xs"><i class="fa-solid fa-save"></i> Simpan</button><button onclick="document.getElementById('addPanelForm').style.display='none'" class="px-4 py-2 rounded-xl bg-white/5 text-slate-400 text-xs">Batal</button></div></div>`;
+            // Hidden form kirim panel
+            phtml += `<div id="deliverPanelForm" class="card p-4 mt-4" style="display:none"><h3 class="font-bold text-sm text-white mb-3">Kirim Panel ke Pembeli</h3>
+            <div class="space-y-3">
+                <div><label class="text-[10px] text-slate-400 block">URL Panel</label><input id="dp-url" class="input-dark" placeholder="https://panel.domain.com"></div>
+                <div><label class="text-[10px] text-slate-400 block">Email/Username</label><input id="dp-email" class="input-dark" placeholder="admin@domain.com"></div>
+                <div><label class="text-[10px] text-slate-400 block">Password</label><input id="dp-pass" class="input-dark" type="text" placeholder="password123"></div>
+                <div class="flex gap-2"><button onclick="confirmDeliverPanel()" class="btn-primary text-xs"><i class="fa-solid fa-paper-plane"></i> Kirim</button><button onclick="document.getElementById('deliverPanelForm').style.display='none'" class="px-4 py-2 rounded-xl bg-white/5 text-slate-400 text-xs">Batal</button></div>
+            </div></div>`;
+            c.innerHTML = phtml;
+        }
         // =============== 10. AFFILIATE ===============
         else if(tab==='affiliate'){
             const [users,stats]=await Promise.all([api('/api/admin/users').then(r=>r.json()),api('/api/affiliate/stats').then(r=>r.json())]);
@@ -746,6 +821,94 @@ async function testSMM(){
     try{const r=await fetch('/api/smm-products').then(r=>r.json());document.getElementById('smm-test').innerHTML=r.success?`<span class="text-emerald-400 font-bold">✅ ${r.data?.length||0} services</span>`:'<span class="text-red-400">❌ Gagal</span>';}catch(e){document.getElementById('smm-test').innerHTML='<span class="text-red-400">Error</span>';}
 }
 
+// Panel functions
+let editingPanelId = null;
+let deliveringPanelId = null;
+window.showAddPanelProduct = function(){
+    editingPanelId = null;
+    document.getElementById('addPanelForm').style.display = 'block';
+    document.getElementById('addPanelForm').scrollIntoView({behavior:'smooth'});
+    ['ap-name','ap-price','ap-stock','ap-category','ap-ram','ap-cpu','ap-storage','ap-bandwidth','ap-databases','ap-backups','ap-short-desc','ap-desc'].forEach(id=>{
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+};
+window.savePanelProduct = async function(){
+    const data = {
+        name: document.getElementById('ap-name').value.trim(),
+        price: parseInt(document.getElementById('ap-price').value)||0,
+        stock: parseInt(document.getElementById('ap-stock').value)||0,
+        category: document.getElementById('ap-category').value.trim()||'Umum',
+        ram: parseInt(document.getElementById('ap-ram').value)||0,
+        cpu: parseInt(document.getElementById('ap-cpu').value)||0,
+        storage: parseInt(document.getElementById('ap-storage').value)||0,
+        bandwidth: parseInt(document.getElementById('ap-bandwidth').value)||0,
+        databases: parseInt(document.getElementById('ap-databases').value)||0,
+        backups: parseInt(document.getElementById('ap-backups').value)||0,
+        shortDesc: document.getElementById('ap-short-desc').value.trim(),
+        description: document.getElementById('ap-desc').value.trim()
+    };
+    if (!data.name) return alert('Nama produk wajib diisi!');
+    let url = '/api/admin/panel/products';
+    if (editingPanelId) {
+        const r = await api(url + '/' + editingPanelId, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const d = await r.json();
+        alert(d.message);
+    } else {
+        const r = await api(url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const d = await r.json();
+        alert(d.message);
+    }
+    loadTab('panel');
+};
+window.editPanelProduct = async function(id){
+    const r = await api('/api/admin/panel/products').then(r=>r.json());
+    const p = (r.products||[]).find(x=>x.id===id);
+    if (!p) return alert('Produk tidak ditemukan');
+    editingPanelId = id;
+    document.getElementById('ap-name').value = p.name||'';
+    document.getElementById('ap-price').value = p.price||0;
+    document.getElementById('ap-stock').value = p.stock||0;
+    document.getElementById('ap-category').value = p.category||'Umum';
+    document.getElementById('ap-ram').value = p.ram||0;
+    document.getElementById('ap-cpu').value = p.cpu||0;
+    document.getElementById('ap-storage').value = p.storage||0;
+    document.getElementById('ap-bandwidth').value = p.bandwidth||0;
+    document.getElementById('ap-databases').value = p.databases||0;
+    document.getElementById('ap-backups').value = p.backups||0;
+    document.getElementById('ap-short-desc').value = p.shortDesc||'';
+    document.getElementById('ap-desc').value = p.description||'';
+    document.getElementById('addPanelForm').style.display = 'block';
+    document.getElementById('addPanelForm').scrollIntoView({behavior:'smooth'});
+};
+window.deletePanelProduct = async function(id){
+    if (!confirm('Hapus produk panel ini?')) return;
+    const r = await api('/api/admin/panel/products/' + id, {method:'DELETE'});
+    const d = await r.json();
+    alert(d.message);
+    loadTab('panel');
+};
+window.deliverPanel = function(id){
+    deliveringPanelId = id;
+    document.getElementById('dp-url').value = '';
+    document.getElementById('dp-email').value = '';
+    document.getElementById('dp-pass').value = '';
+    document.getElementById('deliverPanelForm').style.display = 'block';
+    document.getElementById('deliverPanelForm').scrollIntoView({behavior:'smooth'});
+};
+window.confirmDeliverPanel = async function(){
+    if (!deliveringPanelId) return;
+    const url = document.getElementById('dp-url').value.trim();
+    const email = document.getElementById('dp-email').value.trim();
+    const password = document.getElementById('dp-pass').value.trim();
+    if (!url || !email || !password) return alert('URL, Email, dan Password wajib diisi');
+    if (!confirm('Kirim panel ini ke pembeli?')) return;
+    const r = await api('/api/admin/panel/deliver/' + deliveringPanelId, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,email,password})});
+    const d = await r.json();
+    alert(d.message);
+    document.getElementById('deliverPanelForm').style.display = 'none';
+    loadTab('panel');
+};
 // Banner functions
 window.addBannerRow=function(){
     const div=document.createElement('div');
