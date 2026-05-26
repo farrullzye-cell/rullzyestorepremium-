@@ -164,49 +164,55 @@ let currentPendingGoogle = null;
 })();
 
 window.googleLogin = function() {
-    if (!fbReady) {
-        Swal.fire({icon:'error', title:'Google Login Belum Siap', text:'Firebase belum dikonfigurasi. Admin harus mengisi Firebase Config di Panel Admin terlebih dahulu.', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
-        return;
-    }
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.addScope('email');
-    provider.addScope('profile');
-    fbAuth.signInWithPopup(provider).then(async (result) => {
-        // Dapatkan token
-        const credential = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
-        const firebaseIdToken = await result.user.getIdToken(); // Firebase ID token (selalu valid)
-        const accessToken = credential?.accessToken; // Google access token
-        const email = result.user.email;
-        const name = result.user.displayName;
-
-        currentPendingGoogle = { idToken: firebaseIdToken, accessToken, email, name };
-
-        const r2 = await fetch('/api/affiliate/google-login', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ idToken: firebaseIdToken, accessToken })
-        });
-        const d = await r2.json();
-        if (!d.success) {
-            Swal.fire({icon:'error', title:'Gagal', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+    try {
+        if (!fbReady) {
+            const msg = !window.firebase ? 'Firebase SDK gagal dimuat. Coba refresh halaman.' : 'Firebase belum dikonfigurasi. Admin harus mengisi Firebase Config di Panel Admin terlebih dahulu.';
+            if (window.Swal) Swal.fire({icon:'error', title:'Google Login Belum Siap', text:msg, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+            else alert(msg);
             return;
         }
-        if (d.linked) {
-            setToken(d.token);
-            localStorage.setItem('affId', d.randomId || '');
-            loadDashboard();
-            if (d.isNew) {
-                document.getElementById('newGoogleUserAlert').innerHTML = `✅ Akun affiliate baru dibuat! Kode kamu: <strong>${d.randomId}</strong>`;
-                document.getElementById('newGoogleUserAlert').classList.remove('hidden');
-            } else {
-                document.getElementById('newGoogleUserAlert').classList.add('hidden');
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('email');
+        provider.addScope('profile');
+        fbAuth.signInWithPopup(provider).then(async (result) => {
+            const firebaseIdToken = await result.user.getIdToken();
+            const credential = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
+            const accessToken = credential?.accessToken;
+
+            currentPendingGoogle = { idToken: firebaseIdToken, accessToken, email: result.user.email, name: result.user.displayName };
+
+            const r2 = await fetch('/api/affiliate/google-login', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ idToken: firebaseIdToken, accessToken })
+            });
+            const d = await r2.json();
+            if (!d.success) {
+                if (window.Swal) Swal.fire({icon:'error', title:'Gagal', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+                else alert(d.message);
+                return;
             }
-            Swal.fire({icon:'success', title:'Berhasil Masuk!', text:d.isNew?'Akun affiliate berhasil dibuat!':'Selamat datang kembali!', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:1500, showConfirmButton:false});
-        }
-    }).catch((err) => {
-        if (err.code !== 'auth/popup-closed-by-user') {
-            Swal.fire({icon:'error', title:'Gagal Login', text:err.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
-        }
-    });
+            if (d.linked) {
+                setToken(d.token);
+                localStorage.setItem('affId', d.randomId || '');
+                loadDashboard();
+                if (d.isNew) {
+                    document.getElementById('newGoogleUserAlert').innerHTML = `Akun affiliate baru dibuat! Kode kamu: ${d.randomId}`;
+                    document.getElementById('newGoogleUserAlert').classList.remove('hidden');
+                } else {
+                    document.getElementById('newGoogleUserAlert').classList.add('hidden');
+                }
+                if (window.Swal) Swal.fire({icon:'success', title:'Berhasil Masuk!', text:d.isNew?'Akun affiliate berhasil dibuat!':'Selamat datang kembali!', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:1500, showConfirmButton:false});
+            }
+        }).catch((err) => {
+            if (err.code !== 'auth/popup-closed-by-user') {
+                if (window.Swal) Swal.fire({icon:'error', title:'Gagal Login', text:err.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+                else alert(err.message);
+            }
+        });
+    } catch(e) {
+        if (window.Swal) Swal.fire({icon:'error', title:'Error', text:e.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+        else alert(e.message);
+    }
 };
 
 // linkTelegram — show modal to enter Telegram Chat ID
@@ -791,9 +797,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('inputRandomId').value = savedId;
         const ok = await loadDashboard();
         if (!ok) {
-            // Token expired or invalid
             clearToken();
         }
+    }
+    // Retry Firebase init jika gagal sebelumnya (CDN mungkin loading lambat)
+    if (!fbReady && window.firebase) {
+        try {
+            const r = await fetch('/api/firebase-config');
+            const d = await r.json();
+            if (d.success && d.config && d.config.apiKey && d.config.projectId) {
+                firebase.initializeApp(d.config);
+                fbAuth = firebase.auth();
+                fbAuth.useDeviceLanguage();
+                fbReady = true;
+                console.log('Firebase init retry success');
+            }
+        } catch(e) { console.warn('Firebase retry:', e.message); }
     }
 });
 </script>
