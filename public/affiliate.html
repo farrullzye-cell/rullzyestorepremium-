@@ -591,9 +591,6 @@ async function loginAffiliate() {
             // Step 2: Fetch dashboard pakai token
             const ok = await loadDashboard();
             if (!ok) { clearToken(); Swal.fire({icon:'error', title:'Gagal', text:'Gagal memuat dashboard.', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'}); }
-                clearToken();
-                Swal.fire({icon:'error', title:'Gagal', text:dash.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
-            }
         } else if (d.isPending) {
             Swal.fire({icon:'info', title:'Menunggu Persetujuan', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
         } else {
