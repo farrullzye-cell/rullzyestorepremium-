@@ -2,6 +2,7 @@
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
+const crypto = require('crypto');
 
 module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL) {
     const router = express.Router();
