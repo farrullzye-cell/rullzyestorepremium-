@@ -46,8 +46,10 @@
         </div>
         <h2 class="text-xl font-black text-white mb-1">Admin Panel</h2>
         <p class="text-xs text-slate-400 mb-4">Masukkan PIN untuk akses</p>
-        <input type="password" id="pinInput" placeholder="PIN Admin" class="input-dark text-center mb-3 text-lg tracking-widest" onkeydown="if(event.key==='Enter')checkPin()">
+        <input type="text" id="adminUsername" placeholder="Username (kosongkan untuk Super Admin)" class="input-dark text-center mb-2 text-xs" autocomplete="off">
+        <input type="password" id="pinInput" placeholder="PIN" class="input-dark text-center mb-3 text-lg tracking-widest" onkeydown="if(event.key==='Enter')checkPin()">
         <button onclick="checkPin()" class="btn-primary w-full">Masuk</button>
+        <p id="loginError" class="text-red-400 text-xs mt-3 hidden"></p>
     </div>
 </div>
 <div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
@@ -55,7 +57,7 @@
 <aside class="sidebar p-2 flex flex-col gap-0.5" id="sidebar" style="display:none">
     <div class="px-3 py-4 flex items-center gap-2.5 mb-1">
         <div class="w-8 h-8 bg-gradient-to-br from-violet-600 to-purple-600 rounded-xl flex items-center justify-center shadow-sm shadow-violet-600/20"><i class="fa-solid fa-gem text-white text-xs"></i></div>
-        <div><span class="font-black text-sm text-white">RullzyeAdmin</span><p class="text-[9px] text-slate-500">v3.0 — Full Control</p></div>
+        <div><span class="font-black text-sm text-white">RullzyeAdmin</span><p id="adminRoleBadge" class="text-[9px] text-slate-500"></p></div>
     </div>
     <div style="overflow-y:auto;flex:1" class="space-y-0.5">
         <div class="menu-item active" data-tab="dashboard"><i class="fa-solid fa-chart-pie"></i>Dashboard</div>
@@ -79,6 +81,7 @@
         <div class="menu-item" data-tab="groups"><i class="fa-solid fa-telegram"></i>Grup Bot</div>
         <div class="menu-item" data-tab="botstatus"><i class="fa-solid fa-robot"></i>Bot Status</div>
         <div class="menu-item" data-tab="broadcast"><i class="fa-solid fa-bullhorn"></i>Broadcast</div>
+        <div class="menu-item admin-only" data-tab="admins"><i class="fa-solid fa-user-shield"></i>Admin</div>
         <div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 10px"></div>
         <div class="menu-item" data-tab="testimoni"><i class="fa-solid fa-star"></i>Testimoni</div>
         <div class="menu-item" data-tab="banner"><i class="fa-solid fa-images"></i>Banner</div>

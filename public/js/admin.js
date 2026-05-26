@@ -1,21 +1,66 @@
 let currentPin='';
+let adminRole='';
+let adminPermissions=[];
+let adminUsername='';
 const formatRp=n=>'Rp '+parseInt(n||0).toLocaleString('id-ID');
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open')}
 
 async function checkPin(){
     const p=document.getElementById('pinInput').value;
+    const u=document.getElementById('adminUsername').value.trim();
+    document.getElementById('loginError').classList.add('hidden');
     try {
         const res=await fetch('/api/admin/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:p})});
         const data=await res.json();
         if(data.success){
             currentPin=p;
+            adminRole=data.role;
+            adminUsername=data.username||u||'Super Admin';
+            adminPermissions=data.permissions||[];
             document.getElementById('pinOverlay').style.display='none';
             document.getElementById('sidebar').style.display='flex';
             document.getElementById('mainContent').style.display='block';
+            document.getElementById('adminRoleBadge').innerText=adminRole==='super_admin'?'👑 Super Admin':'🔑 Admin — '+adminUsername;
+            // Hide admin-only menu for regular admins
+            document.querySelectorAll('.admin-only').forEach(el=>el.style.display=adminRole==='super_admin'?'':'none');
             loadTab('dashboard');
-        } else alert('PIN Salah!');
-    } catch(e){ alert('Gagal terhubung ke server.'); }
+        } else {
+            document.getElementById('loginError').innerText='❌ '+data.message;
+            document.getElementById('loginError').classList.remove('hidden');
+        }
+    } catch(e){ document.getElementById('loginError').innerText='❌ Gagal terhubung ke server.'; document.getElementById('loginError').classList.remove('hidden'); }
+}
+
+// ================= ADMIN MANAGEMENT =================
+async function addAdmin(){
+    const username=document.getElementById('adm-username').value.trim();
+    const pin=document.getElementById('adm-pin').value.trim();
+    const perms=document.getElementById('adm-perms').value.trim().split(',').map(s=>s.trim()).filter(Boolean);
+    if(!username||!pin) return alert('Username dan PIN wajib diisi!');
+    const r=await api('/api/admin/admins/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,pin,permissions:perms})});
+    const d=await r.json();
+    if(d.success){alert('Admin ditambahkan!');loadTab('admins');} else alert(d.message||'Gagal');
+}
+async function editAdmin(id){
+    const r=await api('/api/admin/admins').then(r=>r.json());
+    const a=(r.admins||[]).find(x=>x.id===id);
+    if(!a) return alert('Admin tidak ditemukan.');
+    const np=prompt('PIN baru (kosongkan jika tidak diubah):',a.pin);
+    if(np===null) return;
+    const nu=prompt('Username baru:',a.username)||a.username;
+    const nperms=prompt('Izin (pisahkan koma):',(a.permissions||[]).join(','));
+    if(nperms===null) return;
+    const perms=nperms.split(',').map(s=>s.trim()).filter(Boolean);
+    const res=await api('/api/admin/admins/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,username:nu,pin:np,permissions:perms})});
+    const d=await res.json();
+    if(d.success){alert('Admin diperbarui!');loadTab('admins');} else alert(d.message||'Gagal');
+}
+async function deleteAdmin(id){
+    if(!confirm('Hapus admin ini?')) return;
+    const r=await api('/api/admin/admins/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+    const d=await r.json();
+    if(d.success){alert('Admin dihapus!');loadTab('admins');} else alert(d.message||'Gagal');
 }
 
 function api(path, options={}) {
@@ -38,6 +83,15 @@ function truncate(txt,len=200){return txt?.length>len?txt.substring(0,len)+'...'
 async function loadTab(tab){
     const c=document.getElementById('tab-content');
     c.innerHTML='<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-3xl text-violet-500"></i><p class="mt-2 text-slate-400 text-sm">Memuat data...</p></div>';
+    // Permission map: tab name → required permission
+    const permMap={orders:'orders',withdraws:'withdraws',users:'users',affiliates:'affiliates',products:'products',config:'config',broadcast:'broadcast',security:'settings',groups:'settings',botstatus:'settings',admins:'admins'};
+    const reqPerm=permMap[tab];
+    if(reqPerm && adminRole!=='super_admin' && !adminPermissions.includes(reqPerm)){
+        c.innerHTML=`<div class="text-center py-20"><i class="fa-solid fa-lock text-4xl text-slate-600 mb-4"></i><p class="text-slate-500 text-sm">Akses ditolak. Tidak ada izin untuk menu ini.</p></div>`;
+        // Reset active tab to previous
+        document.querySelectorAll('.menu-item').forEach(m=>{if(m.dataset.tab===tab) m.classList.remove('active');});
+        return;
+    }
     try{
         // =============== 1. DASHBOARD ===============
         if(tab==='dashboard'){
@@ -455,10 +509,13 @@ async function loadTab(tab){
         else if(tab==='security'){
             c.innerHTML=`<h2 class="text-xl font-black mb-4">Pengaturan Keamanan</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="card p-6"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-key text-amber-400 mr-2"></i>Ganti PIN Admin</h3>
-                    <input type="password" id="newPin" class="input-dark mb-2" placeholder="PIN Baru (6 digit)">
+                <div class="card p-6"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-key text-amber-400 mr-2"></i>${adminRole==='super_admin'?'Ganti PIN Super Admin':'PIN Admin'}</h3>
+                    ${adminRole==='super_admin'?`
+                    <input type="password" id="oldPin" class="input-dark mb-2" placeholder="PIN Lama">
+                    <input type="password" id="newPin" class="input-dark mb-2" placeholder="PIN Baru (min 4 karakter)">
                     <input type="password" id="confirmPin" class="input-dark mb-3" placeholder="Konfirmasi PIN Baru">
-                    <button onclick="changePin()" class="btn-primary w-full">Ganti PIN</button>
+                    <button onclick="changePin()" class="btn-primary w-full">Ganti PIN Super Admin</button>
+                    `:`<p class="text-xs text-slate-400">Hanya Super Admin yang bisa mengganti PIN. Hubungi Super Admin untuk perubahan.</p>`}
                 </div>
                 <div class="card p-6"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-shield text-emerald-400 mr-2"></i>Log Aktivitas</h3>
                     <p class="text-xs text-slate-400 mb-3">Lihat semua aktivitas login, withdraw, dan perubahan di sistem.</p>
@@ -574,7 +631,43 @@ async function loadTab(tab){
                 </div>
             </div>`;
         }
-        // =============== 21. BROADCAST ===============
+        // =============== 21. ADMINS (Super Admin only) ===============
+        else if(tab==='admins'){
+            const r=await api('/api/admin/admins').then(r=>r.json());
+            const list=r.admins||[];
+            let rows=list.map(a=>`<tr class="border-b border-white/[0.03] hover:bg-white/[0.01]">
+                <td class="px-4 py-3 font-bold text-white">${a.username}</td>
+                <td class="px-4 py-3"><code class="text-violet-300 bg-violet-500/5 px-2 py-0.5 rounded text-[10px] font-mono">${a.pin}</code></td>
+                <td class="px-4 py-3 text-[10px]">${(a.permissions||[]).join(', ')||'<span class="text-slate-500">—</span>'}</td>
+                <td class="px-4 py-3 text-center"><span class="${a.active===false?'text-red-400':'text-emerald-400'} text-[10px] font-bold">${a.active===false?'OFF':'ON'}</span></td>
+                <td class="px-4 py-3 text-center">
+                    <button onclick="editAdmin('${a.id}')" class="text-amber-400 hover:text-amber-300 text-xs mr-2"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="deleteAdmin('${a.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>`).join('');
+            c.innerHTML=`<h2 class="text-xl font-black mb-4"><i class="fa-solid fa-user-shield text-violet-400 mr-2"></i>Manajemen Admin</h2>
+            <div class="card p-5 mb-4">
+                <div class="flex flex-col sm:flex-row gap-3 items-end">
+                    <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Username</label><input id="adm-username" class="input-dark mt-1" placeholder="admin1"></div>
+                    <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">PIN</label><input id="adm-pin" type="password" class="input-dark mt-1" placeholder="123456"></div>
+                    <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Izin (pisahkan koma)</label><input id="adm-perms" class="input-dark mt-1" placeholder="orders,withdraws,users"></div>
+                    <button onclick="addAdmin()" class="btn-primary shrink-0"><i class="fa-solid fa-plus mr-1"></i>Tambah</button>
+                </div>
+                <p class="text-[10px] text-slate-500 mt-3">Izin tersedia: <code class="text-violet-300">dashboard, orders, withdraws, users, affiliates, products, config, broadcast, settings</code></p>
+            </div>
+            <div class="card p-5">
+                <h3 class="font-bold text-sm text-white mb-3">Daftar Admin</h3>
+                ${list.length===0?'<p class="text-xs text-slate-500">Belum ada admin.</p>':
+                `<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="text-slate-500 border-b border-white/[0.04]">
+                    <th class="px-4 py-3 text-left font-bold uppercase tracking-widest text-[10px]">Username</th>
+                    <th class="px-4 py-3 text-left font-bold uppercase tracking-widest text-[10px]">PIN</th>
+                    <th class="px-4 py-3 text-left font-bold uppercase tracking-widest text-[10px]">Izin</th>
+                    <th class="px-4 py-3 text-center font-bold uppercase tracking-widest text-[10px]">Status</th>
+                    <th class="px-4 py-3 text-center font-bold uppercase tracking-widest text-[10px]">Aksi</th>
+                </tr></thead><tbody>${rows}</tbody></table></div>`}
+            </div>`;
+        }
+        // =============== 22. BROADCAST ===============
         else if(tab==='broadcast'){
             c.innerHTML=`<h2 class="text-xl font-black mb-4">Broadcast / Kirim Pesan Massal</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -845,11 +938,12 @@ window.saveBadges=async function(){
 };
 
 window.changePin=async function(){
+    const oldPin=document.getElementById('oldPin')?.value||currentPin;
     const newPin=document.getElementById('newPin').value;
     const confirmPin=document.getElementById('confirmPin').value;
     if(!newPin||newPin.length<4) return alert('PIN minimal 4 karakter');
     if(newPin!==confirmPin) return alert('PIN tidak cocok');
-    const r=await api('/api/admin/change-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldPin:currentPin,newPin})});
+    const r=await api('/api/admin/change-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldPin,newPin})});
     const d=await r.json();
     if(d.success){alert('PIN berhasil diganti!');currentPin=newPin;} else alert(d.message||'Gagal ganti PIN');
 };

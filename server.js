@@ -12,11 +12,31 @@ app.use(express.static('public'));
 
 const getAdminPin = () => { const cfg = getConfig(); return cfg.adminPin || '858486'; };
 
-// Admin auth middleware
+// Multi-admin helpers
+const verifyAdmin = (pin) => {
+    const cfg = getConfig();
+    // Super admin check
+    if (pin === (cfg.superAdminPin || cfg.adminPin || '858486')) return { role: 'super_admin', permissions: 'all' };
+    // Regular admin check
+    if (cfg.admins && Array.isArray(cfg.admins)) {
+        const admin = cfg.admins.find(a => a.pin === pin && a.active !== false);
+        if (admin) return { role: 'admin', username: admin.username, permissions: admin.permissions || [] };
+    }
+    return null;
+};
+
+const hasPermission = (admin, requiredPerm) => {
+    if (!admin) return false;
+    if (admin.role === 'super_admin') return true;
+    return admin.permissions && admin.permissions.includes(requiredPerm);
+};
+
+// Admin auth middleware — attaches req.admin
 const adminAuth = (req, res, next) => {
     const pin = req.headers['x-admin-pin'];
-    const validPin = getAdminPin();
-    if (pin !== validPin) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const admin = verifyAdmin(pin);
+    if (!admin) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    req.admin = admin;
     next();
 };
 
@@ -66,7 +86,8 @@ let bot, sendBroadcast, notifyAffiliateApproved, notifyAffiliateRejected, notify
 // ================= ADMIN: AUTH ENDPOINT =================
 app.post('/api/admin/auth', (req, res) => {
     const { pin } = req.body;
-    if (pin === getAdminPin()) return res.json({ success: true });
+    const admin = verifyAdmin(pin);
+    if (admin) return res.json({ success: true, role: admin.role, username: admin.username || 'Super Admin', permissions: admin.permissions });
     res.json({ success: false, message: 'PIN salah!' });
 });
 
@@ -1152,13 +1173,65 @@ app.post('/api/admin/affiliate/add-balance', async (req, res) => {
 
 app.post('/api/admin/change-pin', async (req, res) => {
     try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Hanya Super Admin yang bisa mengganti PIN Super Admin.' });
         const { oldPin, newPin } = req.body;
-        if (oldPin !== getAdminPin()) return res.json({ success: false, message: 'PIN lama salah.' });
-        if (!newPin || newPin.length < 4) return res.json({ success: false, message: 'PIN baru minimal 4 karakter.' });
         const cfg = getConfig();
-        cfg.adminPin = newPin;
+        if (oldPin !== (cfg.superAdminPin || cfg.adminPin || '858486')) return res.json({ success: false, message: 'PIN lama salah.' });
+        if (!newPin || newPin.length < 4) return res.json({ success: false, message: 'PIN baru minimal 4 karakter.' });
+        cfg.superAdminPin = newPin;
+        delete cfg.adminPin; // migrate from old field
         await saveConfig(cfg);
-        res.json({ success: true, message: 'PIN berhasil diganti!' });
+        res.json({ success: true, message: 'PIN Super Admin berhasil diganti!' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+// ================= ADMIN: ADMIN MANAGEMENT (super admin only) =================
+app.get('/api/admin/admins', (req, res) => {
+    if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
+    const cfg = getConfig();
+    res.json({ success: true, admins: cfg.admins || [] });
+});
+
+app.post('/api/admin/admins/add', async (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
+        const { username, pin, permissions } = req.body;
+        if (!username || !pin) return res.json({ success: false, message: 'Username dan PIN diperlukan.' });
+        if (pin.length < 4) return res.json({ success: false, message: 'PIN minimal 4 karakter.' });
+        const cfg = getConfig();
+        if (!cfg.admins) cfg.admins = [];
+        if (cfg.admins.find(a => a.username === username)) return res.json({ success: false, message: 'Username sudah ada.' });
+        if (cfg.admins.find(a => a.pin === pin)) return res.json({ success: false, message: 'PIN sudah digunakan admin lain.' });
+        cfg.admins.push({ id: 'ADMIN-' + Date.now().toString(36).toUpperCase(), username, pin, permissions: permissions || [], active: true, createdBy: req.admin.username || 'Super Admin', createdAt: new Date().toISOString() });
+        await saveConfig(cfg);
+        res.json({ success: true, message: 'Admin berhasil ditambahkan!' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+app.post('/api/admin/admins/edit', async (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
+        const { id, username, pin, permissions, active } = req.body;
+        const cfg = getConfig();
+        const idx = (cfg.admins || []).findIndex(a => a.id === id);
+        if (idx === -1) return res.json({ success: false, message: 'Admin tidak ditemukan.' });
+        if (username) cfg.admins[idx].username = username;
+        if (pin) { if (pin.length < 4) return res.json({ success: false, message: 'PIN minimal 4 karakter.' }); cfg.admins[idx].pin = pin; }
+        if (permissions !== undefined) cfg.admins[idx].permissions = permissions;
+        if (active !== undefined) cfg.admins[idx].active = active;
+        await saveConfig(cfg);
+        res.json({ success: true, message: 'Admin berhasil diperbarui!' });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+app.post('/api/admin/admins/delete', async (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
+        const { id } = req.body;
+        const cfg = getConfig();
+        cfg.admins = (cfg.admins || []).filter(a => a.id !== id);
+        await saveConfig(cfg);
+        res.json({ success: true, message: 'Admin berhasil dihapus!' });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
@@ -1483,6 +1556,16 @@ async function initConfigFromFirebase() {
 
 (async () => {
     await initConfigFromFirebase();
+
+    // Migrasi config: adminPin → superAdminPin jika perlu
+    const cfg = getConfig();
+    if (cfg.adminPin && !cfg.superAdminPin) {
+        cfg.superAdminPin = cfg.adminPin;
+        delete cfg.adminPin;
+        if (!cfg.admins) cfg.admins = [];
+        await saveConfig(cfg);
+        console.log('✅ Config migrated: adminPin -> superAdminPin');
+    }
 
     // Load bot (membaca config.json yang sudah diperbarui dari Firebase)
     const botModule = require('./bot.js');
