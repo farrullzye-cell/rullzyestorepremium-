@@ -478,14 +478,46 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
     // ============================================================
     router.post('/google-login', async (req, res) => {
         try {
-            const { idToken } = req.body;
+            const { idToken, accessToken } = req.body;
             if (!idToken) return res.json({ success: false, message: 'Token Google diperlukan.' });
 
-            // Verifikasi token ke Google
-            const verify = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
-            const payload = verify.data;
+            // Verifikasi token — multi method fallback
+            let payload;
+            // Method 1: Google tokeninfo (pure Google ID token)
+            try {
+                const verify = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`, { timeout: 5000 });
+                payload = verify.data;
+            } catch (e1) {
+                // Method 2: Firebase Identity Toolkit (Firebase ID token)
+                try {
+                    const cfg = getConfig();
+                    const apiKey = cfg.firebaseConfig?.apiKey;
+                    if (apiKey) {
+                        const fbVerify = await axios.post(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, { idToken }, { timeout: 5000 });
+                        const users = fbVerify.data?.users;
+                        if (users && users.length) {
+                            payload = {
+                                email: users[0].email || users[0].providerUserInfo?.[0]?.email,
+                                name: users[0].displayName || users[0].providerUserInfo?.[0]?.displayName || ''
+                            };
+                        }
+                    }
+                } catch (e2) { /* try next method */ }
+
+                // Method 3: access token → Google userinfo
+                if (!payload && accessToken) {
+                    try {
+                        const ui = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+                            headers: { Authorization: `Bearer ${accessToken}` }, timeout: 5000
+                        });
+                        if (ui.data && ui.data.email) payload = { email: ui.data.email, name: ui.data.name || '' };
+                    } catch (e3) { /* give up */ }
+                }
+
+                if (!payload) return res.json({ success: false, message: 'Token tidak valid di semua metode verifikasi.' });
+            }
             if (!payload || !payload.email) {
-                return res.json({ success: false, message: 'Token Google tidak valid.' });
+                return res.json({ success: false, message: 'Token tidak mengandung email.' });
             }
 
             const googleEmail = payload.email.toLowerCase();
@@ -525,13 +557,35 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
 
     router.post('/link-google', async (req, res) => {
         try {
-            const { idToken, randomId } = req.body;
+            const { idToken, randomId, accessToken } = req.body;
             if (!idToken || !randomId) return res.json({ success: false, message: 'Data tidak lengkap.' });
 
-            // Verifikasi token
-            const verify = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
-            const payload = verify.data;
-            if (!payload || !payload.email) return res.json({ success: false, message: 'Token Google tidak valid.' });
+            // Verifikasi token — multi method
+            let payload;
+            try {
+                const verify = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`, { timeout: 5000 });
+                payload = verify.data;
+            } catch (e1) {
+                try {
+                    const cfg = getConfig();
+                    const apiKey = cfg.firebaseConfig?.apiKey;
+                    if (apiKey) {
+                        const fbVerify = await axios.post(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, { idToken }, { timeout: 5000 });
+                        const users = fbVerify.data?.users;
+                        if (users && users.length) {
+                            payload = { email: users[0].email || users[0].providerUserInfo?.[0]?.email, name: users[0].displayName || '' };
+                        }
+                    }
+                } catch (e2) {}
+                if (!payload && accessToken) {
+                    try {
+                        const ui = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 5000 });
+                        if (ui.data && ui.data.email) payload = { email: ui.data.email, name: ui.data.name || '' };
+                    } catch (e3) {}
+                }
+                if (!payload) return res.json({ success: false, message: 'Token tidak valid.' });
+            }
+            if (!payload || !payload.email) return res.json({ success: false, message: 'Token tidak mengandung email.' });
 
             const googleEmail = payload.email.toLowerCase();
 

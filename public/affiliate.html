@@ -163,7 +163,7 @@ let currentPendingGoogle = null;
     try {
         const r = await fetch('/api/firebase-config');
         const d = await r.json();
-        if (d.success && d.config && d.config.apiKey) {
+        if (d.success && d.config && d.config.apiKey && d.config.projectId) {
             firebase.initializeApp(d.config);
             fbAuth = firebase.auth();
             fbAuth.useDeviceLanguage();
@@ -181,13 +181,20 @@ window.googleLogin = function() {
     provider.addScope('email');
     provider.addScope('profile');
     fbAuth.signInWithPopup(provider).then(async (result) => {
-        const idToken = await result.user.getIdToken();
-        currentPendingGoogle = { idToken, email: result.user.email, name: result.user.displayName };
-        const r = await fetch('/api/affiliate/google-login', {
+        // Dapatkan token dari credential
+        const credential = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
+        const googleIdToken = credential.idToken;  // Google-issued ID token
+        const accessToken = credential.accessToken; // Google access token
+        const email = result.user.email;
+        const name = result.user.displayName;
+
+        currentPendingGoogle = { idToken: googleIdToken, accessToken, email, name };
+
+        const r2 = await fetch('/api/affiliate/google-login', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ idToken })
+            body: JSON.stringify({ idToken: googleIdToken, accessToken })
         });
-        const d = await r.json();
+        const d = await r2.json();
         if (!d.success) {
             Swal.fire({icon:'error', title:'Gagal', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
             return;
@@ -213,7 +220,7 @@ window.confirmLinkGoogle = async function() {
     if (!currentPendingGoogle) return;
     const r = await fetch('/api/affiliate/link-google', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ idToken: currentPendingGoogle.idToken, randomId })
+        body: JSON.stringify({ idToken: currentPendingGoogle.idToken, accessToken: currentPendingGoogle.accessToken, randomId })
     });
     const d = await r.json();
     if (d.success) {
