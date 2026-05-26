@@ -155,30 +155,32 @@
 </div>
 
 <script>
-let firebaseConfig = { apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' };
+let fbAuth = null;
+let fbReady = false;
+let currentPendingGoogle = null;
+
 (async function initFirebase() {
     try {
         const r = await fetch('/api/firebase-config');
         const d = await r.json();
         if (d.success && d.config && d.config.apiKey) {
-            firebaseConfig = d.config;
-            firebase.initializeApp(firebaseConfig);
+            firebase.initializeApp(d.config);
+            fbAuth = firebase.auth();
+            fbAuth.useDeviceLanguage();
+            fbReady = true;
         }
-    } catch(e) { console.warn('Firebase config not loaded:', e.message); }
+    } catch(e) { console.warn('Firebase init:', e.message); }
 })();
-const auth = firebase.auth();
-auth.useDeviceLanguage();
-let currentPendingGoogle = null;
 
 window.googleLogin = function() {
-    if (!firebase.apps || !firebase.apps.length) {
+    if (!fbReady) {
         Swal.fire({icon:'error', title:'Google Login Belum Siap', text:'Firebase belum dikonfigurasi. Admin harus mengisi Firebase Config di Panel Admin terlebih dahulu.', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
         return;
     }
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
-    auth.signInWithPopup(provider).then(async (result) => {
+    fbAuth.signInWithPopup(provider).then(async (result) => {
         const idToken = await result.user.getIdToken();
         currentPendingGoogle = { idToken, email: result.user.email, name: result.user.displayName };
         const r = await fetch('/api/affiliate/google-login', {
@@ -195,7 +197,6 @@ window.googleLogin = function() {
             loadDashboard();
             Swal.fire({icon:'success', title:'Berhasil Masuk!', text:'Selamat datang kembali!', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:1500, showConfirmButton:false});
         } else {
-            // Tampilkan modal linking
             document.getElementById('linkGoogleEmail').textContent = d.googleEmail;
             document.getElementById('linkGoogleModal').style.display = 'flex';
         }
