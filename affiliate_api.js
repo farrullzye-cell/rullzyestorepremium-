@@ -8,6 +8,20 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
     const router = express.Router();
     const security = require('./anti_fraud.js');
 
+    const BANK_LIST = [
+        "Bank Aladin Syariah","Bank BRI","Bank BNI","Bank Mandiri","Bank BCA","Bank CIMB Niaga",
+        "Bank Danamon","Bank Permata","Bank Panin","Bank OCBC NISP","Bank Maybank Indonesia",
+        "Bank Mega","Bank BTN","Bank BTPN","Bank BJB","Bank Jatim","Bank Jateng","Bank DIY",
+        "Bank Sumut","Bank Nagari","Bank Riau Kepri","Bank Lampung","Bank Kalsel","Bank Kalteng",
+        "Bank Kaltim","Bank Sulselbar","Bank Sulut","Bank NTB","Bank NTT","Bank Maluku",
+        "Bank Papua","Bank Sinarmas","Bank Artos","Bank BNP Paribas","Bank Capital",
+        "Bank DBS Indonesia","Bank HSBC Indonesia","Bank ICBC Indonesia","Bank Mayapada",
+        "Bank MNC Internasional","Bank UOB Indonesia","Bank Victoria","Bank Woori Saudara",
+        "Bank Seabank","Bank Jago","Bank Neo Commerce","DANA","OVO","GoPay","ShopeePay","LinkAja"
+    ];
+    // Endpoint untuk mendapatkan daftar bank
+    router.get('/banks', (req, res) => { res.json({ success: true, banks: BANK_LIST }); });
+
     // ================= HELPERS =================
     const getWithdraws = async () => {
         try {
@@ -97,7 +111,7 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
     // ============================================================
     router.post('/login', security.rateLimitMiddleware('login'), async (req, res) => {
         try {
-            const { randomId } = req.body;
+            const { randomId, pin } = req.body;
             const ip = getClientIP(req);
             const ua = req.headers['user-agent'] || '';
 
@@ -114,6 +128,22 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
             }
             if (user.isBanned) {
                 return res.json({ success: false, message: 'Akun Anda dibanned. Alasan: ' + (user.bannedReason || 'Tidak disebutkan') });
+            }
+
+            // Verifikasi PIN (jika sudah diset)
+            if (user.affiliatePin && user.affiliatePin !== pin) {
+                return res.json({ success: false, pinRequired: true, message: 'PIN salah.' });
+            }
+            if (!user.affiliatePin && !pin) {
+                // Belum set PIN — minta set PIN dulu
+                return res.json({ success: false, pinRequired: true, setPin: true, message: 'Atur PIN 6 digit terlebih dahulu.' });
+            }
+            if (!user.affiliatePin && pin) {
+                // Set PIN pertama kali
+                if (!pin || pin.length < 4) return res.json({ success: false, message: 'PIN minimal 4 karakter.' });
+                user.affiliatePin = pin;
+                users[users.findIndex(u => u.randomId === randomId)] = user;
+                await saveUsers(users);
             }
 
             // Track IP
@@ -140,6 +170,24 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
             console.error('[AFFILIATE LOGIN]', e);
             res.json({ success: false, message: 'Gagal login: ' + e.message });
         }
+    });
+
+    // Set/Ubah PIN affiliate
+    router.post('/change-pin', security.authMiddleware, async (req, res) => {
+        try {
+            const { oldPin, newPin } = req.body;
+            const randomId = req.userSession.randomId;
+            if (!newPin || newPin.length < 4) return res.json({ success: false, message: 'PIN baru minimal 4 karakter.' });
+            const users = await getUsers();
+            const idx = users.findIndex(u => u.randomId === randomId);
+            if (idx === -1) return res.json({ success: false, message: 'User tidak ditemukan.' });
+            if (users[idx].affiliatePin && users[idx].affiliatePin !== oldPin) {
+                return res.json({ success: false, message: 'PIN lama salah.' });
+            }
+            users[idx].affiliatePin = newPin;
+            await saveUsers(users);
+            res.json({ success: true, message: 'PIN berhasil diubah!' });
+        } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
     // ============================================================

@@ -84,7 +84,7 @@ async function loadTab(tab){
     const c=document.getElementById('tab-content');
     c.innerHTML='<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-3xl text-violet-500"></i><p class="mt-2 text-slate-400 text-sm">Memuat data...</p></div>';
     // Permission map: tab name → required permission
-    const permMap={orders:'orders',withdraws:'withdraws',users:'users',affiliates:'affiliates',products:'products',config:'config',broadcast:'broadcast',security:'settings',groups:'settings',botstatus:'settings',admins:'admins'};
+    const permMap={orders:'orders',withdraws:'withdraws',users:'users',affiliates:'users',products:'products',config:'config',broadcast:'broadcast',security:'settings',groups:'settings',botstatus:'settings',admins:'admins',database:'settings',system:'settings',checkip:'settings',resellers:'users'};
     const reqPerm=permMap[tab];
     if(reqPerm && adminRole!=='super_admin' && !adminPermissions.includes(reqPerm)){
         c.innerHTML=`<div class="text-center py-20"><i class="fa-solid fa-lock text-4xl text-slate-600 mb-4"></i><p class="text-slate-500 text-sm">Akses ditolak. Tidak ada izin untuk menu ini.</p></div>`;
@@ -653,7 +653,7 @@ async function loadTab(tab){
                     <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Izin (pisahkan koma)</label><input id="adm-perms" class="input-dark mt-1" placeholder="orders,withdraws,users"></div>
                     <button onclick="addAdmin()" class="btn-primary shrink-0"><i class="fa-solid fa-plus mr-1"></i>Tambah</button>
                 </div>
-                <p class="text-[10px] text-slate-500 mt-3">Izin tersedia: <code class="text-violet-300">dashboard, orders, withdraws, users, affiliates, products, config, broadcast, settings</code></p>
+                <p class="text-[10px] text-slate-500 mt-3">Izin tersedia: <code class="text-violet-300">dashboard, orders, withdraws, users, products, config, broadcast, settings</code></p>
             </div>
             <div class="card p-5">
                 <h3 class="font-bold text-sm text-white mb-3">Daftar Admin</h3>

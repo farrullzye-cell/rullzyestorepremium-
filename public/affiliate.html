@@ -94,7 +94,10 @@
             <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/[0.06]"></div></div>
             <div class="relative flex justify-center"><span class="bg-[#0f172a] px-3 text-[10px] text-slate-600">atau pakai Random ID</span></div>
         </div>
-        <input type="text" id="inputRandomId" placeholder="ID-ABC123" class="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm uppercase font-bold text-center text-white placeholder-slate-600 focus:border-violet-500/50 outline-none mb-3 tracking-wider">
+        <input type="text" id="inputRandomId" placeholder="ID-ABC123" class="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm uppercase font-bold text-center text-white placeholder-slate-600 focus:border-violet-500/50 outline-none mb-2 tracking-wider">
+        <div id="pinLoginWrap">
+            <input type="password" id="inputPin" placeholder="PIN 6 digit" class="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-center text-white placeholder-slate-600 focus:border-violet-500/50 outline-none mb-3 tracking-widest">
+        </div>
         <button onclick="loginAffiliate()" class="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold py-3.5 rounded-xl text-sm hover:shadow-xl hover:shadow-violet-500/25 transition-all active:scale-[0.98]">
             <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i>Masuk Dashboard
         </button>
@@ -214,6 +217,29 @@ window.googleLogin = function() {
         else alert(e.message);
     }
 };
+
+// Ganti PIN affiliate
+async function changeAffPin() {
+    const { value: newPin } = await Swal.fire({
+        title:'Ganti PIN Keamanan',
+        html:'<input id="swal-oldpin" type="password" class="swal2-input" style="background:#1e293b;color:white;border-color:#334155;width:100%;margin:0 0 10px" placeholder="PIN Lama"><input id="swal-newpin" type="password" class="swal2-input" style="background:#1e293b;color:white;border-color:#334155;width:100%;margin:0" placeholder="PIN Baru (4-6 digit)">',
+        background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed',
+        showCancelButton:true, cancelButtonColor:'#475569',
+        preConfirm:()=>{
+            const o=document.getElementById('swal-oldpin').value;
+            const n=document.getElementById('swal-newpin').value;
+            if(!o||!n){Swal.showValidationMessage('Semua kolom harus diisi!');return false;}
+            if(n.length<4||n.length>6){Swal.showValidationMessage('PIN baru 4-6 digit!');return false;}
+            return {oldPin:o,newPin:n};
+        }
+    });
+    if (newPin) {
+        const d = await apiPost('/api/affiliate/change-pin', newPin);
+        if (d && d.success) {
+            Swal.fire({icon:'success', title:'PIN Diubah!', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:1500, showConfirmButton:false});
+        } else if(d) { Swal.fire({icon:'error', title:'Gagal', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'}); }
+    }
+}
 
 // linkTelegram — show modal to enter Telegram Chat ID
 async function linkTelegram() {
@@ -580,17 +606,41 @@ function updateTelegramLinkStatus() {
 // ================= LOGIN =================
 async function loginAffiliate() {
     const rid = document.getElementById('inputRandomId').value.trim().toUpperCase();
+    const pin = document.getElementById('inputPin').value.trim();
     if (!rid) return Swal.fire({icon:'warning',title:'Oops',text:'Masukkan Random ID',background:'#0f172a',color:'#e2e8f0',confirmButtonColor:'#7c3aed'});
     try {
         // Step 1: Login dapat token
-        const r = await fetch('/api/affiliate/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({randomId:rid}) });
+        const r = await fetch('/api/affiliate/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({randomId:rid, pin}) });
         const d = await r.json();
         if (d.success) {
             setToken(d.token);
             localStorage.setItem('affId', rid);
+            document.getElementById('inputPin').value = '';
             // Step 2: Fetch dashboard pakai token
             const ok = await loadDashboard();
             if (!ok) { clearToken(); Swal.fire({icon:'error', title:'Gagal', text:'Gagal memuat dashboard.', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'}); }
+        } else if (d.pinRequired && d.setPin) {
+            // Belum set PIN — minta set PIN dulu
+            const { value: newPin } = await Swal.fire({
+                title:'Atur PIN Keamanan',
+                text:'Buat PIN 6 digit untuk melindungi akun affiliate kamu.',
+                input:'password', inputAttributes:{maxlength:6},
+                inputPlaceholder:'6 digit angka',
+                background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed',
+                showCancelButton:true, cancelButtonColor:'#475569',
+                preConfirm:(v)=>{ if(!/^\d{4,6}$/.test(v)){Swal.showValidationMessage('PIN harus 4-6 digit angka!');return false;} return v; }
+            });
+            if (newPin) {
+                const r2 = await fetch('/api/affiliate/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({randomId:rid, pin:newPin}) });
+                const d2 = await r2.json();
+                if (d2.success) {
+                    setToken(d2.token); localStorage.setItem('affId', rid);
+                    const ok = await loadDashboard();
+                    if (!ok) { clearToken(); Swal.fire({icon:'error', title:'Gagal', text:'Gagal memuat dashboard.', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'}); }
+                } else { Swal.fire({icon:'error', title:'Gagal', text:d2.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'}); }
+            }
+        } else if (d.pinRequired) {
+            Swal.fire({icon:'error', title:'PIN Salah', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
         } else if (d.isPending) {
             Swal.fire({icon:'info', title:'Menunggu Persetujuan', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
         } else {
@@ -630,6 +680,7 @@ function populateDashboard(d) {
         { label: 'Riwayat Komisi', icon: 'fa-clock-rotate-left', action: "switchDashTab('history')" },
         { label: 'Preview Toko', icon: 'fa-eye', action: `window.open('/toko/${d.data.randomId}', '_blank')` },
         { label: 'Link Telegram', icon: 'fa-telegram', action: 'linkTelegram()' },
+        { label: 'Ganti PIN', icon: 'fa-lock', action: 'changeAffPin()' },
         { label: 'Pengaturan', icon: 'fa-gear', action: "switchDashTab('settings')" }
     ];
     document.getElementById('actionGrid').innerHTML = actions.map(a => `<button onclick="${a.action}" class="glass-card p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-violet-500/25 border border-white/[0.06] rounded-2xl flex items-center gap-3"><span class="w-10 h-10 rounded-xl bg-violet-500/8 text-violet-300 flex items-center justify-center shrink-0"><i class="fa-solid ${a.icon} text-sm"></i></span><div class="min-w-0"><p class="text-[11px] font-bold text-white truncate">${a.label}</p></div></button>`).join('');
@@ -747,24 +798,37 @@ async function saveSettings() {
 }
 
 async function tarikKomisi() {
-    // Cek apakah sudah withdraw hari ini
     if (dashData.data?.wdToday >= 1) {
         return Swal.fire({icon:'warning', title:'Batas Harian', text:'Kamu sudah melakukan withdraw hari ini. Coba lagi besok!', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
     }
+    // Ambil daftar bank dari server
+    let banks = [];
+    try { const r = await fetch('/api/affiliate/banks').then(r=>r.json()); banks = r.banks || []; } catch(e) {}
+    const bankOpts = banks.map((b,i) => `<option value="${b}">${b}</option>`).join('');
     const { value } = await Swal.fire({
         title:'Tarik Komisi',
         background:'#0f172a',
         color:'#e2e8f0',
         html:`<p class="text-xs text-slate-400 mb-4">Saldo: <strong class="text-emerald-400">Rp ${(currentProfile.affiliateBalance||0).toLocaleString('id-ID')}</strong></p>
         <p class="text-[10px] text-amber-400/80 mb-3">Batas 1x withdraw per hari. Maks komisi per transaksi Rp 50.000.</p>
-        <input id="swal-amount" type="number" class="swal2-input" style="background:#1e293b;color:white;border-color:#334155;width:100%;margin:0 0 10px" placeholder="Nominal (min Rp 10.000)">
-        <input id="swal-bank" class="swal2-input" style="background:#1e293b;color:white;border-color:#334155;width:100%;margin:0" placeholder="Bank/E-Wallet + Nomor (cth: DANA 0812xxx)">`,
+        <select id="swal-bank" class="swal2-input" style="background:#1e293b;color:white;border-color:#334155;width:100%;margin:0 0 10px">${bankOpts}</select>
+        <input id="swal-account" class="swal2-input" style="background:#1e293b;color:white;border-color:#334155;width:100%;margin:0 0 10px" placeholder="Nomor Rekening/E-Wallet">
+        <input id="swal-name" class="swal2-input" style="background:#1e293b;color:white;border-color:#334155;width:100%;margin:0" placeholder="Atas Nama">
+        <input id="swal-amount" type="number" class="swal2-input" style="background:#1e293b;color:white;border-color:#334155;width:100%;margin:0" placeholder="Nominal (min Rp 10.000)">`,
         showCancelButton:true,
         confirmButtonText:'Ajukan',
         confirmButtonColor:'#059669',
         cancelButtonText:'Batal',
         cancelButtonColor:'#475569',
-        preConfirm:()=>{ const a=document.getElementById('swal-amount').value,b=document.getElementById('swal-bank').value; if(!a||!b){Swal.showValidationMessage('Semua kolom wajib diisi!');return false;} if(parseInt(a)<10000){Swal.showValidationMessage('Minimal Rp 10.000!');return false;} return {amount:parseInt(a),bankDetails:b}; }
+        preConfirm:()=>{
+            const bank=document.getElementById('swal-bank').value;
+            const acc=document.getElementById('swal-account').value.trim();
+            const name=document.getElementById('swal-name').value.trim();
+            const amount=document.getElementById('swal-amount').value;
+            if(!bank||!acc||!name||!amount){Swal.showValidationMessage('Semua kolom wajib diisi!');return false;}
+            if(parseInt(amount)<10000){Swal.showValidationMessage('Minimal Rp 10.000!');return false;}
+            return {amount:parseInt(amount),bankDetails:bank+' - '+acc+' a.n '+name};
+        }
     });
     if(value) {
         const d = await apiPost('/api/affiliate/withdraw', {amount:value.amount,bankDetails:value.bankDetails});

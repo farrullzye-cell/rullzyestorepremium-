@@ -98,7 +98,7 @@ app.use('/api/admin', (req, res, next) => {
 });
 
 // ================= 4. API ADMIN DASHBOARD =================
-app.get('/api/admin/users', async (req, res) => { res.json(await getUsers()); });
+app.get('/api/admin/users', async (req, res) => { if (!hasPermission(req.admin, 'users')) return res.json([]); res.json(await getUsers()); });
 app.post('/api/admin/users/toggle', async (req, res) => {
     const { randomId, isReseller } = req.body;
     let users = await getUsers();
@@ -331,6 +331,7 @@ app.get('/api/admin/database/export/:type', async (req, res) => {
 
 // ================= ADMIN: DELETE USER =================
 app.post('/api/admin/users/delete', async (req, res) => {
+    if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
     let users = await getUsers();
     users = users.filter(u => u.randomId !== req.body.randomId);
     await saveUsers(users);
@@ -375,6 +376,7 @@ app.get('/api/admin/withdraws', async (req, res) => {
 });
 app.post('/api/admin/withdraw/process', async (req, res) => {
     try {
+        if (!hasPermission(req.admin, 'withdraws')) return res.json({ success: false, message: 'Akses ditolak.' });
         const { id, status } = req.body;
         let wds = await getWithdraws();
         const idx = wds.findIndex(w => w.id === id);
@@ -1131,6 +1133,7 @@ app.post('/api/admin/notify-stock', async (req, res) => {
 // ================= ADMIN: NEW ENDPOINTS =================
 app.post('/api/admin/users/edit', async (req, res) => {
     try {
+        if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
         const { randomId, name, balance, affiliateBalance } = req.body;
         let users = await getUsers();
         const idx = users.findIndex(u => u.randomId === randomId);
@@ -1161,6 +1164,7 @@ app.post('/api/admin/order/force-status', async (req, res) => {
 
 app.post('/api/admin/affiliate/add-balance', async (req, res) => {
     try {
+        if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
         const { randomId, amount } = req.body;
         let users = await getUsers();
         const idx = users.findIndex(u => u.randomId === randomId && u.isAffiliate);
