@@ -4,9 +4,10 @@ const axios = require('axios');
 const fs = require('fs');
 const crypto = require('crypto');
 
-module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL) {
+module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL, botNotifiers) {
     const router = express.Router();
     const security = require('./anti_fraud.js');
+    const { notifyGroupWithdrawNew, notifyGroupCommission } = botNotifiers || {};
 
     const BANK_LIST = [
         "Bank Aladin Syariah","Bank BRI","Bank BNI","Bank Mandiri","Bank BCA","Bank CIMB Niaga",
@@ -398,6 +399,16 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
             });
             await saveAuditLogs(logs);
 
+            // Notify admin group
+            if (notifyGroupWithdrawNew) {
+                notifyGroupWithdrawNew({
+                    id: wdId,
+                    affiliateName: users[idx].affiliateName || users[idx].firstName,
+                    amount: amountInt,
+                    bankDetails: bankClean
+                }).catch(() => {});
+            }
+
             res.json({
                 success: true,
                 message: `Request Withdraw Rp ${amountInt.toLocaleString('id-ID')} berhasil diajukan! Admin akan memproses dalam 1x24 jam.`,
@@ -472,33 +483,31 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                     newBalance: users[uplineIdx].affiliateBalance
                 });
             } catch(e) { console.error('[AFFILIATE NOTIFY ERR]', e.message); }
+            // Notify group
+            if (notifyGroupCommission) {
+                notifyGroupCommission(users[uplineIdx].affiliateName || users[uplineIdx].firstName, commission, order).catch(() => {});
+            }
         } catch (e) {
             console.error('[AFFILIATE COMMISSION ERROR]', e.message);
         }
     };
 
     // ============================================================
-    // API: REJECT AFFILIATE (admin)
-    // ============================================================
-    router.post('/reject', async (req, res) => {
-        try {
-            const { randomId, reason } = req.body;
-            let users = await getUsers();
-            const idx = users.findIndex(u => u.randomId === randomId);
-            if (idx === -1) return res.json({ success: false, message: 'User tidak ditemukan.' });
-            users[idx].affiliatePending = false;
-            users[idx].affiliateRejectedAt = new Date().toISOString();
-            users[idx].affiliateRejectReason = reason || '';
-            await saveUsers(users);
-            res.json({ success: true });
-        } catch(e) { res.json({ success: false, message: e.message }); }
-    });
-
-    // ============================================================
-    // API: STATISTIK AFFILIATE (admin)
+    // STATISTIK AFFILIATE (admin only — protected by x-admin-auth)
     // ============================================================
     router.get('/stats', async (req, res) => {
         try {
+            // Verify admin auth header
+            const auth = req.headers['x-admin-auth'];
+            if (!auth || !auth.includes(':')) return res.json({ success: false, message: 'Unauthorized' });
+            const [username, ...pinParts] = auth.split(':');
+            const pin = pinParts.join(':');
+            const cfg = JSON.parse(fs.readFileSync('./config.json'));
+            const sa = cfg.superAdmin || {};
+            if (!(sa.pin && sa.username ? (username === sa.username && pin === sa.pin) : false) &&
+                !(cfg.admins || []).some(a => a.username === username && a.pin === pin && a.active !== false)) {
+                return res.json({ success: false, message: 'Unauthorized' });
+            }
             const users = await getUsers();
             const orders = await getOrders();
             const wds = await getWithdraws();
@@ -524,15 +533,6 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
         } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
-    // ============================================================
-    // API: AUDIT LOGS (admin only)
-    // ============================================================
-    router.get('/audit-logs', async (req, res) => {
-        try {
-            const logs = await getAuditLogs();
-            res.json({ success: true, logs: logs.reverse().slice(0, 100) });
-        } catch(e) { res.json({ success: false, message: e.message }); }
-    });
 
     // ============================================================
     // GOOGLE OAUTH LOGIN

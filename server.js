@@ -111,6 +111,7 @@ app.use('/api/admin', (req, res, next) => {
 // ================= 4. API ADMIN DASHBOARD =================
 app.get('/api/admin/users', async (req, res) => { if (!hasPermission(req.admin, 'users')) return res.json([]); res.json(await getUsers()); });
 app.post('/api/admin/users/toggle', async (req, res) => {
+    if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
     const { randomId, isReseller } = req.body;
     let users = await getUsers();
     let index = users.findIndex(u => u.randomId === randomId);
@@ -118,13 +119,6 @@ app.post('/api/admin/users/toggle', async (req, res) => {
     res.json({success: true});
 });
 app.get('/api/admin/withdraws', async (req, res) => { res.json(await getWithdraws()); });
-app.post('/api/admin/withdraws/acc', async (req, res) => {
-    const { id } = req.body;
-    let wds = await getWithdraws();
-    let index = wds.findIndex(w => w.id === id);
-    if(index !== -1) { wds[index].status = 'SUKSES'; await saveWithdraws(wds); }
-    res.json({success: true});
-});
 // Broadcast handler di baris 329
 
 app.post('/api/web-user/register', async (req, res) => {
@@ -172,6 +166,7 @@ app.get('/api/admin/orders', async (req, res) => {
 
 app.post('/api/admin/config', async (req, res) => {
     try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
         const currentConfig = getConfig();
         const updatedConfig = { ...currentConfig, ...req.body };
         await saveConfig(updatedConfig);
@@ -183,6 +178,7 @@ app.post('/api/admin/config', async (req, res) => {
 });
 
 app.post('/api/admin/affiliate/approve', async (req, res) => {
+    if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
     let users = await getUsers();
     const idx = users.findIndex(u => u.randomId === req.body.randomId);
     if (idx !== -1) {
@@ -199,6 +195,7 @@ app.post('/api/admin/affiliate/approve', async (req, res) => {
 });
 
 app.post('/api/admin/affiliate/reject', async (req, res) => {
+    if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
     const { randomId, reason } = req.body;
     let users = await getUsers();
     const idx = users.findIndex(u => u.randomId === randomId);
@@ -209,11 +206,13 @@ app.post('/api/admin/affiliate/reject', async (req, res) => {
         if (bot && notifyAffiliateRejected) {
             notifyAffiliateRejected(users[idx].chatId, reason || '').catch(() => {});
         }
+        notifyGroupAffiliateNew(users[idx]).catch(() => {});
     }
     res.json({ success: true });
 });
 
 app.post('/api/admin/affiliate/toggle-ppob', async (req, res) => {
+    if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
     let users = await getUsers();
     const idx = users.findIndex(u => u.randomId === req.body.randomId);
     if (idx !== -1) {
@@ -229,14 +228,24 @@ app.post('/api/admin/affiliate/toggle-ppob', async (req, res) => {
 
 // ================= ADMIN: AFFILIATE DETAIL UPDATE =================
 app.post('/api/admin/affiliate/update', async (req, res) => {
+    if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
     const { randomId, commissionPercent, maxMarkup, isBanned, bannedReason } = req.body;
     let users = await getUsers();
     const idx = users.findIndex(u => u.randomId === randomId);
     if (idx === -1) return res.json({ success: false, message: 'User tidak ditemukan.' });
+    const wasBanned = users[idx].isBanned;
     if (commissionPercent !== undefined) users[idx].customCommission = parseInt(commissionPercent);
     if (maxMarkup !== undefined) users[idx].maxMarkup = parseInt(maxMarkup);
     if (isBanned !== undefined) { users[idx].isBanned = isBanned; users[idx].bannedReason = bannedReason || ''; }
     await saveUsers(users);
+    // Notify affiliate if banned/unbanned
+    if (isBanned !== undefined && wasBanned !== isBanned && bot && users[idx].chatId) {
+        if (isBanned) {
+            bot.sendMessage(users[idx].chatId, `🚫 *Akun Affiliate Dibanned*\n\n${bannedReason ? `📝 *Alasan:* ${bannedReason}\n\n` : ''}Silakan hubungi admin untuk informasi lebih lanjut.`, { parse_mode: 'Markdown' }).catch(() => {});
+        } else {
+            bot.sendMessage(users[idx].chatId, `✅ *Akun Affiliate Unbanned*\n\nAkun kamu sudah diaktifkan kembali oleh admin.`, { parse_mode: 'Markdown' }).catch(() => {});
+        }
+    }
     res.json({ success: true });
 });
 
@@ -254,6 +263,7 @@ app.get('/api/admin/affiliate-config', (req, res) => {
 });
 app.post('/api/admin/affiliate-config', async (req, res) => {
     try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
         const cfg = getConfig();
         const fields = ['affiliateCommissionPercent','affiliateMinWithdraw','affiliateAutoApprove','affiliateMaxMarkup','affiliateEnabled','affiliateWelcomeMsg'];
         fields.forEach(f => { if (req.body[f] !== undefined) cfg[f] = req.body[f]; });
@@ -320,12 +330,14 @@ app.get('/api/firebase-config', (req, res) => {
     res.json({ success: true, config: cfg.firebaseConfig || {} });
 });
 app.get('/api/admin/config', (req, res) => {
+    if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
     res.json(getConfig());
 });
 
 // ================= ADMIN: EXPORT DATABASE =================
 app.get('/api/admin/database/export/:type', async (req, res) => {
     try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
         const { type } = req.params;
         let data;
         if (type === 'users') data = await getUsers();
@@ -370,6 +382,7 @@ app.get('/api/admin/system', (req, res) => {
 // ================= ADMIN: BROADCAST =================
 app.post('/api/admin/broadcast', async (req, res) => {
     try {
+        if (!hasPermission(req.admin, 'broadcast')) return res.json({ success: false, message: 'Akses ditolak.' });
         const { message } = req.body;
         if (!message) return res.json({ success: false, message: 'Pesan kosong.' });
         if (!bot) return res.json({ success: false, message: 'Bot tidak aktif.' });
@@ -397,12 +410,14 @@ app.post('/api/admin/withdraw/process', async (req, res) => {
         wds[idx].status = status;
         
         if (status === 'DITOLAK') {
+            const reason = req.body.reason || '';
+            wds[idx].rejectionReason = reason;
             let users = await getUsers();
             const uIdx = users.findIndex(u => u.randomId === wds[idx].randomId);
             if (uIdx !== -1) {
                 users[uIdx].affiliateBalance = (users[uIdx].affiliateBalance || 0) + wds[idx].amount;
                 await saveUsers(users);
-                if (bot && users[uIdx].chatId) notifyWithdrawRejected(users[uIdx].chatId, wds[idx], '');
+                if (bot && users[uIdx].chatId) notifyWithdrawRejected(users[uIdx].chatId, wds[idx], reason);
             }
             notifyGroupWithdrawProcessed(wds[idx], 'DITOLAK').catch(() => {});
         } else if (status === 'SUKSES') {
@@ -500,11 +515,13 @@ app.post('/api/admin/badge-settings', async (req, res) => {
 
 // ================= 5. ADMIN API: FLOWIX CONFIG =================
 app.get('/api/admin/flowix-config', (req, res) => {
+    if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
     const cfg = getConfig();
     res.json({ apiKey: cfg.flowixApiKey || '', merchantId: cfg.flowixMerchantId || '' });
 });
 app.post('/api/admin/flowix-config', async (req, res) => {
     try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
         const cfg = getConfig();
         cfg.flowixApiKey = req.body.apiKey || '';
         cfg.flowixMerchantId = req.body.merchantId || '';
@@ -1185,6 +1202,7 @@ app.post('/api/admin/users/edit', async (req, res) => {
 
 app.post('/api/admin/order/force-status', async (req, res) => {
     try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
         const { id, status } = req.body;
         let orders = await getOrders();
         const idx = orders.findIndex(o => o.idDeposit === id || o.idOrder === id);
@@ -1208,6 +1226,11 @@ app.post('/api/admin/affiliate/add-balance', async (req, res) => {
         if (idx === -1) return res.json({ success: false, message: 'Affiliate tidak ditemukan.' });
         users[idx].affiliateBalance = (users[idx].affiliateBalance || 0) + parseInt(amount);
         await saveUsers(users);
+        // Notify affiliate about balance change
+        if (bot && users[idx].chatId) {
+            const sign = parseInt(amount) >= 0 ? '+' : '';
+            bot.sendMessage(users[idx].chatId, `💰 *Saldo Komisi Diubah Admin*\n\n${sign}Rp ${parseInt(amount).toLocaleString('id-ID')}\n💰 *Saldo Saat Ini:* Rp ${users[idx].affiliateBalance.toLocaleString('id-ID')}`, { parse_mode: 'Markdown' }).catch(() => {});
+        }
         res.json({ success: true, message: `Saldo komisi ditambahkan Rp ${parseInt(amount).toLocaleString('id-ID')}` });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
@@ -1302,6 +1325,7 @@ app.post('/api/admin/test-group', async (req, res) => {
 
 app.post('/api/admin/database/reset', async (req, res) => {
     try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
         await saveUsers([]);
         await saveOrders([]);
         const wds = await getWithdraws();
@@ -1634,8 +1658,8 @@ async function initConfigFromFirebase() {
     notifyGroupStockUpdate = botModule.notifyGroupStockUpdate;
     notifyGroupAdmin = botModule.notifyGroupAdmin;
 
-    // Load affiliate API routes
-    require('./affiliate_api.js')(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL);
+    // Load affiliate API routes — pass bot notifications for group alerts
+    require('./affiliate_api.js')(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL, { notifyGroupWithdrawNew, notifyGroupCommission });
 
     app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server berjalan di port ${PORT}`));
 })();

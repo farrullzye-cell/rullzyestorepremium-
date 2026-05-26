@@ -529,7 +529,7 @@ async function loadTab(tab){
         }
         // =============== 16. AUDIT LOGS ===============
         else if(tab==='audit'){
-            const r=await api('/api/affiliate/audit-logs').then(r=>r.json());
+            const r=await api('/api/admin/audit-logs').then(r=>r.json());
             const logs=r.logs||[];
             let ah=`<h2 class="text-xl font-black mb-4">Audit Log (${logs.length})</h2>
             <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
