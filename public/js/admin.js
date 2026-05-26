@@ -407,6 +407,30 @@ async function loadTab(tab){
                     <div class="grid grid-cols-2 gap-2"><input type="text" id="cfg-api-merchant" class="input-dark" placeholder="Merchant ID" value="${cfg.apigamesMerchantId||''}">
                     <input type="text" id="cfg-api-secret" class="input-dark" placeholder="Secret Key" value="${cfg.apigamesSecretKey||''}"></div>
                 </div>
+                <div class="card p-5 md:col-span-2"><h3 class="font-bold text-emerald-400 mb-3 text-sm"><i class="fa-brands fa-google mr-2"></i>Firebase Google OAuth</h3>
+                    <p class="text-[10px] text-slate-500 mb-2">Isi dari Firebase Console → Project Settings → General → Your apps → Web app.</p>
+                    <div class="grid grid-cols-2 gap-2 mb-2"><input type="text" id="cfg-fb-api" class="input-dark" placeholder="apiKey" value="${cfg.firebaseConfig?.apiKey||''}">
+                    <input type="text" id="cfg-fb-domain" class="input-dark" placeholder="authDomain" value="${cfg.firebaseConfig?.authDomain||''}"></div>
+                    <div class="grid grid-cols-2 gap-2 mb-2"><input type="text" id="cfg-fb-project" class="input-dark" placeholder="projectId" value="${cfg.firebaseConfig?.projectId||''}">
+                    <input type="text" id="cfg-fb-sender" class="input-dark" placeholder="messagingSenderId" value="${cfg.firebaseConfig?.messagingSenderId||''}"></div>
+                    <div class="grid grid-cols-2 gap-2"><input type="text" id="cfg-fb-app" class="input-dark" placeholder="appId" value="${cfg.firebaseConfig?.appId||''}">
+                    <input type="text" id="cfg-fb-bucket" class="input-dark" placeholder="storageBucket" value="${cfg.firebaseConfig?.storageBucket||''}"></div>
+                    <details class="mt-3 text-[10px] text-slate-400">
+                        <summary class="cursor-pointer text-violet-400 font-bold">📖 Cara Konfigurasi Firebase Console</summary>
+                        <div class="mt-2 space-y-1.5 leading-relaxed bg-white/[0.03] p-3 rounded-xl">
+                            <p><strong class="text-white">1.</strong> Buka <a href="https://console.firebase.google.com" target="_blank" class="text-violet-400 underline">Firebase Console</a></p>
+                            <p><strong class="text-white">2.</strong> Buat project baru atau pilih project yang sudah ada</p>
+                            <p><strong class="text-white">3.</strong> Klik <span class="text-emerald-400">⚙️ Project Settings</span> (icon roda gigi) → <span class="text-emerald-400">General</span></p>
+                            <p><strong class="text-white">4.</strong> Di bagian <span class="text-amber-400">"Your apps"</span>, klik <span class="text-emerald-400">Add app</span> → pilih <span class="text-emerald-400">Web</span> (icon &lt;/&gt;)</p>
+                            <p><strong class="text-white">5.</strong> Daftarkan aplikasi (nama bebas, misal "RullzyeStore Affiliate")</p>
+                            <p><strong class="text-white">6.</strong> Copy <span class="text-amber-400">firebaseConfig</span> yang muncul, isikan ke kolom di atas</p>
+                            <p><strong class="text-white">7.</strong> Di Firebase Console kiri, buka <span class="text-emerald-400">Authentication</span> → <span class="text-emerald-400">Sign-in method</span></p>
+                            <p><strong class="text-white">8.</strong> Klik <span class="text-emerald-400">Google</span>, aktifkan <span class="text-amber-400">Enable</span>, isi <span class="text-amber-400">Project support email</span> (email kamu)</p>
+                            <p><strong class="text-white">9.</strong> Jika perlu, di <span class="text-emerald-400">Authorized domains</span>, tambahkan <code class="text-violet-300">rullzyestorepremium.my.id</code></p>
+                            <p><strong class="text-white">10.</strong> Simpan, lalu refresh halaman affiliate. Tombol "Masuk dengan Google" siap pakai!</p>
+                        </div>
+                    </details>
+                </div>
             </div>
             <button onclick="saveConfig()" class="btn-primary mt-4">Simpan Semua Konfigurasi</button>`;
         }
@@ -697,6 +721,14 @@ async function saveConfig() {
             smmSecretKey: document.getElementById('cfg-smm-sec').value,
             apigamesMerchantId: document.getElementById('cfg-api-merchant')?.value||'',
             apigamesSecretKey: document.getElementById('cfg-api-secret')?.value||'',
+            firebaseConfig: {
+                apiKey: document.getElementById('cfg-fb-api')?.value||'',
+                authDomain: document.getElementById('cfg-fb-domain')?.value||'',
+                projectId: document.getElementById('cfg-fb-project')?.value||'',
+                storageBucket: document.getElementById('cfg-fb-bucket')?.value||'',
+                messagingSenderId: document.getElementById('cfg-fb-sender')?.value||'',
+                appId: document.getElementById('cfg-fb-app')?.value||'',
+            },
         };
         const res=await api('/api/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
         const json=await res.json();

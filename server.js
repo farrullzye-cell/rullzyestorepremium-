@@ -27,7 +27,7 @@ const FIREBASE_URL = "https://rullzyestorepremium-default-rtdb.asia-southeast1.f
 
 const getConfig = () => {
     try { return JSON.parse(fs.readFileSync('./config.json')); }
-    catch(e) { return { apiKey: '', celestialApiKey: '', celestialSecret: '', smmApiKey: '', smmSecretKey: '', profit: 2000, botUsername: '', telegramToken: '', storeName: 'Rullzye Store', productSettings: {}, flowixApiKey: '', flowixMerchantId: '' }; }
+    catch(e) { return { apiKey: '', celestialApiKey: '', celestialSecret: '', smmApiKey: '', smmSecretKey: '', profit: 2000, botUsername: '', telegramToken: '', storeName: 'Rullzye Store', productSettings: {}, flowixApiKey: '', flowixMerchantId: '', firebaseConfig: {} }; }
 };
 const saveConfig = async (configData) => {
     fs.writeFileSync('./config.json', JSON.stringify(configData, null, 2));
@@ -283,6 +283,10 @@ app.get('/api/admin/check-ip', async (req, res) => {
 });
 
 // ================= ADMIN: SYSTEM CONFIGURATION =================
+app.get('/api/firebase-config', (req, res) => {
+    const cfg = getConfig();
+    res.json({ success: true, config: cfg.firebaseConfig || {} });
+});
 app.get('/api/admin/config', (req, res) => {
     res.json(getConfig());
 });

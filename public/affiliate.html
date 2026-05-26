@@ -22,6 +22,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #03050f; color: #cbd5e1; min-height: 100vh; }
@@ -84,11 +86,29 @@
         </div>
         <h2 class="text-xl font-black text-white mb-1 tracking-tight">Dashboard Affiliate</h2>
         <p class="text-xs text-slate-500 mb-6">Masukkan Random ID untuk mengelola toko affiliate</p>
+        <!-- Google Login -->
+        <button onclick="googleLogin()" id="btnGoogleLogin" class="w-full bg-white text-gray-900 font-bold py-3.5 rounded-xl text-sm hover:shadow-xl hover:shadow-white/10 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mb-4 border border-white/10">
+            <img src="https://www.google.com/favicon.ico" alt="Google" class="w-5 h-5"> Masuk dengan Google
+        </button>
+        <div class="relative mb-4">
+            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/[0.06]"></div></div>
+            <div class="relative flex justify-center"><span class="bg-[#0f172a] px-3 text-[10px] text-slate-600">atau pakai Random ID</span></div>
+        </div>
         <input type="text" id="inputRandomId" placeholder="ID-ABC123" class="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm uppercase font-bold text-center text-white placeholder-slate-600 focus:border-violet-500/50 outline-none mb-3 tracking-wider">
         <button onclick="loginAffiliate()" class="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold py-3.5 rounded-xl text-sm hover:shadow-xl hover:shadow-violet-500/25 transition-all active:scale-[0.98]">
             <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i>Masuk Dashboard
         </button>
         <p class="text-[10px] text-slate-600 mt-5">Belum punya ID? Daftar via <a href="https://t.me/RullzyeBot" class="text-violet-400 underline hover:text-violet-300 transition">Bot Telegram</a></p>
+        <!-- Link Google Modal -->
+        <div id="linkGoogleModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" style="display:none;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px)">
+            <div class="glass p-6 max-w-sm w-full modal-pop">
+                <h3 class="font-black text-white text-lg mb-2">🔗 Hubungkan Akun Google</h3>
+                <p class="text-xs text-slate-400 mb-4">Email <strong id="linkGoogleEmail" class="text-violet-300"></strong> belum terhubung. Masukkan Random ID affiliate kamu untuk menautkan.</p>
+                <input type="text" id="linkRandomId" placeholder="ID-ABC123" class="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm uppercase font-bold text-center text-white placeholder-slate-600 focus:border-violet-500/50 outline-none mb-3 tracking-wider">
+                <button onclick="confirmLinkGoogle()" class="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold py-3 rounded-xl text-sm hover:shadow-xl transition-all"><i class="fa-solid fa-link mr-2"></i>Tautkan & Masuk</button>
+                <button onclick="document.getElementById('linkGoogleModal').style.display='none'" class="w-full text-[11px] text-slate-500 mt-3 hover:text-white transition">Batal</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -135,6 +155,76 @@
 </div>
 
 <script>
+let firebaseConfig = { apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' };
+(async function initFirebase() {
+    try {
+        const r = await fetch('/api/firebase-config');
+        const d = await r.json();
+        if (d.success && d.config && d.config.apiKey) {
+            firebaseConfig = d.config;
+            firebase.initializeApp(firebaseConfig);
+        }
+    } catch(e) { console.warn('Firebase config not loaded:', e.message); }
+})();
+const auth = firebase.auth();
+auth.useDeviceLanguage();
+let currentPendingGoogle = null;
+
+window.googleLogin = function() {
+    if (!firebase.apps || !firebase.apps.length) {
+        Swal.fire({icon:'error', title:'Google Login Belum Siap', text:'Firebase belum dikonfigurasi. Admin harus mengisi Firebase Config di Panel Admin terlebih dahulu.', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+        return;
+    }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+    auth.signInWithPopup(provider).then(async (result) => {
+        const idToken = await result.user.getIdToken();
+        currentPendingGoogle = { idToken, email: result.user.email, name: result.user.displayName };
+        const r = await fetch('/api/affiliate/google-login', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ idToken })
+        });
+        const d = await r.json();
+        if (!d.success) {
+            Swal.fire({icon:'error', title:'Gagal', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+            return;
+        }
+        if (d.linked) {
+            setToken(d.token);
+            loadDashboard();
+            Swal.fire({icon:'success', title:'Berhasil Masuk!', text:'Selamat datang kembali!', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:1500, showConfirmButton:false});
+        } else {
+            // Tampilkan modal linking
+            document.getElementById('linkGoogleEmail').textContent = d.googleEmail;
+            document.getElementById('linkGoogleModal').style.display = 'flex';
+        }
+    }).catch((err) => {
+        if (err.code !== 'auth/popup-closed-by-user') {
+            Swal.fire({icon:'error', title:'Gagal Login', text:err.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+        }
+    });
+};
+
+window.confirmLinkGoogle = async function() {
+    const randomId = document.getElementById('linkRandomId').value.trim().toUpperCase();
+    if (!randomId) return Swal.fire({icon:'warning', title:'Oops', text:'Masukkan Random ID', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+    if (!currentPendingGoogle) return;
+    const r = await fetch('/api/affiliate/link-google', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ idToken: currentPendingGoogle.idToken, randomId })
+    });
+    const d = await r.json();
+    if (d.success) {
+        setToken(d.token);
+        document.getElementById('linkGoogleModal').style.display = 'none';
+        loadDashboard();
+        Swal.fire({icon:'success', title:'Tertaut!', text:'Akun Google berhasil dihubungkan!', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:1500, showConfirmButton:false});
+    } else {
+        Swal.fire({icon:'error', title:'Gagal', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+    }
+};
+
 let currentProfile = {};
 let dashData = {};
 let affiliateProducts = [];

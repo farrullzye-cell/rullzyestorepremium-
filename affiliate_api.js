@@ -134,7 +134,7 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
             });
             await saveAuditLogs(logs);
 
-            res.json({ success: true, token });
+            res.json({ success: true, token, googleLinked: !!user.googleEmail });
         } catch(e) {
             console.error('[AFFILIATE LOGIN]', e);
             res.json({ success: false, message: 'Gagal login: ' + e.message });
@@ -474,7 +474,100 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
     });
 
     // ============================================================
-    // API: CEK TOKEN VALIDITY
+    // GOOGLE OAUTH LOGIN
+    // ============================================================
+    router.post('/google-login', async (req, res) => {
+        try {
+            const { idToken } = req.body;
+            if (!idToken) return res.json({ success: false, message: 'Token Google diperlukan.' });
+
+            // Verifikasi token ke Google
+            const verify = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+            const payload = verify.data;
+            if (!payload || !payload.email) {
+                return res.json({ success: false, message: 'Token Google tidak valid.' });
+            }
+
+            const googleEmail = payload.email.toLowerCase();
+            const googleName = payload.name || payload.given_name || googleEmail.split('@')[0];
+
+            // Cari user berdasarkan googleEmail
+            let users = await getUsers();
+            let user = users.find(u => u.googleEmail === googleEmail && u.isAffiliate);
+
+            if (user) {
+                // Login langsung
+                const ip = getClientIP(req);
+                const ua = req.headers['user-agent'] || '';
+                security.revokeUserTokens(user.randomId);
+                const token = security.generateToken(user.randomId, ip, ua);
+
+                const logs = await getAuditLogs();
+                logs.push({ id:'AUDIT-'+Date.now(), action:'GOOGLE_LOGIN', randomId:user.randomId, ip, timestamp: new Date().toISOString() });
+                await saveAuditLogs(logs);
+
+                return res.json({ success: true, token, linked: true });
+            }
+
+            // Email belum terdaftar, kirim info untuk linking
+            res.json({
+                success: true,
+                linked: false,
+                googleEmail,
+                googleName,
+                message: 'Email Google belum terhubung ke akun affiliate. Masukkan Random ID untuk menghubungkan.'
+            });
+        } catch(e) {
+            console.error('[GOOGLE LOGIN]', e.message);
+            res.json({ success: false, message: 'Gagal verifikasi Google: ' + (e.response?.data?.error_description || e.message) });
+        }
+    });
+
+    router.post('/link-google', async (req, res) => {
+        try {
+            const { idToken, randomId } = req.body;
+            if (!idToken || !randomId) return res.json({ success: false, message: 'Data tidak lengkap.' });
+
+            // Verifikasi token
+            const verify = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+            const payload = verify.data;
+            if (!payload || !payload.email) return res.json({ success: false, message: 'Token Google tidak valid.' });
+
+            const googleEmail = payload.email.toLowerCase();
+
+            // Cek apakah email sudah dipakai
+            let users = await getUsers();
+            if (users.find(u => u.googleEmail === googleEmail && u.randomId !== randomId)) {
+                return res.json({ success: false, message: 'Email Google sudah terhubung ke akun lain.' });
+            }
+
+            const idx = users.findIndex(u => u.randomId === randomId);
+            if (idx === -1) return res.json({ success: false, message: 'Random ID tidak ditemukan.' });
+            if (!users[idx].isAffiliate) return res.json({ success: false, message: 'Akun ini bukan affiliate.' });
+
+            users[idx].googleEmail = googleEmail;
+            users[idx].googleName = payload.name || payload.given_name || '';
+            await saveUsers(users);
+
+            // Login setelah link
+            const ip = getClientIP(req);
+            const ua = req.headers['user-agent'] || '';
+            security.revokeUserTokens(randomId);
+            const token = security.generateToken(randomId, ip, ua);
+
+            const logs = await getAuditLogs();
+            logs.push({ id:'AUDIT-'+Date.now(), action:'GOOGLE_LINK', randomId, ip, googleEmail, timestamp: new Date().toISOString() });
+            await saveAuditLogs(logs);
+
+            res.json({ success: true, token, message: 'Akun Google berhasil ditautkan!' });
+        } catch(e) {
+            console.error('[LINK GOOGLE]', e.message);
+            res.json({ success: false, message: 'Gagal: ' + (e.response?.data?.error_description || e.message) });
+        }
+    });
+
+    // ============================================================
+    // CEK TOKEN VALIDITY
     // ============================================================
     router.post('/check-token', (req, res) => {
         const token = req.headers['x-auth-token'];
