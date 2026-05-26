@@ -446,8 +446,10 @@ async function loadTab(tab){
                     <button onclick="testPremku()" class="text-xs bg-amber-600 px-3 py-1.5 rounded mt-2"><i class="fa-solid fa-play mr-1"></i>Test</button></div>
                 <div class="card p-5"><h3 class="font-bold text-sm text-white mb-3">SMM Panel</h3><div id="smm-test">Loading...</div>
                     <button onclick="testSMM()" class="text-xs bg-pink-600 px-3 py-1.5 rounded mt-2"><i class="fa-solid fa-play mr-1"></i>Test</button></div>
+                <div class="card p-5"><h3 class="font-bold text-sm text-white mb-3">Firebase Auth</h3><div id="firebase-test-result">Loading...</div>
+                    <button onclick="testFirebase()" class="text-xs bg-emerald-600 px-3 py-1.5 rounded mt-2"><i class="fa-solid fa-play mr-1"></i>Test Firebase</button></div>
             </div>`;
-            testFlowix();testIP();testPremku();testSMM();
+            testFlowix();testIP();testPremku();testSMM();testFirebase();
         }
         // =============== 15. SECURITY ===============
         else if(tab==='security'){
@@ -883,6 +885,9 @@ async function testPremku(){
 }
 async function testSMM(){
     try{const r=await fetch('/api/smm-products').then(r=>r.json());document.getElementById('smm-test').innerHTML=r.success?`<span class="text-emerald-400 font-bold">✅ ${r.data?.length||0} services</span>`:'<span class="text-red-400">❌ Gagal</span>';}catch(e){document.getElementById('smm-test').innerHTML='<span class="text-red-400">Error</span>';}
+}
+async function testFirebase(){
+    try{const r=await fetch('/api/affiliate/firebase-test').then(r=>r.json());document.getElementById('firebase-test-result').innerHTML=r.success?`<span class="text-emerald-400 font-bold">✅ ${r.message}</span>`:`<span class="text-red-400">❌ ${r.message}</span>`;}catch(e){document.getElementById('firebase-test-result').innerHTML='<span class="text-red-400">Error</span>';}
 }
 
 // Testimoni functions

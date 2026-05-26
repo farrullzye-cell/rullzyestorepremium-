@@ -181,18 +181,18 @@ window.googleLogin = function() {
     provider.addScope('email');
     provider.addScope('profile');
     fbAuth.signInWithPopup(provider).then(async (result) => {
-        // Dapatkan token dari credential
+        // Dapatkan token
         const credential = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
-        const googleIdToken = credential.idToken;  // Google-issued ID token
-        const accessToken = credential.accessToken; // Google access token
+        const firebaseIdToken = await result.user.getIdToken(); // Firebase ID token (selalu valid)
+        const accessToken = credential?.accessToken; // Google access token
         const email = result.user.email;
         const name = result.user.displayName;
 
-        currentPendingGoogle = { idToken: googleIdToken, accessToken, email, name };
+        currentPendingGoogle = { idToken: firebaseIdToken, accessToken, email, name };
 
         const r2 = await fetch('/api/affiliate/google-login', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ idToken: googleIdToken, accessToken })
+            body: JSON.stringify({ idToken: firebaseIdToken, accessToken })
         });
         const d = await r2.json();
         if (!d.success) {
