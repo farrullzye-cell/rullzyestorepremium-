@@ -134,10 +134,13 @@ async function loadTab(tab){
         else if(tab==='users'){
             const u=await api('/api/admin/users').then(r=>r.json());
             let h=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Manajemen Pengguna (${u.length})</h2>
-                <button onclick="this.nextElementSibling.classList.toggle('hidden')" class="text-xs bg-violet-600 text-white px-3 py-1.5 rounded-lg"><i class="fa-solid fa-search mr-1"></i>Cari</button>
-                <div class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
-                    <div class="card p-6 max-w-lg w-full"><input type="text" id="userSearch" placeholder="Cari nama atau ID..." class="input-dark mb-3" oninput="filterUserTable(this.value)">
-                    <div id="userSearchResults" class="max-h-60 overflow-y-auto text-sm"></div></div>
+                <div class="flex gap-2">
+                    <button onclick="showCreateUserModal()" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg"><i class="fa-solid fa-plus mr-1"></i>Buat User</button>
+                    <button onclick="this.nextElementSibling.classList.toggle('hidden')" class="text-xs bg-violet-600 text-white px-3 py-1.5 rounded-lg"><i class="fa-solid fa-search mr-1"></i>Cari</button>
+                    <div class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+                        <div class="card p-6 max-w-lg w-full"><input type="text" id="userSearch" placeholder="Cari nama atau ID..." class="input-dark mb-3" oninput="filterUserTable(this.value)">
+                        <div id="userSearchResults" class="max-h-60 overflow-y-auto text-sm"></div></div>
+                    </div>
                 </div>
             </div>
             <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
@@ -359,7 +362,8 @@ async function loadTab(tab){
         else if(tab==='affiliate'){
             const [users,stats]=await Promise.all([api('/api/admin/users').then(r=>r.json()),api('/api/affiliate/stats').then(r=>r.json())]);
             const aff=users.filter(u=>u.isAffiliate||u.affiliatePending);
-            let ah=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Affiliate (${stats.totalAffiliate||0})</h2></div>`;
+            let ah=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Affiliate (${stats.totalAffiliate||0})</h2>
+                <button onclick="showCreateAffiliateModal()" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg"><i class="fa-solid fa-plus mr-1"></i>Buat Affiliate</button></div>`;
             if(stats.success){
                 ah+=`<div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
                     <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Aktif</p><h3 class="text-xl font-black mt-1 text-indigo-400">${stats.totalAffiliate}</h3></div>
@@ -380,7 +384,7 @@ async function loadTab(tab){
                 <td class="p-2 text-center">
                     ${a.affiliatePending&&!a.isAffiliate?`<button onclick="approveAffiliate('${a.randomId}')" class="text-[10px] bg-emerald-600 px-2 py-0.5 rounded mr-1">Terima</button><button onclick="rejectAffiliate('${a.randomId}')" class="text-[10px] bg-red-600 px-2 py-0.5 rounded">Tolak</button>`:''}
                     ${a.isAffiliate?`<button onclick="editAffiliate('${a.randomId}',${a.customCommission||0},${a.maxMarkup||0},${a.isBanned||false})" class="text-[10px] bg-sky-600 px-2 py-0.5 rounded mr-1">Edit</button><button onclick="togglePPOB('${a.randomId}')" class="text-[10px] ${a.upgradePPOB?'bg-red-600':'bg-indigo-600'} px-2 py-0.5 rounded mr-1">${a.upgradePPOB?'PPOB Off':'PPOB On'}</button>
-                    <button onclick="addAffiliateBalance('${a.randomId}')" class="text-[10px] bg-amber-600 px-2 py-0.5 rounded">TopUp</button>`:''}
+                    <button onclick="setAffiliateBalance('${a.randomId}')" class="text-[10px] bg-amber-600 px-2 py-0.5 rounded">Edit Saldo</button>`:''}
                 </td></tr>`;
             });
             ah+=`</tbody></table></div>`;
@@ -857,7 +861,68 @@ window.deleteUser=async function(rid){
     await api('/api/admin/users/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid})});
     loadTab('users');
 };
+window.showCreateUserModal=function(){
+    const div=document.createElement('div');
+    div.className='fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4';
+    div.onclick=function(e){if(e.target===this)this.remove()};
+    div.innerHTML=`<div class="card p-6 max-w-sm w-full"><h3 class="font-bold text-white mb-4">Buat User Baru</h3>
+        <input type="text" id="cu-name" placeholder="Nama User" class="input-dark mb-2">
+        <input type="number" id="cu-balance" placeholder="Saldo Awal (Rp)" class="input-dark mb-2" value="0">
+        <label class="flex items-center gap-2 text-xs text-slate-300 mb-2"><input type="checkbox" id="cu-reseller"> Sebagai Reseller</label>
+        <label class="flex items-center gap-2 text-xs text-slate-300 mb-4"><input type="checkbox" id="cu-affiliate"> Sebagai Affiliate</label>
+        <button onclick="createUser()" class="btn-primary w-full mb-2">Buat User</button>
+        <button onclick="this.closest('.fixed').remove()" class="text-xs text-slate-400 w-full">Batal</button>
+    </div>`;
+    document.body.appendChild(div);
+    setTimeout(()=>document.getElementById('cu-name')?.focus(),100);
+};
+window.createUser=async function(){
+    const name=document.getElementById('cu-name').value.trim();
+    const balance=document.getElementById('cu-balance').value;
+    const isReseller=document.getElementById('cu-reseller').checked;
+    const isAffiliate=document.getElementById('cu-affiliate').checked;
+    if(!name) return alert('Nama wajib diisi!');
+    const r=await api('/api/admin/users/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,balance,isReseller,isAffiliate})});
+    const d=await r.json();
+    if(d.success){alert(d.message);document.querySelector('.fixed.inset-0')?.remove();loadTab('users');}
+    else alert(d.message||'Gagal');
+};
 
+window.showCreateAffiliateModal=function(){
+    const div=document.createElement('div');
+    div.className='fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4';
+    div.onclick=function(e){if(e.target===this)this.remove()};
+    div.innerHTML=`<div class="card p-6 max-w-sm w-full"><h3 class="font-bold text-white mb-4">Buat Affiliate Baru</h3>
+        <input type="text" id="ca-name" placeholder="Nama Affiliate" class="input-dark mb-2">
+        <input type="number" id="ca-balance" placeholder="Saldo Komisi Awal (Rp)" class="input-dark mb-2" value="0">
+        <input type="number" id="ca-comm" placeholder="Komisi Kustom (%)" class="input-dark mb-4" value="0">
+        <button onclick="createAffiliate()" class="btn-primary w-full mb-2">Buat Affiliate</button>
+        <button onclick="this.closest('.fixed').remove()" class="text-xs text-slate-400 w-full">Batal</button>
+    </div>`;
+    document.body.appendChild(div);
+    setTimeout(()=>document.getElementById('ca-name')?.focus(),100);
+};
+window.createAffiliate=async function(){
+    const name=document.getElementById('ca-name').value.trim();
+    const balance=document.getElementById('ca-balance').value;
+    const commissionPercent=document.getElementById('ca-comm').value;
+    if(!name) return alert('Nama wajib diisi!');
+    const r=await api('/api/admin/affiliate/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,balance,commissionPercent})});
+    const d=await r.json();
+    if(d.success){alert(d.message);document.querySelector('.fixed.inset-0')?.remove();loadTab('affiliate');}
+    else alert(d.message||'Gagal');
+};
+window.setAffiliateBalance=async function(rid){
+    const amt=prompt('Edit saldo komisi (masukkan nominal baru):');
+    if(amt&&!isNaN(parseInt(amt))){
+        // Get current user balance, set new affiliateBalance
+        const users=await api('/api/admin/users').then(r=>r.json());
+        const u=users.find(x=>x.randomId===rid);
+        const currentBalance=u?u.balance:0;
+        await api('/api/admin/users/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid,balance:currentBalance,affiliateBalance:parseInt(amt)})});
+        loadTab('affiliate');
+    }
+};
 window.editUser=async function(rid){
     const p=prompt('Format: Nama,Saldo,Komisi (contoh: Nama Baru,50000,10000)\nKosongkan jika tidak ingin mengubah.');
     if(p){

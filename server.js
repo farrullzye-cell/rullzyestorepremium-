@@ -1141,7 +1141,33 @@ app.post('/api/admin/notify-stock', async (req, res) => {
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
-// ================= ADMIN: NEW ENDPOINTS =================
+// ================= ADMIN: USER & AFFILIATE CRUD =================
+app.post('/api/admin/users/create', async (req, res) => {
+    try {
+        if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
+        const { name, balance, isReseller, isAffiliate } = req.body;
+        let users = await getUsers();
+        let randomId;
+        do { randomId = `U-${Math.random().toString(36).slice(2, 8).toUpperCase()}`; } while (users.some(u => u.randomId === randomId));
+        users.push({ randomId, firstName: name || '', balance: parseInt(balance)||0, isReseller: !!isReseller, isAffiliate: !!isAffiliate, affiliateBalance: 0, createdAt: new Date().toISOString() });
+        await saveUsers(users);
+        res.json({ success: true, randomId, message: `User ${randomId} berhasil dibuat.` });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+app.post('/api/admin/affiliate/create', async (req, res) => {
+    try {
+        if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
+        const { name, balance, commissionPercent } = req.body;
+        let users = await getUsers();
+        let randomId;
+        do { randomId = `AFF-${Math.random().toString(36).slice(2, 8).toUpperCase()}`; } while (users.some(u => u.randomId === randomId));
+        users.push({ randomId, firstName: name || '', affiliateName: name || '', balance: 0, affiliateBalance: parseInt(balance)||0, isAffiliate: true, affiliatePending: false, customCommission: parseInt(commissionPercent)||0, affiliateApprovedAt: new Date().toISOString(), createdAt: new Date().toISOString() });
+        await saveUsers(users);
+        res.json({ success: true, randomId, message: `Affiliate ${randomId} berhasil dibuat.` });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
 app.post('/api/admin/users/edit', async (req, res) => {
     try {
         if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
