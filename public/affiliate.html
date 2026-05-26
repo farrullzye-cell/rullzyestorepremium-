@@ -542,6 +542,22 @@ function renderTab(tab) {
     }
 }
 
+async function loadDashboard() {
+    const dash = await apiPost('/api/affiliate/dashboard', {});
+    if (!dash) return false;
+    if (dash.success) {
+        dashData = dash;
+        currentProfile = dash.data;
+        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('dashboardSection').classList.remove('hidden');
+        document.getElementById('btnLogout').classList.remove('hidden');
+        document.getElementById('headerName').classList.remove('hidden');
+        populateDashboard(dash);
+        return true;
+    }
+    return false;
+}
+
 function updateTelegramLinkStatus() {
     const el = document.getElementById('telegramLinkStatus');
     const btn = document.getElementById('telegramBtnLabel');
@@ -567,17 +583,8 @@ async function loginAffiliate() {
             setToken(d.token);
             localStorage.setItem('affId', rid);
             // Step 2: Fetch dashboard pakai token
-            const dash = await apiPost('/api/affiliate/dashboard', {});
-            if (!dash) return;
-            if (dash.success) {
-                dashData = dash;
-                currentProfile = dash.data;
-                document.getElementById('loginSection').classList.add('hidden');
-                document.getElementById('dashboardSection').classList.remove('hidden');
-                document.getElementById('btnLogout').classList.remove('hidden');
-                document.getElementById('headerName').classList.remove('hidden');
-                populateDashboard(dash);
-            } else {
+            const ok = await loadDashboard();
+            if (!ok) { clearToken(); Swal.fire({icon:'error', title:'Gagal', text:'Gagal memuat dashboard.', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'}); }
                 clearToken();
                 Swal.fire({icon:'error', title:'Gagal', text:dash.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
             }
@@ -782,16 +789,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const savedId = localStorage.getItem('affId');
     if (saved && savedId) {
         document.getElementById('inputRandomId').value = savedId;
-        const dash = await apiPost('/api/affiliate/dashboard', {});
-        if (dash && dash.success) {
-            dashData = dash;
-            currentProfile = dash.data;
-            document.getElementById('loginSection').classList.add('hidden');
-            document.getElementById('dashboardSection').classList.remove('hidden');
-            document.getElementById('btnLogout').classList.remove('hidden');
-            document.getElementById('headerName').classList.remove('hidden');
-            populateDashboard(dash);
-        } else {
+        const ok = await loadDashboard();
+        if (!ok) {
             // Token expired or invalid
             clearToken();
         }
