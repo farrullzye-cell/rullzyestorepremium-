@@ -374,13 +374,14 @@ async function loadTab(tab){
                 </div>`;
             }
             ah+=`<div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
-                <tr><th class="p-2 text-[10px]">Nama</th><th class="p-2 text-[10px] text-center">Status</th><th class="p-2 text-[10px] text-right">Saldo</th><th class="p-2 text-[10px] text-right">Earned</th><th class="p-2 text-[10px] text-center">PPOB</th><th class="p-2 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
+                <tr><th class="p-2 text-[10px]">Nama</th><th class="p-2 text-[10px] text-center">Status</th><th class="p-2 text-[10px] text-right">Saldo</th><th class="p-2 text-[10px] text-right">Earned</th><th class="p-2 text-[10px] text-center">PPOB</th><th class="p-2 text-[10px]">Tgl Daftar</th><th class="p-2 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
             aff.forEach(a=>{
-                ah+=`<tr class="border-b border-white/5"><td class="p-2 font-bold text-xs">${a.affiliateName||a.firstName||'-'}<br><code class="text-[10px] text-slate-400 font-normal">${a.randomId}</code></td>
+                ah+=`<tr class="border-b border-white/5"><td class="p-2 font-bold text-xs">${a.affiliateName||a.firstName||'-'}<br><code class="text-[10px] text-slate-400 font-normal">${a.randomId}</code><br><span class="text-[9px] text-sky-400">${a.chatId?'📱 '+a.chatId:'—'}</span></td>
                 <td class="p-2 text-center">${a.isAffiliate?'<span class="badge-ok">Aktif</span>':a.affiliatePending?'<span class="badge-warn">Pending</span>':'<span class="badge-err">Ditolak</span>'}</td>
                 <td class="p-2 text-right font-bold text-emerald-400 text-xs">${formatRp(a.affiliateBalance)}</td>
                 <td class="p-2 text-right font-bold text-violet-400 text-xs">${formatRp(a.totalEarned)}</td>
                 <td class="p-2 text-center">${a.upgradePPOB?'<span class="badge-ok">Ya</span>':'<span class="badge-err">Tdk</span>'}</td>
+                <td class="p-2 text-[9px] text-slate-400">${a.affiliateAppliedAt?new Date(a.affiliateAppliedAt).toLocaleDateString('id-ID'):'-'}</td>
                 <td class="p-2 text-center">
                     ${a.affiliatePending&&!a.isAffiliate?`<button onclick="approveAffiliate('${a.randomId}')" class="text-[10px] bg-emerald-600 px-2 py-0.5 rounded mr-1">Terima</button><button onclick="rejectAffiliate('${a.randomId}')" class="text-[10px] bg-red-600 px-2 py-0.5 rounded">Tolak</button>`:''}
                     ${a.isAffiliate?`<button onclick="editAffiliate('${a.randomId}',${a.customCommission||0},${a.maxMarkup||0},${a.isBanned||false})" class="text-[10px] bg-sky-600 px-2 py-0.5 rounded mr-1">Edit</button><button onclick="togglePPOB('${a.randomId}')" class="text-[10px] ${a.upgradePPOB?'bg-red-600':'bg-indigo-600'} px-2 py-0.5 rounded mr-1">${a.upgradePPOB?'PPOB Off':'PPOB On'}</button>

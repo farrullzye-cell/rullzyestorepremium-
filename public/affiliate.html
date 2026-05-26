@@ -569,7 +569,7 @@ function renderTab(tab) {
             </div>
             ${wh.length === 0 ?
                 `<div class="flex flex-col items-center justify-center py-8 text-center"><div class="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center mb-4"><i class="fa-solid fa-money-bill-transfer text-slate-600 text-2xl"></i></div><p class="text-sm text-slate-500">Belum ada riwayat penarikan.</p></div>` :
-                `<div class="overflow-x-auto -mx-5 sm:-mx-6"><table class="w-full text-xs"><thead><tr class="text-slate-500 border-b border-white/[0.04]"><th class="px-4 sm:px-6 py-3 text-center font-bold uppercase tracking-widest text-[10px]">ID</th><th class="px-4 sm:px-6 py-3 text-right font-bold uppercase tracking-widest text-[10px]">Jumlah</th><th class="px-4 sm:px-6 py-3 text-left font-bold uppercase tracking-widest text-[10px] hidden sm:table-cell">Tujuan</th><th class="px-4 sm:px-6 py-3 text-center font-bold uppercase tracking-widest text-[10px]">Status</th></tr></thead><tbody>${wh.map(w => `<tr class="border-b border-white/[0.03] hover:bg-white/[0.01] transition"><td class="px-4 sm:px-6 py-3 text-center font-mono text-[10px] text-slate-500">${w.id}</td><td class="px-4 sm:px-6 py-3 text-right font-bold text-white">Rp ${(w.amount||0).toLocaleString('id-ID')}</td><td class="px-4 sm:px-6 py-3 text-slate-500 text-[10px] hidden sm:table-cell">${w.bankDetails||'-'}</td><td class="px-4 sm:px-6 py-3 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${w.status==='SUKSES'?'bg-emerald-500/15 text-emerald-400':w.status==='PENDING'?'bg-amber-500/15 text-amber-400':'bg-red-500/15 text-red-400'}">${w.status}</span></td></tr>`).join('')}</tbody></table></div>`}
+                `<div class="overflow-x-auto -mx-5 sm:-mx-6"><table class="w-full text-xs"><thead><tr class="text-slate-500 border-b border-white/[0.04]"><th class="px-4 sm:px-6 py-3 text-center font-bold uppercase tracking-widest text-[10px]">ID</th><th class="px-4 sm:px-6 py-3 text-right font-bold uppercase tracking-widest text-[10px]">Jumlah</th><th class="px-4 sm:px-6 py-3 text-left font-bold uppercase tracking-widest text-[10px] hidden sm:table-cell">Tujuan</th><th class="px-4 sm:px-6 py-3 text-center font-bold uppercase tracking-widest text-[10px]">Tgl</th><th class="px-4 sm:px-6 py-3 text-center font-bold uppercase tracking-widest text-[10px]">Status</th></tr></thead><tbody>${wh.map(w => `<tr class="border-b border-white/[0.03] hover:bg-white/[0.01] transition"><td class="px-4 sm:px-6 py-3 text-center font-mono text-[10px] text-slate-500">${w.id||'-'}</td><td class="px-4 sm:px-6 py-3 text-right font-bold text-white">Rp ${(w.amount||0).toLocaleString('id-ID')}</td><td class="px-4 sm:px-6 py-3 text-slate-500 text-[10px] hidden sm:table-cell">${w.bankDetails||'-'}</td><td class="px-4 sm:px-6 py-3 text-center text-slate-500 text-[10px]">${w.date?new Date(w.date).toLocaleDateString('id-ID', {day:'numeric',month:'short'}):'-'}</td><td class="px-4 sm:px-6 py-3 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${w.status==='SUKSES'?'bg-emerald-500/15 text-emerald-400':w.status==='PENDING'?'bg-amber-500/15 text-amber-400':'bg-red-500/15 text-red-400'}">${w.status}</span></td></tr>`).join('')}</tbody></table></div>`}
         </div>`;
     }
 }
@@ -661,6 +661,9 @@ function populateDashboard(d) {
         { label:'Komisi Bulan Ini', value:'Rp '+(d.data.monthlyCommission||0).toLocaleString('id-ID'), icon:'fa-calendar', bg:'from-amber-600/20 to-orange-600/20', color:'text-amber-400' },
         { label:'Total Komisi', value:'Rp '+(d.data.totalCommission||0).toLocaleString('id-ID'), icon:'fa-chart-line', bg:'from-violet-600/20 to-purple-600/20', color:'text-violet-400' }
     ];
+    if (d.data.pendingWithdrawAmount > 0) {
+        stats.push({ label:'Menunggu Cair', value:'Rp '+(d.data.pendingWithdrawAmount||0).toLocaleString('id-ID'), icon:'fa-hourglass-half', bg:'from-rose-600/20 to-pink-600/20', color:'text-rose-400' });
+    }
     document.getElementById('statsGrid').innerHTML = stats.map(s => `<div class="glass-card p-4 fade-up flex items-start gap-3">
         <div class="stat-icon bg-gradient-to-br ${s.bg} shrink-0"><i class="fa-solid ${s.icon} ${s.color} text-sm"></i></div>
         <div class="min-w-0">
@@ -765,7 +768,7 @@ async function editProfile() {
     });
     if (value) {
         const d = await apiPost('/api/affiliate/settings', {affiliateName:value.name,bio:value.bio});
-        if(d && d.success){ Swal.fire({icon:'success',title:'Berhasil',text:'Profil diperbarui.',background:'#0f172a',color:'#e2e8f0',confirmButtonColor:'#7c3aed'}); loginAffiliate(); }
+        if(d && d.success){ Swal.fire({icon:'success',title:'Berhasil',text:'Profil diperbarui.',background:'#0f172a',color:'#e2e8f0',confirmButtonColor:'#7c3aed'}); loadDashboard(); }
         else if(d) Swal.fire({icon:'error',title:'Gagal',text:d.message,background:'#0f172a',color:'#e2e8f0',confirmButtonColor:'#7c3aed'});
     }
 }
@@ -785,7 +788,7 @@ async function saveTampilan() {
     const d = await apiPost('/api/affiliate/settings', { avatarUrl, themeColor, socialLinks });
     if(d && d.success){
         Swal.fire({icon:'success',title:'Tampilan Disimpan!',text:'Cek preview toko Anda.',background:'#0f172a',color:'#e2e8f0',confirmButtonColor:'#7c3aed'});
-        loginAffiliate();
+        loadDashboard();
     } else if(d) Swal.fire({icon:'error',title:'Gagal',text:d.message,background:'#0f172a',color:'#e2e8f0',confirmButtonColor:'#7c3aed'});
 }
 
@@ -793,7 +796,7 @@ async function saveSettings() {
     const markup = parseInt(document.getElementById('markupSlider').value);
     const sel = Array.from(document.querySelectorAll('.product-cb:checked')).map(cb=>cb.value);
     const d = await apiPost('/api/affiliate/settings', {markupPercent:markup,selectedProducts:sel});
-    if(d && d.success){ Swal.fire({icon:'success',title:'Tersimpan',text:'Pengaturan toko disimpan.',background:'#0f172a',color:'#e2e8f0',confirmButtonColor:'#7c3aed'}); loginAffiliate(); }
+    if(d && d.success){ Swal.fire({icon:'success',title:'Tersimpan',text:'Pengaturan toko disimpan.',background:'#0f172a',color:'#e2e8f0',confirmButtonColor:'#7c3aed'}); loadDashboard(); }
     else if(d) Swal.fire({icon:'error',title:'Gagal',text:d.message,background:'#0f172a',color:'#e2e8f0',confirmButtonColor:'#7c3aed'});
 }
 

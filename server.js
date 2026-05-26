@@ -1659,7 +1659,7 @@ async function initConfigFromFirebase() {
     notifyGroupAdmin = botModule.notifyGroupAdmin;
 
     // Load affiliate API routes — pass bot notifications for group alerts
-    require('./affiliate_api.js')(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL, { notifyGroupWithdrawNew, notifyGroupCommission });
+    require('./affiliate_api.js')(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL, { notifyGroupWithdrawNew, notifyGroupCommission, notifyGroupAffiliateNew });
 
     app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server berjalan di port ${PORT}`));
 })();

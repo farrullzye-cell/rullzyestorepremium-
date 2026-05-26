@@ -7,7 +7,7 @@ const crypto = require('crypto');
 module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL, botNotifiers) {
     const router = express.Router();
     const security = require('./anti_fraud.js');
-    const { notifyGroupWithdrawNew, notifyGroupCommission } = botNotifiers || {};
+    const { notifyGroupWithdrawNew, notifyGroupCommission, notifyGroupAffiliateNew } = botNotifiers || {};
 
     const BANK_LIST = [
         "Bank Aladin Syariah","Bank BRI","Bank BNI","Bank Mandiri","Bank BCA","Bank CIMB Niaga",
@@ -80,6 +80,7 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                 users[idx].isAffiliate = true;
                 users[idx].affiliatePending = false;
                 users[idx].affiliateApprovedAt = new Date().toISOString();
+                users[idx].affiliateBalance = 0;
             } else {
                 users[idx].affiliatePending = true;
             }
@@ -98,6 +99,36 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                 timestamp: new Date().toISOString()
             });
             await saveAuditLogs(logs);
+
+            // Notify admin group about new application
+            if (notifyGroupAffiliateNew) {
+                notifyGroupAffiliateNew(users[idx]).catch(() => {});
+            }
+
+            // Notify user via Telegram if they have chatId
+            try {
+                const { bot } = require('./bot.js');
+                if (bot && users[idx].chatId) {
+                    if (cfg.affiliateAutoApprove) {
+                        const store = cfg.storeName || 'Rullzye Store Premium';
+                        bot.sendMessage(users[idx].chatId,
+                            `🎉 *SELAMAT! KAMU SEKARANG AFFILIATE!* 🎉\n\n` +
+                            `Kamu sudah resmi menjadi Affiliate *${store}* 🥳\n\n` +
+                            `Bagikan link tokomu dan dapatkan komisi dari setiap transaksi! 💰\n\n` +
+                            `🌐 *Link Tokomu:* https://rullzyestorepremium.my.id/toko/${randomId}\n` +
+                            `📱 *Link Telegram:* https://t.me/${cfg.botUsername || 'rullzyestorebot'}?start=${randomId}`,
+                            { parse_mode: 'Markdown' }
+                        ).catch(() => {});
+                    } else {
+                        bot.sendMessage(users[idx].chatId,
+                            `📩 *PERMINTAAN AFFILIATE TERKIRIM* 📩\n\n` +
+                            `Permintaan kamu untuk menjadi Affiliate sudah terkirim dan sedang direview oleh admin.\n\n` +
+                            `Kami akan memberi tahu kamu begitu akun disetujui ya! 🤗`,
+                            { parse_mode: 'Markdown' }
+                        ).catch(() => {});
+                    }
+                }
+            } catch(e) { console.error('[AFFILIATE APPLY NOTIFY]', e.message); }
 
             if (cfg.affiliateAutoApprove) {
                 res.json({ success: true, message: 'Pendaftaran berhasil! Anda langsung menjadi affiliate.' });
@@ -268,6 +299,7 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                     wdToday,
                     maxWdPerDay: 1,
                     wdCooldownHours: security.WD_COOLDOWN_HOURS,
+                    pendingWithdrawAmount: myWithdraws.filter(w => w.status === 'PENDING').reduce((s, w) => s + (w.amount || 0), 0),
                 },
                 history,
                 withdrawHistory: myWithdraws,
