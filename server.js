@@ -10,16 +10,20 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-const getAdminPin = () => { const cfg = getConfig(); return cfg.adminPin || '858486'; };
-
-// Multi-admin helpers
-const verifyAdmin = (pin) => {
+// Multi-admin: verifikasi username + pin
+const verifyAdmin = (username, pin) => {
     const cfg = getConfig();
-    // Super admin check
-    if (pin === (cfg.superAdminPin || cfg.adminPin || '858486')) return { role: 'super_admin', permissions: 'all' };
-    // Regular admin check
+    // Super admin (username + pin dari objek superAdmin atau fallback)
+    const sa = cfg.superAdmin || {};
+    if (sa.pin && sa.username) {
+        if (username === sa.username && pin === sa.pin) return { role: 'super_admin', username: sa.username, permissions: 'all' };
+    } else {
+        // Fallback: legacy superAdminPin
+        if (pin === (cfg.superAdminPin || cfg.adminPin || '858486')) return { role: 'super_admin', username: 'Super Admin', permissions: 'all' };
+    }
+    // Regular admin
     if (cfg.admins && Array.isArray(cfg.admins)) {
-        const admin = cfg.admins.find(a => a.pin === pin && a.active !== false);
+        const admin = cfg.admins.find(a => a.username === username && a.pin === pin && a.active !== false);
         if (admin) return { role: 'admin', username: admin.username, permissions: admin.permissions || [] };
     }
     return null;
@@ -31,10 +35,17 @@ const hasPermission = (admin, requiredPerm) => {
     return admin.permissions && admin.permissions.includes(requiredPerm);
 };
 
+// Parse auth header "username:pin" 
+const parseAuthHeader = (header) => {
+    if (!header || !header.includes(':')) return { username: '', pin: header || '' };
+    const parts = header.split(':');
+    return { username: parts[0], pin: parts.slice(1).join(':') };
+};
+
 // Admin auth middleware — attaches req.admin
 const adminAuth = (req, res, next) => {
-    const pin = req.headers['x-admin-pin'];
-    const admin = verifyAdmin(pin);
+    const { username, pin } = parseAuthHeader(req.headers['x-admin-auth']);
+    const admin = verifyAdmin(username, pin);
     if (!admin) return res.status(401).json({ success: false, message: 'Unauthorized' });
     req.admin = admin;
     next();
@@ -85,10 +96,10 @@ let bot, sendBroadcast, notifyAffiliateApproved, notifyAffiliateRejected, notify
 
 // ================= ADMIN: AUTH ENDPOINT =================
 app.post('/api/admin/auth', (req, res) => {
-    const { pin } = req.body;
-    const admin = verifyAdmin(pin);
+    const { username, pin } = req.body;
+    const admin = verifyAdmin(username || '', pin);
     if (admin) return res.json({ success: true, role: admin.role, username: admin.username || 'Super Admin', permissions: admin.permissions });
-    res.json({ success: false, message: 'PIN salah!' });
+    res.json({ success: false, message: 'Username atau PIN salah!' });
 });
 
 // Apply admin auth to all /api/admin routes below
@@ -1180,10 +1191,15 @@ app.post('/api/admin/change-pin', async (req, res) => {
         if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Hanya Super Admin yang bisa mengganti PIN Super Admin.' });
         const { oldPin, newPin } = req.body;
         const cfg = getConfig();
-        if (oldPin !== (cfg.superAdminPin || cfg.adminPin || '858486')) return res.json({ success: false, message: 'PIN lama salah.' });
+        const sa = cfg.superAdmin || {};
+        const currentPin = sa.pin || cfg.superAdminPin || cfg.adminPin || '';
+        if (oldPin !== currentPin) return res.json({ success: false, message: 'PIN lama salah.' });
         if (!newPin || newPin.length < 4) return res.json({ success: false, message: 'PIN baru minimal 4 karakter.' });
-        cfg.superAdminPin = newPin;
-        delete cfg.adminPin; // migrate from old field
+        const superAdmin = cfg.superAdmin || {};
+        superAdmin.pin = newPin;
+        cfg.superAdmin = superAdmin;
+        delete cfg.superAdminPin;
+        delete cfg.adminPin;
         await saveConfig(cfg);
         res.json({ success: true, message: 'PIN Super Admin berhasil diganti!' });
     } catch(e) { res.json({ success: false, message: e.message }); }
@@ -1561,14 +1577,17 @@ async function initConfigFromFirebase() {
 (async () => {
     await initConfigFromFirebase();
 
-    // Migrasi config: adminPin → superAdminPin jika perlu
+    // Migrasi config: legacy fields → superAdmin object
     const cfg = getConfig();
-    if (cfg.adminPin && !cfg.superAdminPin) {
-        cfg.superAdminPin = cfg.adminPin;
+    if (!cfg.superAdmin || !cfg.superAdmin.pin) {
+        const pin = cfg.superAdminPin || cfg.adminPin || '858486';
+        const username = cfg.superAdmin && cfg.superAdmin.username ? cfg.superAdmin.username : 'super';
+        cfg.superAdmin = { username, pin };
+        delete cfg.superAdminPin;
         delete cfg.adminPin;
         if (!cfg.admins) cfg.admins = [];
         await saveConfig(cfg);
-        console.log('✅ Config migrated: adminPin -> superAdminPin');
+        console.log('✅ Config migrated: legacy pin fields → superAdmin object');
     }
 
     // Load bot (membaca config.json yang sudah diperbarui dari Firebase)

@@ -1,4 +1,4 @@
-let currentPin='';
+let currentAuth='';
 let adminRole='';
 let adminPermissions=[];
 let adminUsername='';
@@ -11,10 +11,10 @@ async function checkPin(){
     const u=document.getElementById('adminUsername').value.trim();
     document.getElementById('loginError').classList.add('hidden');
     try {
-        const res=await fetch('/api/admin/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:p})});
+        const res=await fetch('/api/admin/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,pin:p})});
         const data=await res.json();
         if(data.success){
-            currentPin=p;
+            currentAuth=u+':'+p;
             adminRole=data.role;
             adminUsername=data.username||u||'Super Admin';
             adminPermissions=data.permissions||[];
@@ -65,7 +65,7 @@ async function deleteAdmin(id){
 
 function api(path, options={}) {
     if (!options.headers) options.headers={};
-    options.headers['x-admin-pin']=currentPin;
+    options.headers['x-admin-auth']=currentAuth;
     return fetch(path, options);
 }
 
@@ -945,7 +945,7 @@ window.changePin=async function(){
     if(newPin!==confirmPin) return alert('PIN tidak cocok');
     const r=await api('/api/admin/change-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldPin,newPin})});
     const d=await r.json();
-    if(d.success){alert('PIN berhasil diganti!');currentPin=newPin;} else alert(d.message||'Gagal ganti PIN');
+    if(d.success){alert('PIN berhasil diganti!');currentAuth=adminUsername+':'+newPin;} else alert(d.message||'Gagal ganti PIN');
 };
 
 window.saveGroups=async function(){

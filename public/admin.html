@@ -45,8 +45,8 @@
             <i class="fa-solid fa-shield-halved text-white text-xl"></i>
         </div>
         <h2 class="text-xl font-black text-white mb-1">Admin Panel</h2>
-        <p class="text-xs text-slate-400 mb-4">Masukkan PIN untuk akses</p>
-        <input type="text" id="adminUsername" placeholder="Username (kosongkan untuk Super Admin)" class="input-dark text-center mb-2 text-xs" autocomplete="off">
+        <p class="text-xs text-slate-400 mb-4">Masukkan Username &amp; PIN</p>
+        <input type="text" id="adminUsername" placeholder="Username" class="input-dark text-center mb-2 text-xs" autocomplete="off">
         <input type="password" id="pinInput" placeholder="PIN" class="input-dark text-center mb-3 text-lg tracking-widest" onkeydown="if(event.key==='Enter')checkPin()">
         <button onclick="checkPin()" class="btn-primary w-full">Masuk</button>
         <p id="loginError" class="text-red-400 text-xs mt-3 hidden"></p>
