@@ -99,16 +99,7 @@
             <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i>Masuk Dashboard
         </button>
         <p class="text-[10px] text-slate-600 mt-5">Belum punya ID? Daftar via <a href="https://t.me/RullzyeBot" class="text-violet-400 underline hover:text-violet-300 transition">Bot Telegram</a></p>
-        <!-- Link Google Modal -->
-        <div id="linkGoogleModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" style="display:none;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px)">
-            <div class="glass p-6 max-w-sm w-full modal-pop">
-                <h3 class="font-black text-white text-lg mb-2">🔗 Hubungkan Akun Google</h3>
-                <p class="text-xs text-slate-400 mb-4">Email <strong id="linkGoogleEmail" class="text-violet-300"></strong> belum terhubung. Masukkan Random ID affiliate kamu untuk menautkan.</p>
-                <input type="text" id="linkRandomId" placeholder="ID-ABC123" class="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm uppercase font-bold text-center text-white placeholder-slate-600 focus:border-violet-500/50 outline-none mb-3 tracking-wider">
-                <button onclick="confirmLinkGoogle()" class="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold py-3 rounded-xl text-sm hover:shadow-xl transition-all"><i class="fa-solid fa-link mr-2"></i>Tautkan & Masuk</button>
-                <button onclick="document.getElementById('linkGoogleModal').style.display='none'" class="w-full text-[11px] text-slate-500 mt-3 hover:text-white transition">Batal</button>
-            </div>
-        </div>
+        <div id="newGoogleUserAlert" class="hidden mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-300"></div>
     </div>
 </div>
 
@@ -201,11 +192,15 @@ window.googleLogin = function() {
         }
         if (d.linked) {
             setToken(d.token);
+            localStorage.setItem('affId', d.randomId || '');
             loadDashboard();
-            Swal.fire({icon:'success', title:'Berhasil Masuk!', text:'Selamat datang kembali!', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:1500, showConfirmButton:false});
-        } else {
-            document.getElementById('linkGoogleEmail').textContent = d.googleEmail;
-            document.getElementById('linkGoogleModal').style.display = 'flex';
+            if (d.isNew) {
+                document.getElementById('newGoogleUserAlert').innerHTML = `✅ Akun affiliate baru dibuat! Kode kamu: <strong>${d.randomId}</strong>`;
+                document.getElementById('newGoogleUserAlert').classList.remove('hidden');
+            } else {
+                document.getElementById('newGoogleUserAlert').classList.add('hidden');
+            }
+            Swal.fire({icon:'success', title:'Berhasil Masuk!', text:d.isNew?'Akun affiliate berhasil dibuat!':'Selamat datang kembali!', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:1500, showConfirmButton:false});
         }
     }).catch((err) => {
         if (err.code !== 'auth/popup-closed-by-user') {
@@ -214,24 +209,47 @@ window.googleLogin = function() {
     });
 };
 
-window.confirmLinkGoogle = async function() {
-    const randomId = document.getElementById('linkRandomId').value.trim().toUpperCase();
-    if (!randomId) return Swal.fire({icon:'warning', title:'Oops', text:'Masukkan Random ID', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
-    if (!currentPendingGoogle) return;
-    const r = await fetch('/api/affiliate/link-google', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ idToken: currentPendingGoogle.idToken, accessToken: currentPendingGoogle.accessToken, randomId })
-    });
-    const d = await r.json();
-    if (d.success) {
-        setToken(d.token);
-        document.getElementById('linkGoogleModal').style.display = 'none';
-        loadDashboard();
-        Swal.fire({icon:'success', title:'Tertaut!', text:'Akun Google berhasil dihubungkan!', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:1500, showConfirmButton:false});
-    } else {
-        Swal.fire({icon:'error', title:'Gagal', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+// linkTelegram — show modal to enter Telegram Chat ID
+async function linkTelegram() {
+    // If already linked, ask to unlink
+    if (dashData.data?.chatId && dashData.data.chatId > 0) {
+        const { isConfirmed } = await Swal.fire({
+            title:'Putuskan Telegram?',
+            text:'Kamu tidak akan lagi mendapat notifikasi order via Telegram.',
+            icon:'warning',
+            background:'#0f172a', color:'#e2e8f0',
+            confirmButtonText:'Ya, Putuskan',
+            confirmButtonColor:'#dc2626',
+            showCancelButton:true, cancelButtonColor:'#475569'
+        });
+        if (isConfirmed) {
+            const d = await apiPost('/api/affiliate/link-telegram', {chatId: 0});
+            if (d && d.success) {
+                Swal.fire({icon:'success', title:'Terputus', text:'Telegram berhasil diputuskan.', background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:1500, showConfirmButton:false});
+                loadDashboard();
+            } else if(d) Swal.fire({icon:'error', title:'Gagal', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+        }
+        return;
     }
-};
+    const { value: chatId } = await Swal.fire({
+        title:'Hubungkan Telegram',
+        text:'Kirim /id ke bot @RullzyeBot, lalu masukkan angka Chat ID yang muncul.',
+        input:'text',
+        inputPlaceholder:'1234567890',
+        background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed',
+        showCancelButton:true, cancelButtonColor:'#475569',
+        preConfirm:(v)=>{ if(!/^\d+$/.test(v)){Swal.showValidationMessage('Hanya angka!');return false;} return v; }
+    });
+    if (chatId) {
+        const d = await apiPost('/api/affiliate/link-telegram', {chatId: parseInt(chatId)});
+        if (d && d.success) {
+            Swal.fire({icon:'success', title:'Tertaut!', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed', timer:2000, showConfirmButton:false});
+            loadDashboard();
+        } else if(d) {
+            Swal.fire({icon:'error', title:'Gagal', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed'});
+        }
+    }
+}
 
 let currentProfile = {};
 let dashData = {};
@@ -297,6 +315,12 @@ function renderTab(tab) {
                             <button onclick="copyLink('linkWebsite')" class="bg-violet-600 hover:bg-violet-500 text-white px-3.5 rounded-r-xl text-xs transition flex items-center"><i class="fa-solid fa-copy"></i></button>
                         </div>
                     </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.12em]"><i class="fa-brands fa-telegram text-sky-400 mr-1.5"></i>Notifikasi Telegram</label>
+                        <div id="telegramLinkStatus" class="text-xs text-slate-400 mt-1.5"></div>
+                        <button onclick="linkTelegram()" class="mt-2 text-[10px] font-bold bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-2 rounded-xl transition flex items-center gap-1.5"><i class="fa-brands fa-telegram"></i><span id="telegramBtnLabel">Hubungkan Telegram</span></button>
+                    </div>
                 </div>
                 <div class="glass-card p-5 space-y-4">
                     <div>
@@ -322,6 +346,7 @@ function renderTab(tab) {
         </div>`;
         document.getElementById('linkTelegram').value = dashData.data?.linkTelegram || '';
         document.getElementById('linkWebsite').value = dashData.data?.linkWebsite || '';
+        updateTelegramLinkStatus();
     } else if (tab === 'tampilan') {
         const sl = currentProfile.socialLinks || {};
         const colors = ['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#ec4899','#0891b2','#4f46e5'];
@@ -517,6 +542,19 @@ function renderTab(tab) {
     }
 }
 
+function updateTelegramLinkStatus() {
+    const el = document.getElementById('telegramLinkStatus');
+    const btn = document.getElementById('telegramBtnLabel');
+    if (!el) return;
+    if (dashData.data?.chatId && dashData.data.chatId > 0) {
+        el.innerHTML = `<span class="text-emerald-400 font-bold">✅ Terhubung (Chat ID: ${dashData.data.chatId})</span>`;
+        if (btn) btn.textContent = 'Putuskan Telegram';
+    } else {
+        el.innerHTML = 'Notifikasi komisi & order akan dikirim ke Telegram.';
+        if (btn) btn.textContent = 'Hubungkan Telegram';
+    }
+}
+
 // ================= LOGIN =================
 async function loginAffiliate() {
     const rid = document.getElementById('inputRandomId').value.trim().toUpperCase();
@@ -581,9 +619,11 @@ function populateDashboard(d) {
         { label: 'Lihat Downline', icon: 'fa-users', action: "switchDashTab('downline')" },
         { label: 'Riwayat Komisi', icon: 'fa-clock-rotate-left', action: "switchDashTab('history')" },
         { label: 'Preview Toko', icon: 'fa-eye', action: `window.open('/toko/${d.data.randomId}', '_blank')` },
+        { label: 'Link Telegram', icon: 'fa-telegram', action: 'linkTelegram()' },
         { label: 'Pengaturan', icon: 'fa-gear', action: "switchDashTab('settings')" }
     ];
     document.getElementById('actionGrid').innerHTML = actions.map(a => `<button onclick="${a.action}" class="glass-card p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-violet-500/25 border border-white/[0.06] rounded-2xl flex items-center gap-3"><span class="w-10 h-10 rounded-xl bg-violet-500/8 text-violet-300 flex items-center justify-center shrink-0"><i class="fa-solid ${a.icon} text-sm"></i></span><div class="min-w-0"><p class="text-[11px] font-bold text-white truncate">${a.label}</p></div></button>`).join('');
+    updateTelegramLinkStatus();
     switchDashTab('links');
 }
 

@@ -411,6 +411,18 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
             }
 
             console.log(`[AFFILIATE] Komisi Rp ${commission} (capped dari ${Math.floor((profit * commissionPct) / 100)}) ke ${users[uplineIdx].randomId}`);
+
+            // Kirim notifikasi ke upline via Telegram
+            try {
+                const { notifyAffiliateNewOrder } = require('./bot.js');
+                await notifyAffiliateNewOrder(users[uplineIdx].chatId, {
+                    buyerName: buyer.firstName || 'Pelanggan',
+                    productName: order.productName || 'Produk',
+                    targetPhone: order.targetPhone || '-',
+                    commission,
+                    newBalance: users[uplineIdx].affiliateBalance
+                });
+            } catch(e) { console.error('[AFFILIATE NOTIFY ERR]', e.message); }
         } catch (e) {
             console.error('[AFFILIATE COMMISSION ERROR]', e.message);
         }
@@ -534,13 +546,37 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
                 return res.json({ success: true, token, linked: true });
             }
 
-            // Email belum terdaftar, kirim info untuk linking
-            res.json({
-                success: true,
-                linked: false,
+            // Email belum terdaftar — auto-create affiliate account
+            const newRandomId = 'G-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+            users.push({
+                chatId: 0,
+                username: googleEmail.split('@')[0],
+                firstName: googleName,
+                randomId: newRandomId,
                 googleEmail,
                 googleName,
-                message: 'Email Google belum terhubung ke akun affiliate. Masukkan Random ID untuk menghubungkan.'
+                registeredAt: new Date().toISOString(),
+                isAffiliate: true,
+                affiliatePending: false,
+                affiliateApprovedAt: new Date().toISOString(),
+                affiliateBalance: 0,
+                balance: 0,
+                referredBy: null,
+                downlineCount: 0
+            });
+            await saveUsers(users);
+
+            const ip = getClientIP(req);
+            const ua = req.headers['user-agent'] || '';
+            const token = security.generateToken(newRandomId, ip, ua);
+
+            res.json({
+                success: true,
+                token,
+                linked: true,
+                isNew: true,
+                randomId: newRandomId,
+                message: 'Akun affiliate berhasil dibuat!'
             });
         } catch(e) {
             console.error('[GOOGLE LOGIN]', e.message);
@@ -548,65 +584,33 @@ module.exports = function(app, getUsers, saveUsers, getOrders, saveOrders, FIREB
         }
     });
 
-    router.post('/link-google', async (req, res) => {
+    router.post('/link-telegram', security.authMiddleware, async (req, res) => {
         try {
-            const { idToken, randomId, accessToken } = req.body;
-            if (!idToken || !randomId) return res.json({ success: false, message: 'Data tidak lengkap.' });
+            const randomId = req.userSession.randomId;
+            const { chatId } = req.body;
 
-            let payload;
-            const cfg = getConfig();
-            const apiKey = cfg.firebaseConfig?.apiKey;
-
-            if (apiKey) {
-                try {
-                    const fb = await axios.post(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, { idToken }, { timeout: 8000 });
-                    if (fb.data?.users?.length) {
-                        const u = fb.data.users[0];
-                        payload = { email: u.email || u.providerUserInfo?.[0]?.email || '', name: u.displayName || '' };
-                    }
-                } catch (e) { console.error('[FB lookup fail link]', e.message); }
-            }
-
-            if (!payload?.email && accessToken) {
-                try {
-                    const ui = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 5000 });
-                    if (ui.data?.email) payload = { email: ui.data.email, name: ui.data.name || '' };
-                } catch (e) {}
-            }
-
-            if (!payload || !payload.email) return res.json({ success: false, message: 'Token tidak valid.' });
-
-            const googleEmail = payload.email.toLowerCase();
-
-            // Cek apakah email sudah dipakai
             let users = await getUsers();
-            if (users.find(u => u.googleEmail === googleEmail && u.randomId !== randomId)) {
-                return res.json({ success: false, message: 'Email Google sudah terhubung ke akun lain.' });
+            const idx = users.findIndex(u => u.randomId === randomId);
+            if (idx === -1) return res.json({ success: false, message: 'User tidak ditemukan.' });
+
+            // Unlink jika chatId = 0
+            if (chatId === 0) {
+                users[idx].chatId = 0;
+                await saveUsers(users);
+                return res.json({ success: true, message: 'Telegram berhasil diputuskan.' });
             }
 
-            const idx = users.findIndex(u => u.randomId === randomId);
-            if (idx === -1) return res.json({ success: false, message: 'Random ID tidak ditemukan.' });
-            if (!users[idx].isAffiliate) return res.json({ success: false, message: 'Akun ini bukan affiliate.' });
+            if (!chatId) return res.json({ success: false, message: 'Telegram Chat ID diperlukan.' });
 
-            users[idx].googleEmail = googleEmail;
-            users[idx].googleName = payload.name || payload.given_name || '';
+            // Cek apakah chatId sudah dipakai akun lain
+            const existing = users.find(u => u.chatId === parseInt(chatId) && u.randomId !== randomId);
+            if (existing) return res.json({ success: false, message: 'Telegram ini sudah terhubung ke akun lain.' });
+
+            users[idx].chatId = parseInt(chatId);
             await saveUsers(users);
 
-            // Login setelah link
-            const ip = getClientIP(req);
-            const ua = req.headers['user-agent'] || '';
-            security.revokeUserTokens(randomId);
-            const token = security.generateToken(randomId, ip, ua);
-
-            const logs = await getAuditLogs();
-            logs.push({ id:'AUDIT-'+Date.now(), action:'GOOGLE_LINK', randomId, ip, googleEmail, timestamp: new Date().toISOString() });
-            await saveAuditLogs(logs);
-
-            res.json({ success: true, token, message: 'Akun Google berhasil ditautkan!' });
-        } catch(e) {
-            console.error('[LINK GOOGLE]', e.message);
-            res.json({ success: false, message: 'Gagal: ' + (e.response?.data?.error_description || e.message) });
-        }
+            res.json({ success: true, message: '✅ Telegram berhasil ditautkan! Kamu akan menerima notifikasi order.' });
+        } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
     // ============================================================
