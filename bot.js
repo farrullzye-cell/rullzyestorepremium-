@@ -410,61 +410,6 @@ if (bot) {
         setTimeout(() => { delete testimoniState[chatId]; }, 120000);
     });
 
-    bot.on('message', async (msg) => {
-        if (!msg.text && !msg.photo) return;
-        const chatId = msg.chat.id;
-        const state = testimoniState[chatId];
-        if (!state) return;
-
-        if (state.step === 'nama') {
-            state.nama = msg.text.trim();
-            state.step = 'layanan';
-            bot.sendMessage(chatId, `👤 Nama: *${state.nama}*\n\nSekarang, kirim *Layanan* yang dibeli (contoh: Top Up ML, Netflix, Panel):`, { parse_mode: 'Markdown' });
-        } else if (state.step === 'layanan') {
-            state.layanan = msg.text.trim();
-            state.step = 'rating';
-            bot.sendMessage(chatId, `📦 Layanan: *${state.layanan}*\n\nKirim *Rating* (1-5):`, { parse_mode: 'Markdown' });
-        } else if (state.step === 'rating') {
-            const rating = parseInt(msg.text);
-            if (isNaN(rating) || rating < 1 || rating > 5) {
-                return bot.sendMessage(chatId, '❌ Rating harus angka 1-5. Coba lagi:');
-            }
-            state.rating = rating;
-            state.step = 'teks';
-            bot.sendMessage(chatId, `⭐ Rating: *${'⭐'.repeat(rating)}*\n\nSekarang kirim *Teks testimoni* (pengalaman kamu):`, { parse_mode: 'Markdown' });
-        } else if (state.step === 'teks') {
-            state.teks = msg.text ? msg.text.trim() : '';
-            state.step = 'foto';
-            bot.sendMessage(chatId, `💬 Teks: *${state.teks.substring(0,50)}${state.teks.length>50?'...':''}*\n\nTerakhir, kirim *Screenshot* (opsional) atau ketik *skip* jika tidak ada:`, { parse_mode: 'Markdown' });
-        } else if (state.step === 'foto') {
-            let screenshot = '';
-            if (msg.photo) {
-                try {
-                    screenshot = await bot.getFileLink(msg.photo[msg.photo.length-1].file_id);
-                } catch(e) {}
-            } else if (msg.text && msg.text.toLowerCase() === 'skip') {
-                // no screenshot
-            } else {
-                return bot.sendMessage(chatId, '❌ Kirim foto screenshot atau ketik *skip*:', { parse_mode: 'Markdown' });
-            }
-            // Simpan testimoni
-            let testimonials = await getTestimonials();
-            const id = 'T-' + Date.now().toString(36).toUpperCase();
-            testimonials.push({
-                id, name: state.nama, service: state.layanan,
-                rating: state.rating, content: state.teks,
-                approved: true, screenshot,
-                createdAt: new Date().toISOString()
-            });
-            await saveTestimonials(testimonials);
-            delete testimoniState[chatId];
-            bot.sendMessage(chatId,
-                `✅ *Testimoni berhasil ditambahkan!* Terima kasih 🎉\n\n👤 *${state.nama}*\n📦 ${state.layanan}\n⭐ ${'⭐'.repeat(state.rating)}\n💬 "${state.teks}"${screenshot ? '\n📸 + Screenshot' : ''}`,
-                { parse_mode: 'Markdown' }
-            );
-        }
-    });
-
     bot.on('callback_query', async (query) => {
         const chatId = query.message.chat.id;
         const data = query.data;
@@ -482,16 +427,14 @@ if (bot) {
         if (data.startsWith('wd_bank_')) {
             const bank = data.replace('wd_bank_', '');
             bot.sendMessage(chatId, `🏦 Kamu memilih: *${bank}*\n\nSekarang kirimkan *Nominal* dan *Data Rekening* kamu.\n\n📝 *Format balasan (2 baris):*\n\`\`\`\n50000\n08123456789 a.n Budi\n\`\`\`\n\n*Baris 1:* Nominal (min Rp 10.000)\n*Baris 2:* No. Rekening a.n Nama\n\nKetik *BATAL* kapan saja untuk membatalkan.`, { parse_mode: 'Markdown' });
-            // Simpan state sementara
-            user._wdState = { step: 'amount', bank: bank };
-            await saveUsers(users);
+            // Simpan state sementara di memory (TIDAK ke Firebase)
+            wdStateMap.set(chatId, { step: 'amount', bank: bank, _ts: Date.now() });
             bot.answerCallbackQuery(query.id);
             return;
         }
 
         if (data === 'wd_cancel') {
-            user._wdState = null;
-            await saveUsers(users);
+            clearWdState(chatId);
             bot.sendMessage(chatId, "❌ *Withdraw dibatalkan.*\n\nSilakan menu lagi kapan saja kalau mau withdraw 😊");
             bot.answerCallbackQuery(query.id);
             return;
@@ -622,48 +565,99 @@ if (bot) {
         }
     });
 
-    // Tangkap pesan teks untuk input withdraw
+    // ============ WITHDRAW STATE (in-memory, aman dari Firebase) ============
+    const wdStateMap = new Map();
+    const clearWdState = (chatId) => { wdStateMap.delete(chatId); };
+    setTimeout(() => { wdStateMap.forEach((v, k) => { if (Date.now() - v._ts > 300000) wdStateMap.delete(k); }); }, 60000);
+
+    // Gabungan handler untuk testimoni + withdraw (perbaiki double handler conflict)
     bot.on('message', async (msg) => {
-        if (!msg.text || msg.text.startsWith('/')) return;
+        if (!msg.text && !msg.photo) return;
         const chatId = msg.chat.id;
+
+        // ===== CEK TESTIMONI STATE =====
+        const tState = testimoniState[chatId];
+        if (tState) {
+            if (tState.step === 'nama') {
+                tState.nama = msg.text.trim();
+                tState.step = 'layanan';
+                return bot.sendMessage(chatId, `👤 Nama: *${tState.nama}*\n\nSekarang, kirim *Layanan* yang dibeli (contoh: Top Up ML, Netflix, Panel):`, { parse_mode: 'Markdown' });
+            } else if (tState.step === 'layanan') {
+                tState.layanan = msg.text.trim();
+                tState.step = 'rating';
+                return bot.sendMessage(chatId, `📦 Layanan: *${tState.layanan}*\n\nKirim *Rating* (1-5):`, { parse_mode: 'Markdown' });
+            } else if (tState.step === 'rating') {
+                const rating = parseInt(msg.text);
+                if (isNaN(rating) || rating < 1 || rating > 5) return bot.sendMessage(chatId, '❌ Rating harus angka 1-5. Coba lagi:');
+                tState.rating = rating;
+                tState.step = 'teks';
+                return bot.sendMessage(chatId, `⭐ Rating: *${'⭐'.repeat(rating)}*\n\nSekarang kirim *Teks testimoni* (pengalaman kamu):`, { parse_mode: 'Markdown' });
+            } else if (tState.step === 'teks') {
+                tState.teks = msg.text ? msg.text.trim() : '';
+                tState.step = 'foto';
+                return bot.sendMessage(chatId, `💬 Teks: *${tState.teks.substring(0,50)}${tState.teks.length>50?'...':''}*\n\nTerakhir, kirim *Screenshot* (opsional) atau ketik *skip* jika tidak ada:`, { parse_mode: 'Markdown' });
+            } else if (tState.step === 'foto') {
+                let screenshot = '';
+                if (msg.photo) {
+                    try { screenshot = await bot.getFileLink(msg.photo[msg.photo.length-1].file_id); } catch(e) {}
+                } else if (msg.text && msg.text.toLowerCase() === 'skip') {}
+                else return bot.sendMessage(chatId, '❌ Kirim foto screenshot atau ketik *skip*:', { parse_mode: 'Markdown' });
+                let testimonials = await getTestimonials();
+                const id = 'T-' + Date.now().toString(36).toUpperCase();
+                testimonials.push({ id, name: tState.nama, service: tState.layanan, rating: tState.rating, content: tState.teks, approved: true, screenshot, createdAt: new Date().toISOString() });
+                await saveTestimonials(testimonials);
+                delete testimoniState[chatId];
+                return bot.sendMessage(chatId, `✅ *Testimoni berhasil ditambahkan!* Terima kasih 🎉\n\n👤 *${tState.nama}*\n📦 ${tState.layanan}\n⭐ ${'⭐'.repeat(tState.rating)}\n💬 "${tState.teks}"${screenshot ? '\n📸 + Screenshot' : ''}`, { parse_mode: 'Markdown' });
+            }
+        }
+
+        // ===== CEK WITHDRAW STATE (in-memory, TIDAK disimpan ke Firebase) =====
+        if (!msg.text || msg.text.startsWith('/')) return;
+        const wState = wdStateMap.get(chatId);
+        if (!wState) return;
+
         const users = await getUsers();
         const user = users.find(u => u.chatId === chatId);
-        if (!user || !user._wdState) return;
+        if (!user) { clearWdState(chatId); return; }
 
-        const state = user._wdState;
-        if (state.step === 'amount') {
+        if (wState.step === 'amount') {
             const parts = msg.text.split('\n');
             const amount = parseInt(parts[0].replace(/\D/g, ''));
             const account = parts[1]?.trim() || '';
-            if (!amount || amount < 10000) {
-                return bot.sendMessage(chatId, "❌ *Nominal tidak valid*\n\nMinimal withdraw Rp 10.000.\nKetik ulang nominalnya ya 😊");
-            }
-            if (amount > (user.affiliateBalance || 0)) {
-                return bot.sendMessage(chatId, `❌ *Saldo tidak cukup*\n\nSaldo komisi kamu: Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}\nKetik ulang nominal yang lebih kecil.`);
-            }
-            if (!account) {
-                return bot.sendMessage(chatId, "❌ *Data rekening belum diisi*\n\nContoh format:\n\`\`\`\n50000\n1234567890 a.n Budi\n\`\`\`\nBaris 1: nominal\nBaris 2: no.rek a.n nama");
-            }
-            state.amount = amount;
-            state.account = account;
-            state.step = 'confirm';
-            await saveUsers(users);
+            if (!amount || amount < 10000) return bot.sendMessage(chatId, "❌ *Nominal tidak valid*\n\nMinimal withdraw Rp 10.000.\nKetik ulang nominalnya ya 😊");
+            if (amount > (user.affiliateBalance || 0)) return bot.sendMessage(chatId, `❌ *Saldo tidak cukup*\n\nSaldo komisi kamu: Rp ${(user.affiliateBalance || 0).toLocaleString('id-ID')}\nKetik ulang nominal yang lebih kecil.`);
+            if (!account) return bot.sendMessage(chatId, "❌ *Data rekening belum diisi*\n\nContoh format:\n\`\`\`\n50000\n1234567890 a.n Budi\n\`\`\`\nBaris 1: nominal\nBaris 2: no.rek a.n nama");
+            wState.amount = amount;
+            wState.account = account;
+            wState.step = 'confirm';
             bot.sendMessage(chatId,
                 `📋 *KONFIRMASI WITHDRAW*\n\n` +
-                `🏦 *Bank:* ${state.bank}\n` +
+                `🏦 *Bank:* ${wState.bank}\n` +
                 `💰 *Jumlah:* Rp ${amount.toLocaleString('id-ID')}\n` +
                 `📝 *Rekening:* \`${account}\`\n\n` +
                 `Ketik *YA* untuk konfirmasi, atau *BATAL* untuk membatalkan.`,
                 { parse_mode: 'Markdown' }
             );
-        } else if (state.step === 'confirm') {
+        } else if (wState.step === 'confirm') {
             if (msg.text.toUpperCase() === 'YA') {
-                bot.sendMessage(chatId, "⏳ *Memproses permintaan withdraw...*");
+                bot.sendMessage(chatId, "⏳ *Memproses permintaan withdraw...");
                 const wdRes = await axios.post(`http://localhost:${process.env.PORT || 3000}/api/affiliate/withdraw`, {
                     randomId: user.randomId,
-                    amount: state.amount,
-                    bankDetails: `${state.bank} - ${state.account}`
+                    amount: wState.amount,
+                    bankDetails: `${wState.bank} - ${wState.account}`
                 });
+                if (wdRes.data.success) {
+                    await notifyWithdrawPending(chatId, { amount: wState.amount, bankDetails: `${wState.bank} - ${wState.account}` });
+                    bot.sendMessage(chatId, `✅ *Withdraw Berhasil Diajukan!*\n\n💰 Rp ${wState.amount.toLocaleString('id-ID')}\n🏦 ${wState.bank} - ${wState.account}\n\nAdmin akan memproses dalam 1x24 jam. Pantau terus notifikasinya ya! 😊`);
+                } else {
+                    bot.sendMessage(chatId, `❌ *Gagal:* ${wdRes.data.message}\n\nCoba lagi atau hubungi CS.`);
+                }
+            } else {
+                bot.sendMessage(chatId, "❌ *Withdraw dibatalkan.*\n\nSilakan menu lagi kapan saja 😊");
+            }
+            clearWdState(chatId);
+        }
+    });
                 if (wdRes.data.success) {
                     await notifyWithdrawPending(chatId, { amount: state.amount, bankDetails: `${state.bank} - ${state.account}` });
                     bot.sendMessage(chatId, `✅ *Withdraw Berhasil Diajukan!*\n\n💰 Rp ${state.amount.toLocaleString('id-ID')}\n🏦 ${state.bank} - ${state.account}\n\nAdmin akan memproses dalam 1x24 jam. Pantau terus notifikasinya ya! 😊`);

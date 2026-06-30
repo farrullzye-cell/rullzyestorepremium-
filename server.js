@@ -56,12 +56,23 @@ const PORT = process.env.PORT || 3000;
 // ================= 1. DATABASE LOKAL & FIREBASE =================
 const FIREBASE_URL = "https://rullzyestorepremium-default-rtdb.asia-southeast1.firebasedatabase.app/Rullzye_Secret_DB_99";
 
+let _cachedConfig = null;
+let _configCacheTime = 0;
+const CONFIG_CACHE_TTL = 5000; // 5 detik
 const getConfig = () => {
-    try { return JSON.parse(fs.readFileSync('./config.json')); }
+    const now = Date.now();
+    if (_cachedConfig && (now - _configCacheTime) < CONFIG_CACHE_TTL) return _cachedConfig;
+    try {
+        _cachedConfig = JSON.parse(fs.readFileSync('./config.json'));
+        _configCacheTime = now;
+        return _cachedConfig;
+    }
     catch(e) { return { apiKey: '', celestialApiKey: '', celestialSecret: '', smmApiKey: '', smmSecretKey: '', profit: 2000, botUsername: '', telegramToken: '', storeName: 'Rullzye Store', productSettings: {}, flowixApiKey: '', flowixMerchantId: '', firebaseConfig: {} }; }
 };
+const invalidateConfigCache = () => { _cachedConfig = null; _configCacheTime = 0; };
 const saveConfig = async (configData) => {
     fs.writeFileSync('./config.json', JSON.stringify(configData, null, 2));
+    invalidateConfigCache();
     try { await axios.put(`${FIREBASE_URL}/system_config.json`, configData); console.log('✅ Config disimpan ke Firebase'); } catch(e) { console.error('❌ Gagal simpan config ke Firebase:', e.message); }
 };
 
@@ -961,9 +972,9 @@ async function autoProc() {
                         const resStatus = await axios.post('https://premku.com/api/status', { api_key: cfg.apiKey, invoice: o.idOrder });
                         if (resStatus.data?.status === 'success' || resStatus.data?.status === 'completed') {
                             let acc = Array.isArray(resStatus.data.accounts) ? resStatus.data.accounts.map(a => `📧 \`${a.username || a.email}\` | 🔑 \`${a.password}\``).join('\n') : (resStatus.data.accounts || "Selesai");
-                            orders[i].status = 'SUKSES'; orders[i].accountDetails = acc; changed = true;
+                            orders[i].status = 'SUKSES'; orders[i].accountDetails = acc; orders[i].completedAt = new Date().toISOString(); orders[i].buyerName = orders[i].buyerName || 'Pelanggan'; changed = true;
                             if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
-                            if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `🎉 **PESANAN SELESAI!**\n📦 *${o.productName}*\n\n${acc}`, { parse_mode: "Markdown" }).catch(()=>{});
+                            if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `🎉 *PESANAN SELESAI!*\n📦 *${o.productName}*\n\n${acc}`, { parse_mode: "Markdown" }).catch(()=>{});
                         }
                     } catch (e) {}
                 }
@@ -987,7 +998,7 @@ async function autoProc() {
                         if (trxRes.data && trxRes.data.success) {
                             if (trxRes.data.data.status === 'success') {
                                 let msg = `✅ *TOP UP BERHASIL*\n🎯 ${o.nickname || o.targetPhone}\n🧾 SN: \`${trxRes.data.data.sn || '-'}\``;
-                                orders[i].status = 'SUKSES'; orders[i].accountDetails = msg; changed = true;
+                                orders[i].status = 'SUKSES'; orders[i].accountDetails = msg; orders[i].completedAt = new Date().toISOString(); orders[i].buyerName = orders[i].buyerName || 'Pelanggan'; changed = true;
                                 if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
                                 if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, msg, { parse_mode: "Markdown" }).catch(()=>{});
                             } else if (trxRes.data.data.status === 'error' || trxRes.data.data.status === 'failed') {
@@ -1004,7 +1015,7 @@ async function autoProc() {
                             const params = new URLSearchParams(); params.append('api_key', cfg.smmApiKey); params.append('secret_key', cfg.smmSecretKey); params.append('action', 'order'); params.append('service', o.productId); params.append('target', o.targetPhone); params.append('quantity', o.qty);
                             const smmBuy = await axios.post('https://pusatpanelsmm.com/api/json.php', params.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }});
                             if (smmBuy.data && smmBuy.data.status) {
-                                orders[i].status = 'SUKSES'; orders[i].idOrder = smmBuy.data.data ? smmBuy.data.data.id : '-'; orders[i].accountDetails = `SMM Diproses (ID: ${orders[i].idOrder})`; changed = true;
+                                orders[i].status = 'SUKSES'; orders[i].idOrder = smmBuy.data.data ? smmBuy.data.data.id : '-'; orders[i].accountDetails = `SMM Diproses (ID: ${orders[i].idOrder})`; orders[i].completedAt = new Date().toISOString(); orders[i].buyerName = orders[i].buyerName || 'Pelanggan'; changed = true;
                                 if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
                                 if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, '✅ *PESANAN SMM BERHASIL*\nSedang dikerjakan oleh server!', { parse_mode: "Markdown" }).catch(()=>{}); 
                             } else { orders[i].status = 'GAGAL'; changed = true; }
@@ -1065,9 +1076,11 @@ async function autoProc() {
                             if (trx === 'success') {
                                 orders[i].status = 'SUKSES';
                                 orders[i].accountDetails = `SN: ${ts.data.sn || '-'} | ${ts.data.note || 'Berhasil'}`;
+                                orders[i].completedAt = new Date().toISOString();
+                                orders[i].buyerName = orders[i].buyerName || 'Pelanggan';
                                 changed = true;
                                 if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
-                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `🎉 *TRANSAKSI BERHASIL*...`).catch(()=>{});
+                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `🎉 *TRANSAKSI BERHASIL*\n📦 ${o.productName}\n🎯 \`${o.targetPhone || '-'}\`\n🔖 SN: \`${ts.data.sn || '-'}\`\n\nTerima kasih telah berbelanja! 🙏`, { parse_mode: 'Markdown' }).catch(()=>{});
                             } else if (trx === 'failed' || trx === 'error') {
                                 orders[i].status = 'GAGAL';
                                 orders[i].accountDetails = ts.data.note || ts.data.message || 'Transaksi gagal';
@@ -1209,6 +1222,7 @@ app.post('/api/admin/order/force-status', async (req, res) => {
         if (idx === -1) return res.json({ success: false, message: 'Order tidak ditemukan.' });
         orders[idx].status = status;
         orders[idx].accountDetails = orders[idx].accountDetails || `Manual: ${status}`;
+        if (status === 'SUKSES') orders[idx].completedAt = new Date().toISOString();
         await saveOrders(orders);
         if (status === 'SUKSES' && app.processAffiliateCommission) {
             app.processAffiliateCommission(orders[idx]).catch(()=>{});
