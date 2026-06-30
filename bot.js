@@ -658,19 +658,6 @@ if (bot) {
             clearWdState(chatId);
         }
     });
-                if (wdRes.data.success) {
-                    await notifyWithdrawPending(chatId, { amount: state.amount, bankDetails: `${state.bank} - ${state.account}` });
-                    bot.sendMessage(chatId, `✅ *Withdraw Berhasil Diajukan!*\n\n💰 Rp ${state.amount.toLocaleString('id-ID')}\n🏦 ${state.bank} - ${state.account}\n\nAdmin akan memproses dalam 1x24 jam. Pantau terus notifikasinya ya! 😊`);
-                } else {
-                    bot.sendMessage(chatId, `❌ *Gagal:* ${wdRes.data.message}\n\nCoba lagi atau hubungi CS.`);
-                }
-            } else {
-                bot.sendMessage(chatId, "❌ *Withdraw dibatalkan.*\n\nSilakan menu lagi kapan saja 😊");
-            }
-            user._wdState = null;
-            await saveUsers(users);
-        }
-    });
 }
 
 // ==================== FUNGSI NOTIFIKASI EKSTERNAL ====================
