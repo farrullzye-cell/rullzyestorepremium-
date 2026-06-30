@@ -946,14 +946,18 @@ app.post('/api/smm-order', async (req, res) => {
     } catch (e) { res.json({ status: false, message: e.message }); }
 });
 
-// ================= 12. AUTO-PILOT HYBRID =================
+// ================= 12. AUTO-PILOT HYBRID (optimized) =================
+const FINAL_STATUSES = new Set(['SUKSES','GAGAL','DIBATALKAN']);
 async function autoProc() {
     if (isProcessing) return;
     isProcessing = true;
     try {
-        let orders = await getOrders(); let changed = false; const cfg = getConfig(); let users = null;
+        let orders = await getOrders(); let changed = false; const cfg = getConfig();
         for (let i = 0; i < orders.length; i++) {
             let o = orders[i];
+            // Skip finalized orders
+            if (FINAL_STATUSES.has(o.status)) continue;
+
             if (!o.type || o.type === 'PREMKU') {
                 if (o.status === 'MENUNGGU_BAYAR') {
                     try {
@@ -966,8 +970,7 @@ async function autoProc() {
                             }
                         }
                     } catch (e) {}
-                }
-                if (o.status === 'PROSES_PUSAT' && o.idOrder) {
+                } else if (o.status === 'PROSES_PUSAT' && o.idOrder) {
                     try {
                         const resStatus = await axios.post('https://premku.com/api/status', { api_key: cfg.apiKey, invoice: o.idOrder });
                         if (resStatus.data?.status === 'success' || resStatus.data?.status === 'completed') {
@@ -991,8 +994,7 @@ async function autoProc() {
                             }
                         }
                     } catch (e) {}
-                }
-                if (o.status === 'PROSES_PUSAT' && o.idOrder) {
+                } else if (o.status === 'PROSES_PUSAT' && o.idOrder) {
                     try {
                         const trxRes = await axios.post('https://celestialtopup.com/api/v1/status', { api_key: cfg.celestialApiKey, signature: sig, trx_id: o.idOrder });
                         if (trxRes.data && trxRes.data.success) {
@@ -1025,21 +1027,17 @@ async function autoProc() {
             } else if (o.type === 'FLOWIX') {
                 const cfgFlowix = getConfig();
                 if (!cfgFlowix.flowixApiKey || !cfgFlowix.flowixMerchantId) continue;
-                console.log(`[AUTO] FLOWIX: ${o.idDeposit} status=${o.status}`);
 
                 if (o.status === 'MENUNGGU_BAYAR') {
                     try {
                         const cek = await ppob.checkDeposit(cfgFlowix.flowixApiKey, cfgFlowix.flowixMerchantId, o.idDeposit);
-                        console.log(`[AUTO] Deposit ${o.idDeposit}:`, cek.data?.status);
                         if (cek.success && cek.data) {
                             const ds = cek.data.status;
                             if (ds === 'success' || ds === 'paid') {
                                 const productInfo = cachedPPOB.data ? cachedPPOB.data.find(p => p.id === o.productId) : null;
                                 if (!productInfo) {
-                                    orders[i].status = 'GAGAL';
-                                    orders[i].accountDetails = 'Produk sudah tidak tersedia / gangguan.';
-                                    changed = true;
-                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *PRODUK GANGGUAN*...`).catch(()=>{});
+                                    orders[i].status = 'GAGAL'; orders[i].accountDetails = 'Produk sudah tidak tersedia / gangguan.'; changed = true;
+                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *PRODUK GANGGUAN*\n\nMaaf, produk ${o.productName} sudah tidak tersedia. Hubungi CS untuk bantuan.`, { parse_mode: 'Markdown' }).catch(()=>{});
                                     continue;
                                 }
                                 const buy = await ppob.createTransaction(cfgFlowix.flowixApiKey, cfgFlowix.flowixMerchantId, o.productId, o.targetPhone);
@@ -1048,7 +1046,7 @@ async function autoProc() {
                                     orders[i].idOrder = buy.data.reff_id;
                                     orders[i].accountDetails = `Status: ${buy.data.status || 'processing'}`;
                                     changed = true;
-                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `✅ *PEMBAYARAN DITERIMA*...`).catch(()=>{});
+                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `✅ *PEMBAYARAN DITERIMA*\nMemproses ${o.productName}...\n🎯 \`${o.targetPhone || '-'}\``, { parse_mode: 'Markdown' }).catch(()=>{});
                                 } else {
                                     const errorMsg = buy.message || 'Gagal membuat transaksi';
                                     orders[i].status = 'GAGAL'; orders[i].accountDetails = errorMsg; changed = true;
@@ -1058,17 +1056,21 @@ async function autoProc() {
                                             if (idx !== -1) { cachedPPOB.data.splice(idx, 1); console.log(`[AUTO] Produk ${o.productId} dihapus dari cache.`); }
                                         }
                                     }
-                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *TRANSAKSI GAGAL*...`).catch(()=>{});
+                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *TRANSAKSI GAGAL*\n${errorMsg}`, { parse_mode: 'Markdown' }).catch(()=>{});
                                 }
                             } else if (['failed','expired','canceled'].includes(ds)) {
                                 orders[i].status = 'GAGAL'; orders[i].accountDetails = `Deposit ${ds}`; changed = true;
-                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *DEPOSIT ${ds.toUpperCase()}*...`).catch(()=>{});
+                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *DEPOSIT ${ds.toUpperCase()}*\n\nDeposit untuk ${o.productName} telah ${ds}. Silakan buat pesanan baru.`, { parse_mode: 'Markdown' }).catch(()=>{});
                             }
+                        } else if (!cek.success && cek.code === 404) {
+                            // Deposit tidak ditemukan di Flowix — tandai GAGAL permanen
+                            orders[i].status = 'GAGAL'; orders[i].accountDetails = 'Deposit tidak ditemukan di server pusat'; changed = true;
+                            if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *DEPOSIT TIDAK DITEMUKAN*\n\nDeposit untuk ${o.productName} tidak ditemukan di server. Silakan hubungi CS.`, { parse_mode: 'Markdown' }).catch(()=>{});
                         }
-                    } catch (e) {}
-                }
-
-                if (o.status === 'PROSES_PUSAT' && o.idOrder) {
+                    } catch (e) {
+                        // Network error — skip this cycle, will retry next cycle
+                    }
+                } else if (o.status === 'PROSES_PUSAT' && o.idOrder) {
                     try {
                         const ts = await ppob.checkTransaction(cfgFlowix.flowixApiKey, cfgFlowix.flowixMerchantId, o.idOrder);
                         if (ts.success && ts.data) {
@@ -1082,15 +1084,13 @@ async function autoProc() {
                                 if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
                                 if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `🎉 *TRANSAKSI BERHASIL*\n📦 ${o.productName}\n🎯 \`${o.targetPhone || '-'}\`\n🔖 SN: \`${ts.data.sn || '-'}\`\n\nTerima kasih telah berbelanja! 🙏`, { parse_mode: 'Markdown' }).catch(()=>{});
                             } else if (trx === 'failed' || trx === 'error') {
-                                orders[i].status = 'GAGAL';
-                                orders[i].accountDetails = ts.data.note || ts.data.message || 'Transaksi gagal';
-                                changed = true;
-                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *TRANSAKSI GAGAL*...`).catch(()=>{});
+                                orders[i].status = 'GAGAL'; orders[i].accountDetails = ts.data.note || ts.data.message || 'Transaksi gagal'; changed = true;
+                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *TRANSAKSI GAGAL*\n${ts.data.note || ''}`, { parse_mode: 'Markdown' }).catch(()=>{});
                             } else if (trx === 'processing') {
-                                if (bot && o.telegramChatId && o.accountDetails !== 'Status: processing') {
+                                if (o.accountDetails !== 'Status: processing') {
                                     orders[i].accountDetails = 'Status: processing';
                                     changed = true;
-                                    bot.sendMessage(o.telegramChatId, `⏳ *MASIH DIPROSES*...`).catch(()=>{});
+                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `⏳ *MASIH DIPROSES*\n${o.productName}\n🎯 \`${o.targetPhone || '-'}\`\n\nMohon tunggu, transaksi sedang berjalan... 🔄`, { parse_mode: 'Markdown' }).catch(()=>{});
                                 }
                             }
                         }
@@ -1098,7 +1098,7 @@ async function autoProc() {
                 }
             }
         }
-        if (changed) await saveOrders(orders);
+        if (changed) { await saveOrders(orders); console.log(`[AUTO] ${new Date().toLocaleTimeString('id-ID')} — ${changed ? 'Ada perubahan' : 'Tidak ada perubahan'}`); }
         await autoProcPanel();
     } finally { isProcessing = false; }
 }
