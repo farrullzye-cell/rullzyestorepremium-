@@ -357,18 +357,7 @@ async function loadTab(tab){
                 <button onclick="saveBadges()" class="btn-primary w-full">Simpan Badge</button>
             </div>`;
         }
-        // =============== 7. SMM SERVICES ===============
-        else if(tab==='smm'){
-            const r=await fetch('/api/smm-products').then(r=>r.json());
-            const s=r.data||[];
-            let h=`<h2 class="text-xl font-black mb-4">Layanan SMM Panel (${s.length})</h2>
-            <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
-                <tr><th class="p-2.5 text-[10px]">ID</th><th class="p-2.5 text-[10px]">Kategori</th><th class="p-2.5 text-[10px]">Nama</th><th class="p-2.5 text-[10px] text-right">Harga</th><th class="p-2.5 text-[10px] text-center">Min-Max</th></tr></thead><tbody>`;
-            s.forEach(x=>{h+=`<tr class="border-b border-white/5"><td class="p-2.5 text-[10px]">${x.id}</td><td class="p-2.5 text-[10px]">${x.category||'-'}</td><td class="p-2.5 font-bold text-xs max-w-[200px] truncate">${x.name}</td><td class="p-2.5 text-right text-xs">${formatRp(x.price)}</td><td class="p-2.5 text-center text-[10px]">${x.min||0}-${x.max||0}</td></tr>`;});
-            h+=`</tbody></table></div>`;
-            c.innerHTML=h;
-        }
-        // =============== 8. PPOB PRODUCTS ===============
+        // =============== 7. PPOB PRODUCTS ===============
         else if(tab==='ppob'){
             const r=await fetch('/api/ppob-products-debug').then(r=>r.json());
             const pp=r.data||r.products||[];
@@ -382,21 +371,7 @@ async function loadTab(tab){
             h+=`</tbody></table></div>`;
             c.innerHTML=h;
         }
-        // =============== 9. CELESTIAL PRODUCTS ===============
-        else if(tab==='celestial'){
-            const r=await fetch('/api/topup-products-debug').then(r=>r.json());
-            const tp=r.success&&r.data?r.data:r.products||[];
-            let h=`<h2 class="text-xl font-black mb-4">Produk TopUp Game (Celestial)</h2>
-            <div class="card p-4 mb-4 text-xs"><span class="text-slate-400">Status: </span>${r.success?'<span class="badge-ok">Terhubung</span>':'<span class="badge-err">Gagal</span>'}
-                <button onclick="loadTab('celestial')" class="ml-3 text-violet-400"><i class="fa-solid fa-rotate"></i></button>
-            </div>
-            <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
-                <tr><th class="p-2 text-[10px]">SKU</th><th class="p-2 text-[10px]">Brand</th><th class="p-2 text-[10px]">Nama</th><th class="p-2 text-[10px] text-right">Harga</th></tr></thead><tbody>`;
-            (Array.isArray(tp)?tp:[]).slice(0,200).forEach(x=>{h+=`<tr class="border-b border-white/5"><td class="p-2 text-[10px] font-mono">${x.sku||x.id||'-'}</td><td class="p-2 text-[10px]">${x.brand||'-'}</td><td class="p-2 text-xs font-bold max-w-[160px] truncate">${x.nama_produk||x.name||'-'}</td><td class="p-2 text-right text-xs">${formatRp(x.harga||x.price)}</td></tr>`;});
-            h+=`</tbody></table></div>`;
-            c.innerHTML=h;
-        }
-        // =============== 9b. PANEL PRODUK ===============
+        // =============== 8. PANEL PRODUK ===============
         else if(tab==='panel'){
             const [prodRes, orderRes] = await Promise.all([
                 api('/api/admin/panel/products').then(r=>r.json()),
@@ -567,14 +542,7 @@ async function loadTab(tab){
                     <input type="text" id="cfg-flow-id" class="input-dark mb-2" placeholder="Merchant ID" value="${cfg.flowixMerchantId||''}">
                     <input type="text" id="cfg-flow-key" class="input-dark" placeholder="API Key" value="${cfg.flowixApiKey||''}">
                 </div>
-                <div class="card p-5"><h3 class="font-bold text-sky-400 mb-3 text-sm"><i class="fa-solid fa-gamepad mr-2"></i>Celestial (Game)</h3>
-                    <input type="text" id="cfg-cel-key" class="input-dark mb-2" placeholder="API Key" value="${cfg.celestialApiKey||''}">
-                    <input type="text" id="cfg-cel-sec" class="input-dark" placeholder="Secret Key" value="${cfg.celestialSecret||''}">
-                </div>
-                <div class="card p-5 md:col-span-2"><h3 class="font-bold text-pink-400 mb-3 text-sm"><i class="fa-solid fa-users mr-2"></i>SMM Panel</h3>
-                    <div class="grid grid-cols-2 gap-2"><input type="text" id="cfg-smm-key" class="input-dark" placeholder="API Key" value="${cfg.smmApiKey||''}">
-                    <input type="text" id="cfg-smm-sec" class="input-dark" placeholder="Secret Key" value="${cfg.smmSecretKey||''}"></div>
-                </div>
+
                 <div class="card p-5 md:col-span-2"><h3 class="font-bold text-rose-400 mb-3 text-sm"><i class="fa-solid fa-credit-card mr-2"></i>API Games (Cek Nickname)</h3>
                     <div class="grid grid-cols-2 gap-2"><input type="text" id="cfg-api-merchant" class="input-dark" placeholder="Merchant ID" value="${cfg.apigamesMerchantId||''}">
                     <input type="text" id="cfg-api-secret" class="input-dark" placeholder="Secret Key" value="${cfg.apigamesSecretKey||''}"></div>
@@ -616,12 +584,10 @@ async function loadTab(tab){
                     <button onclick="testIP()" class="text-xs bg-sky-600 px-3 py-1.5 rounded mt-2"><i class="fa-solid fa-play mr-1"></i>Cek IP</button></div>
                 <div class="card p-5"><h3 class="font-bold text-sm text-white mb-3">Premku Products</h3><div id="premku-test">Loading...</div>
                     <button onclick="testPremku()" class="text-xs bg-amber-600 px-3 py-1.5 rounded mt-2"><i class="fa-solid fa-play mr-1"></i>Test</button></div>
-                <div class="card p-5"><h3 class="font-bold text-sm text-white mb-3">SMM Panel</h3><div id="smm-test">Loading...</div>
-                    <button onclick="testSMM()" class="text-xs bg-pink-600 px-3 py-1.5 rounded mt-2"><i class="fa-solid fa-play mr-1"></i>Test</button></div>
                 <div class="card p-5"><h3 class="font-bold text-sm text-white mb-3">Firebase Auth</h3><div id="firebase-test-result">Loading...</div>
                     <button onclick="testFirebase()" class="text-xs bg-emerald-600 px-3 py-1.5 rounded mt-2"><i class="fa-solid fa-play mr-1"></i>Test Firebase</button></div>
             </div>`;
-            testFlowix();testIP();testPremku();testSMM();testFirebase();
+            testFlowix();testIP();testPremku();testFirebase();
         }
         // =============== 15. SECURITY ===============
         else if(tab==='security'){
@@ -709,8 +675,7 @@ async function loadTab(tab){
                         ['Bot Telegram',s.botActive?'<span class="badge-ok">Online</span>':'<span class="badge-err">Offline</span>'],
                         ['Premku API',s.premkuKey?'<span class="badge-ok">Key Set</span>':'<span class="badge-warn">Kosong</span>'],
                         ['Flowix (PPOB)',s.flowixKey?'<span class="badge-ok">Key Set</span>':'<span class="badge-warn">Kosong</span>'],
-                        ['Celestial (Game)',s.celestialKey?'<span class="badge-ok">Key Set</span>':'<span class="badge-warn">Kosong</span>'],
-                        ['SMM Panel',s.smmKey?'<span class="badge-ok">Key Set</span>':'<span class="badge-warn">Kosong</span>'],
+
                         ['Telegram Token',s.telegramToken?'<span class="badge-ok">Ada</span>':'<span class="badge-err">Kosong</span>']
                     ].map(([k,v])=>`<div class="flex justify-between py-1.5 border-b border-white/5"><span class="text-slate-400">${k}</span>${v}</div>`).join('')}</div>
                 </div>
@@ -856,11 +821,8 @@ async function loadTab(tab){
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 ${[
                     {name:'Halaman Utama',file:'index.html',url:'/'},
-                    {name:'Top Up Game',file:'topup.html',url:'/topup.html'},
                     {name:'PPOB',file:'ppob.html',url:'/ppob.html'},
                     {name:'Akun Digital',file:'akundigital.html',url:'/akundigital.html'},
-                    {name:'SMM Panel',file:'smmpanel.html',url:'/smmpanel.html'},
-                    {name:'Checkout',file:'checkout.html',url:'/checkout.html'},
                     {name:'FAQ',file:'faq.html',url:'/faq.html'},
                     {name:'Affiliate Dashboard',file:'affiliate.html',url:'/affiliate.html'},
                     {name:'Toko Affiliate',file:'toko.html',url:'/toko/:refCode'},
@@ -928,10 +890,6 @@ async function saveConfig() {
             profit: parseInt(document.getElementById('cfg-profit').value),
             flowixMerchantId: document.getElementById('cfg-flow-id').value,
             flowixApiKey: document.getElementById('cfg-flow-key').value,
-            celestialApiKey: document.getElementById('cfg-cel-key').value,
-            celestialSecret: document.getElementById('cfg-cel-sec').value,
-            smmApiKey: document.getElementById('cfg-smm-key').value,
-            smmSecretKey: document.getElementById('cfg-smm-sec').value,
             apigamesMerchantId: document.getElementById('cfg-api-merchant')?.value||'',
             apigamesSecretKey: document.getElementById('cfg-api-secret')?.value||'',
             firebaseConfig: {
@@ -1208,9 +1166,6 @@ async function testIP(){
 }
 async function testPremku(){
     try{const r=await fetch('/api/products').then(r=>r.json());document.getElementById('premku-test').innerHTML=r.success?`<span class="text-emerald-400 font-bold">✅ ${r.products?.length||0} produk</span>`:'<span class="text-red-400">❌ Gagal</span>';}catch(e){document.getElementById('premku-test').innerHTML='<span class="text-red-400">Error</span>';}
-}
-async function testSMM(){
-    try{const r=await fetch('/api/smm-products').then(r=>r.json());document.getElementById('smm-test').innerHTML=r.success?`<span class="text-emerald-400 font-bold">✅ ${r.data?.length||0} services</span>`:'<span class="text-red-400">❌ Gagal</span>';}catch(e){document.getElementById('smm-test').innerHTML='<span class="text-red-400">Error</span>';}
 }
 async function testFirebase(){
     try{const r=await fetch('/api/affiliate/firebase-test').then(r=>r.json());document.getElementById('firebase-test-result').innerHTML=r.success?`<span class="text-emerald-400 font-bold">✅ ${r.message}</span>`:`<span class="text-red-400">❌ ${r.message}</span>`;}catch(e){document.getElementById('firebase-test-result').innerHTML='<span class="text-red-400">Error</span>';}

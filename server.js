@@ -67,7 +67,7 @@ const getConfig = () => {
         _configCacheTime = now;
         return _cachedConfig;
     }
-    catch(e) { return { apiKey: '', celestialApiKey: '', celestialSecret: '', smmApiKey: '', smmSecretKey: '', profit: 2000, botUsername: '', telegramToken: '', storeName: 'Rullzye Store', productSettings: {}, flowixApiKey: '', flowixMerchantId: '', firebaseConfig: {} }; }
+    catch(e) { return { apiKey: '', profit: 2000, botUsername: '', telegramToken: '', storeName: 'Rullzye Store', productSettings: {}, flowixApiKey: '', flowixMerchantId: '', firebaseConfig: {} }; }
 };
 const invalidateConfigCache = () => { _cachedConfig = null; _configCacheTime = 0; };
 const saveConfig = async (configData) => {
@@ -97,7 +97,6 @@ const savePanelOrders = async (data) => { try { await axios.put(`${FIREBASE_URL}
 const config = getConfig();
 let isProcessing = false;
 
-const getCelestialSignature = (apiKey, secret) => crypto.createHash('md5').update(apiKey + secret).digest('hex');
 
 // ================= 2. LOAD MODULE FLOWIX =================
 const ppob = require('./ppob.js');
@@ -383,9 +382,8 @@ app.get('/api/admin/system', (req, res) => {
         port: PORT,
         botActive: !!bot,
         premkuKey: !!cfg.apiKey,
-        celestialKey: !!cfg.celestialApiKey,
         flowixKey: !!cfg.flowixApiKey,
-        smmKey: !!cfg.smmApiKey,
+        premkuKey: !!cfg.apiKey,
         telegramToken: !!cfg.telegramToken,
     });
 });
@@ -448,13 +446,9 @@ app.post('/api/admin/withdraw/process', async (req, res) => {
 app.get('/api/mixed-products', async (req, res) => {
     try {
         const cfg = getConfig();
-        const [premkuRes, ppobRes, topupRes] = await Promise.all([
+        const [premkuRes, ppobRes] = await Promise.all([
             axios.post('https://premku.com/api/products', { api_key: cfg.apiKey }).catch(() => ({ data: { products: [] } })),
-            ppob.getProducts(cfg.flowixApiKey, cfg.flowixMerchantId, 'prepaid').catch(() => ({ data: [] })),
-            axios.post('https://celestialtopup.com/api/v1/produk', {
-                api_key: cfg.celestialApiKey,
-                signature: getCelestialSignature(cfg.celestialApiKey, cfg.celestialSecret)
-            }).catch(() => ({ data: { data: [] } }))
+            ppob.getProducts(cfg.flowixApiKey, cfg.flowixMerchantId, 'prepaid').catch(() => ({ data: [] }))
         ]);
 
         const profit = parseInt(cfg.profit || 2000);
@@ -487,20 +481,6 @@ app.get('/api/mixed-products', async (req, res) => {
                     badge: null,
                     category: 'ppob',
                     brand: p.brand || ''
-                });
-            });
-        }
-
-        if (topupRes.data?.success && topupRes.data?.data) {
-            topupRes.data.data.filter(x => (x.status || '').toLowerCase() === 'tersedia').forEach(x => {
-                allProducts.push({
-                    id: 'TOPUP-' + x.sku,
-                    source: 'topup',
-                    name: `${x.brand} - ${x.nama_produk}`,
-                    price: parseInt(x.harga) + profit,
-                    stock: 999,
-                    badge: null,
-                    category: 'game'
                 });
             });
         }
@@ -606,29 +586,6 @@ app.get('/api/store-info', (req, res) => {
     res.json({ storeName: cfg.storeName || 'Rullzye Store' });
 });
 
-app.post('/api/cek-nickname', async (req, res) => {
-    const { service, target, targetZone } = req.body;
-    const cfg = getConfig();
-    const merchantId = cfg.apigamesMerchantId || ""; const secretKey = cfg.apigamesSecretKey || "";
-    if (!merchantId || !secretKey) return res.json({ success: false, message: "Cek nickname tidak tersedia." });
-    try {
-        let gameSlug = ""; let sku = service.toLowerCase();
-        if (sku.includes('ml') || sku.includes('mobile')) gameSlug = "mobilelegend";
-        else if (sku.includes('ff') || sku.includes('freefire')) gameSlug = "freefire";
-        else if (sku.includes('pubg')) gameSlug = "pubgmobile";
-        else if (sku.includes('valo')) gameSlug = "valorant";
-        else if (sku.includes('cod')) gameSlug = "callofduty";
-        else if (sku.includes('genshin')) gameSlug = "genshinimpact";
-        else return res.json({ success: false, message: "Gagal cek, langsung bayar." });
-        const signature = crypto.createHash('md5').update(merchantId + secretKey).digest('hex');
-        let urlApiGames = `https://v1.apigames.id/merchant/${merchantId}/cek-username/${gameSlug}?user_id=${target}&signature=${signature}`;
-        if (targetZone) urlApiGames += `&zone_id=${targetZone}`;
-        const apiRes = await axios.get(urlApiGames);
-        if (apiRes.data && apiRes.data.status === 1) res.json({ success: true, nickname: apiRes.data.data.username || apiRes.data.data, label: 'PLAYER NAME' });
-        else res.json({ success: false, message: apiRes.data.error_msg || 'ID Salah.' });
-    } catch (e) { res.json({ success: false, message: 'Gagal terhubung ke pusat.' }); }
-});
-
 app.get('/api/products', async (req, res) => {
     try {
         const cfg = getConfig();
@@ -648,29 +605,7 @@ app.get('/api/products', async (req, res) => {
     } catch (e) { res.json({ success: false }); }
 });
 
-app.get('/api/topup-products', async (req, res) => {
-    const cfg = getConfig();
-    try {
-        const signature = getCelestialSignature(cfg.celestialApiKey, cfg.celestialSecret);
-        const resP = await axios.post('https://celestialtopup.com/api/v1/produk', { api_key: cfg.celestialApiKey, signature: signature });
-        if (resP.data && resP.data.success) {
-            const p = resP.data.data.map(x => ({ id: x.sku, name: `${x.brand} - ${x.nama_produk}`, price: parseInt(x.harga) + parseInt(cfg.profit || 2000), stock: (x.status.toLowerCase() === 'tersedia') ? 999 : 0, isZoneRequired: x.butuh_zone_id }));
-            res.json({ success: true, products: p });
-        } else res.json({ success: false, message: resP.data?.message });
-    } catch (e) { res.json({ success: false, message: e.message }); }
-});
 
-app.get('/api/smm-products', async (req, res) => {
-    const cfg = getConfig();
-    try {
-        const params = new URLSearchParams();
-        params.append('api_key', cfg.smmApiKey); params.append('secret_key', cfg.smmSecretKey); params.append('action', 'services');
-        const smmRes = await axios.post('https://pusatpanelsmm.com/api/json.php', params.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }});
-        let services = smmRes.data?.data || (Array.isArray(smmRes.data) ? smmRes.data : []);
-        if (services.length > 0) res.json({ success: true, data: services.map(x => ({ id: x.id, category: x.category, name: x.name, price: parseInt(x.price), min: parseInt(x.min), max: parseInt(x.max) })) });
-        else res.json({ success: false, message: "Gagal memuat layanan SMM" });
-    } catch (e) { res.json({ success: false, message: e.message }); }
-});
 
 // Landing page toko affiliate (serve static HTML)
 app.get('/toko/:refCode', (req, res) => {
@@ -914,37 +849,7 @@ app.post('/api/order', async (req, res) => {
     } catch (e) { res.json({ status: false, message: e.message }); }
 });
 
-app.post('/api/topup-order', async (req, res) => {
-    const { service, target, targetZone, productName, displayPrice, randomId, nickname } = req.body;
-    const cfg = getConfig(); const user = await checkRandomId(randomId);
-    if (!user) return res.json({ status: false, message: '❌ Random ID Tidak Valid! Daftar di Bot.' });
-    try {
-        const finalTagihan = parseInt(displayPrice);
-        const resDep = await axios.post('https://celestialtopup.com/api/v1/deposit', { api_key: cfg.celestialApiKey, signature: getCelestialSignature(cfg.celestialApiKey, cfg.celestialSecret), jumlah: finalTagihan });
-        if (resDep.data && resDep.data.success) {
-            let orders = await getOrders();
-            orders.push({ idDeposit: resDep.data.data.deposit_id, idOrder: null, productId: service, productName, targetPhone: target, zoneId: targetZone || "", status: 'MENUNGGU_BAYAR', accountDetails: '-', telegramChatId: user.chatId, type: 'CELESTIAL', resellerProfit: parseInt(cfg.profit||2000), nickname: nickname || target });
-            await saveOrders(orders);
-            res.json({ status: true, invoice: { orderId: resDep.data.data.deposit_id, amount: resDep.data.data.jumlah, qr_url: resDep.data.data.qr_image, botLink: `https://t.me/${cfg.botUsername}?start=${resDep.data.data.deposit_id}` } });
-        } else res.json({ status: false, message: 'Deposit Celestial Gagal' });
-    } catch (e) { res.json({ status: false, message: e.message }); }
-});
 
-app.post('/api/smm-order', async (req, res) => {
-    const { service, target, qty, productName, displayPrice, randomId } = req.body;
-    const cfg = getConfig(); const user = await checkRandomId(randomId);
-    if (!user) return res.json({ status: false, message: '❌ Random ID Tidak Valid! Daftar di Bot.' });
-    try {
-        const finalTagihan = parseInt(displayPrice);
-        const resPay = await axios.post('https://premku.com/api/pay', { api_key: cfg.apiKey, amount: finalTagihan });
-        if (resPay.data && resPay.data.success) {
-            let orders = await getOrders();
-            orders.push({ idDeposit: resPay.data.data.invoice, idOrder: null, productId: service, productName, targetPhone: target, qty: qty, status: 'MENUNGGU_BAYAR', accountDetails: '-', telegramChatId: user.chatId, type: 'SMM', resellerProfit: parseInt(cfg.profit||2000) });
-            await saveOrders(orders);
-            res.json({ status: true, invoice: { orderId: resPay.data.data.invoice, amount: resPay.data.data.total_bayar, qr_url: resPay.data.data.qr_image, botLink: `https://t.me/${cfg.botUsername}?start=${resPay.data.data.invoice}` } });
-        } else res.json({ status: false, message: 'Gagal membuat QRIS SMM' });
-    } catch (e) { res.json({ status: false, message: e.message }); }
-});
 
 // ================= 12. AUTO-PILOT HYBRID (optimized) =================
 const FINAL_STATUSES = new Set(['SUKSES','GAGAL','DIBATALKAN']);
@@ -978,49 +883,6 @@ async function autoProc() {
                             orders[i].status = 'SUKSES'; orders[i].accountDetails = acc; orders[i].completedAt = new Date().toISOString(); orders[i].buyerName = orders[i].buyerName || 'Pelanggan'; changed = true;
                             if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
                             if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `🎉 *PESANAN SELESAI!*\n📦 *${o.productName}*\n\n${acc}`, { parse_mode: "Markdown" }).catch(()=>{});
-                        }
-                    } catch (e) {}
-                }
-            } else if (o.type === 'CELESTIAL') {
-                const sig = getCelestialSignature(cfg.celestialApiKey, cfg.celestialSecret);
-                if (o.status === 'MENUNGGU_BAYAR') {
-                    try {
-                        const resCek = await axios.post('https://celestialtopup.com/api/v1/deposit/status', { api_key: cfg.celestialApiKey, signature: sig, deposit_id: o.idDeposit });
-                        if (resCek.data && resCek.data.success && (resCek.data.data.status === 'paid' || resCek.data.data.status === 'success')) {
-                            const buyRes = await axios.post('https://celestialtopup.com/api/v1/order', { api_key: cfg.celestialApiKey, signature: sig, ref_id: o.idDeposit, sku: o.productId, target: o.targetPhone, zone_id: o.zoneId || "" });
-                            if (buyRes.data && buyRes.data.success) {
-                                orders[i].status = 'PROSES_PUSAT'; orders[i].idOrder = buyRes.data.data?.trx_id || buyRes.data.trx_id; changed = true;
-                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, '✅ *PEMBAYARAN DITERIMA*\nMemproses Top Up Game...', { parse_mode: "Markdown" }).catch(()=>{});
-                            }
-                        }
-                    } catch (e) {}
-                } else if (o.status === 'PROSES_PUSAT' && o.idOrder) {
-                    try {
-                        const trxRes = await axios.post('https://celestialtopup.com/api/v1/status', { api_key: cfg.celestialApiKey, signature: sig, trx_id: o.idOrder });
-                        if (trxRes.data && trxRes.data.success) {
-                            if (trxRes.data.data.status === 'success') {
-                                let msg = `✅ *TOP UP BERHASIL*\n🎯 ${o.nickname || o.targetPhone}\n🧾 SN: \`${trxRes.data.data.sn || '-'}\``;
-                                orders[i].status = 'SUKSES'; orders[i].accountDetails = msg; orders[i].completedAt = new Date().toISOString(); orders[i].buyerName = orders[i].buyerName || 'Pelanggan'; changed = true;
-                                if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
-                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, msg, { parse_mode: "Markdown" }).catch(()=>{});
-                            } else if (trxRes.data.data.status === 'error' || trxRes.data.data.status === 'failed') {
-                                orders[i].status = 'GAGAL'; orders[i].accountDetails = 'Gagal Pusat'; changed = true;
-                            }
-                        }
-                    } catch (e) {}
-                }
-            } else if (o.type === 'SMM') {
-                if (o.status === 'MENUNGGU_BAYAR') {
-                    try {
-                        const resCek = await axios.post('https://premku.com/api/pay_status', { api_key: cfg.apiKey, invoice: o.idDeposit });
-                        if (resCek.data?.data?.status === 'success' || resCek.data?.status === 'success') {
-                            const params = new URLSearchParams(); params.append('api_key', cfg.smmApiKey); params.append('secret_key', cfg.smmSecretKey); params.append('action', 'order'); params.append('service', o.productId); params.append('target', o.targetPhone); params.append('quantity', o.qty);
-                            const smmBuy = await axios.post('https://pusatpanelsmm.com/api/json.php', params.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }});
-                            if (smmBuy.data && smmBuy.data.status) {
-                                orders[i].status = 'SUKSES'; orders[i].idOrder = smmBuy.data.data ? smmBuy.data.data.id : '-'; orders[i].accountDetails = `SMM Diproses (ID: ${orders[i].idOrder})`; orders[i].completedAt = new Date().toISOString(); orders[i].buyerName = orders[i].buyerName || 'Pelanggan'; changed = true;
-                                if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
-                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, '✅ *PESANAN SMM BERHASIL*\nSedang dikerjakan oleh server!', { parse_mode: "Markdown" }).catch(()=>{}); 
-                            } else { orders[i].status = 'GAGAL'; changed = true; }
                         }
                     } catch (e) {}
                 }
@@ -1550,7 +1412,7 @@ app.post('/api/admin/testimonials/seed', async (req, res) => {
             { name: 'Budi Hartono', service: 'Token Listrik PLN 200rb', rating: 5, content: 'Biasanya beli token listrik lewat sini karena prosesnya cepet dan bisa bayar QRIS. Gak perlu antri, tinggal order langsung masuk. Sangat praktis!', screenshot: '' },
             { name: 'Rina Melati', service: 'Youtube Premium 3 Bulan', rating: 5, content: 'Nonton youtube tanpa iklan jadi lebih nyaman. Harga lebih murah dari langganan resmi. Udah repeat order 2 kali, selalu puas dengan pelayanannya.', screenshot: '' },
             { name: 'Andi Saputra', service: 'Top Up PUBG UC', rating: 4, content: 'Top up UC PUBG lumayan sering. Harganya ok dan prosesnya cepat. Cuma kadang suka khawatir aja karena ini barang digital, tapi sejauh ini aman terus.', screenshot: '' },
-            { name: 'Mega Wulandari', service: 'SMM Panel Instagram Followers', rating: 5, content: 'Beli followers instagram untuk bisnis online. Turunnya bertahap jadi kelihatan natural. Pelayanannya ramah dan harganya murah. Recommended buat yang butuh sosmed!', screenshot: '' },
+            { name: 'Mega Wulandari', service: 'Instagram Followers', rating: 5, content: 'Beli followers instagram untuk bisnis online. Turunnya bertahap jadi kelihatan natural. Pelayanannya ramah dan harganya murah. Recommended buat yang butuh sosmed!', screenshot: '' },
         ];
         let testimonials = await getTestimonials();
         const startId = Date.now();
@@ -1597,24 +1459,6 @@ app.get('/api/reseller/download-sku', async (req, res) => {
         res.setHeader('Content-Type', 'text/csv'); res.setHeader('Content-Disposition', 'attachment; filename=Daftar_SKU.csv');
         res.status(200).send(csvContent);
     } catch (e) { res.status(500).send("Gagal mengambil data dari pusat."); }
-});
-
-// DEBUG: Lihat respons asli Celestial
-app.get('/api/topup-products-debug', async (req, res) => {
-    const cfg = getConfig();
-    if (!cfg.celestialApiKey || !cfg.celestialSecret) {
-        return res.json({ success: false, message: 'Celestial API Key/Secret belum diisi' });
-    }
-    try {
-        const signature = getCelestialSignature(cfg.celestialApiKey, cfg.celestialSecret);
-        const resP = await axios.post('https://celestialtopup.com/api/v1/produk', {
-            api_key: cfg.celestialApiKey,
-            signature: signature
-        });
-        res.json(resP.data); // kirimkan mentah
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
 });
 
 process.on('uncaughtException', (err) => {

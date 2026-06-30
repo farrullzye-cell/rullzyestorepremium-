@@ -164,9 +164,9 @@ async function loadBanners() {
             banners = data.banners;
         } else {
             banners = [
-                { image: 'https://placehold.co/1200x400/7c3aed/white?text=Promo+Spesial', link: '/topup.html' },
-                { image: 'https://placehold.co/1200x400/059669/white?text=Pulsa+Murah', link: '/ppob.html' },
-                { image: 'https://placehold.co/1200x400/2563eb/white?text=Sosmed+Boost', link: '/smmpanel.html' }
+                { image: 'https://placehold.co/1200x400/7c3aed/white?text=Promo+Spesial', link: '/ppob.html' },
+                { image: 'https://placehold.co/1200x400/2563eb/white?text=Diskon+Akun', link: '/akundigital.html' }
+
             ];
         }
         renderBanners();
@@ -256,7 +256,6 @@ async function loadProducts() {
 function getSourceLabel(source) {
     switch (source) {
         case 'ppob': return 'PPOB';
-        case 'topup': return 'Top Up';
         case 'premku': return 'Akun Digital';
         default: return 'Lainnya';
     }
@@ -280,13 +279,6 @@ function renderBadgeSections() {
             filter: p => p.source === 'ppob' && !p.name.toLowerCase().includes('data') && !p.name.toLowerCase().includes('gb') && !p.name.toLowerCase().includes('kuota'),
             limit: 6,
             link: '/ppob.html'
-        },
-        {
-            title: '🎮 Top Up Game Pilihan',
-            desc: 'Top up game cepat dan mudah',
-            filter: p => p.source === 'topup',
-            limit: 6,
-            link: '/topup.html'
         },
         {
             title: '⭐ Akun Digital Populer',
@@ -333,8 +325,8 @@ function renderBadgeSections() {
 }
 
 function openOrder(id, name, price, source) {
-    const labelTarget = source === 'ppob' ? 'Nomor Tujuan / HP' : source === 'topup' ? 'UID / Username / Target' : 'Username / Tujuan';
-    const requireTarget = source === 'ppob' || source === 'topup';
+    const labelTarget = source === 'ppob' ? 'Nomor Tujuan / HP' : 'Username / Tujuan';
+    const requireTarget = source === 'ppob';
     const modal = document.createElement('div');
     modal.id = 'orderModal';
     modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4';
@@ -414,7 +406,6 @@ function openOrder(id, name, price, source) {
         };
 
         if (source === 'ppob') endpoint = '/api/ppob-order';
-        else if (source === 'topup') endpoint = '/api/topup-order';
         else if (source === 'premku') endpoint = '/api/order';
 
         try {
@@ -491,7 +482,7 @@ const fomoData = [
     { u: 'Rizky***92', t: 'baru beli Netflix Premium' },
     { u: 'Siti***17', t: 'baru beli Spotify Family' },
     { u: 'Dewi***45', t: 'baru isi pulsa Telkomsel 50rb' },
-    { u: 'Budi***33', t: 'baru topup MLBB 86 Diamonds' },
+    { u: 'Budi***33', t: 'baru beli Pulsa 50k' },
     { u: 'Nina***78', t: 'baru beli paket data 10GB' },
     { u: 'Fajar***21', t: 'baru beli akun YouTube Premium' }
 ];

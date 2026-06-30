@@ -697,7 +697,7 @@ async function loadProductCheckboxes() {
         if (d.products) {
             affiliateProducts = d.products.map(p => ({
                 ...p,
-                label: `${p.name} (${p.source === 'ppob' ? 'PPOB' : p.source === 'topup' ? 'Top Up' : 'Akun'})`
+                label: `${p.name} (${p.source === 'ppob' ? 'PPOB' : 'Akun'})`
             }));
             currentProductCategory = 'all';
             productSearchTerm = '';
@@ -708,9 +708,9 @@ async function loadProductCheckboxes() {
 }
 
 function renderCategoryFilters() {
-    const categories = ['all','premku','ppob','topup'];
+    const categories = ['all','premku','ppob'];
     document.getElementById('categoryFilters').innerHTML = categories.map(cat => {
-        const label = cat === 'all' ? 'Semua' : cat === 'premku' ? 'Akun' : cat === 'ppob' ? 'PPOB' : 'Top Up';
+        const label = cat === 'all' ? 'Semua' : cat === 'premku' ? 'Akun' : 'PPOB';
         return `<button class="text-[10px] font-bold px-4 py-2 rounded-full transition-all ${currentProductCategory === cat ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'bg-white/[0.04] text-slate-400 border border-white/[0.06] hover:bg-white/[0.08]'}" onclick="setAffiliateCategory('${cat}')">${label}</button>`;
     }).join('');
 }

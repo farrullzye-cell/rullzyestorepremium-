@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Toko Digital Affiliate - RullzyeStore Premium</title>
-    <meta name="description" content="Toko digital affiliate RullzyeStore. Temukan produk pulsa, top up game, akun premium, dan layanan PPOB dengan harga spesial." />
+    <meta name="description" content="Toko digital affiliate RullzyeStore. Temukan produk pulsa, akun premium, dan layanan PPOB dengan harga spesial." />
     <meta name="robots" content="index, follow" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Toko Digital Affiliate - RullzyeStore" />
-    <meta property="og:description" content="Toko digital affiliate dengan produk pulsa, top up game, akun premium." />
+    <meta property="og:title" content="Toko Affiliate - RullzyeStore" />
+    <meta property="og:description" content="Toko digital affiliate dengan produk pulsa, PPOB, dan akun premium." />
     <meta property="og:url" content="https://rullzyestorepremium.my.id/toko/" />
     <meta property="og:image" content="https://rullzyestorepremium.my.id/favicon.jpeg" />
     <meta property="og:site_name" content="RullzyeStore" />
@@ -338,7 +338,7 @@ function renderProducts() {
 
 function openOrder(id, name, price, source) {
     const modal = document.getElementById('orderModal');
-    const needTarget = source === 'ppob' || source === 'topup' || source === 'game';
+    const needTarget = source === 'ppob' || source === 'game';
     modal.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-bg';
     modal.style.background = 'rgba(0,0,0,0.7)';
     modal.innerHTML = `
@@ -370,11 +370,10 @@ async function submitOrder(id, name, price, source) {
     const rid = document.getElementById('m-rid')?.value.trim().toUpperCase();
     const target = document.getElementById('m-target')?.value.trim();
     if (!rid) return alert('Masukkan Random ID!');
-    if ((source==='ppob'||source==='topup'||source==='game') && !target) return alert('Masukkan nomor tujuan!');
+    if ((source==='ppob'||source==='game') && !target) return alert('Masukkan nomor tujuan!');
 
     let endpoint = '/api/order', body = { service: id.replace(/^(PREMKU|PPOB|TOPUP)-/,''), productName:name, displayPrice:price, randomId:rid, target:target||rid };
     if (source==='ppob') { endpoint='/api/ppob-order'; body.productId=id.replace('PPOB-',''); body.target=target; }
-    else if (source==='topup') { endpoint='/api/topup-order'; body.service=id.replace('TOPUP-',''); body.target=target; }
 
     try {
         const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
