@@ -18,11 +18,14 @@ async function checkPin(){
             adminRole=data.role;
             adminUsername=data.username||u||'Super Admin';
             adminPermissions=data.permissions||[];
+            localStorage.setItem('adminAuth',currentAuth);
+            localStorage.setItem('adminRole',adminRole);
+            localStorage.setItem('adminUsername',adminUsername);
+            localStorage.setItem('adminPermissions',JSON.stringify(adminPermissions));
             document.getElementById('pinOverlay').style.display='none';
             document.getElementById('sidebar').style.display='flex';
             document.getElementById('mainContent').style.display='block';
             document.getElementById('adminRoleBadge').innerText=adminRole==='super_admin'?'👑 Super Admin':'🔑 Admin — '+adminUsername;
-            // Hide admin-only menu for regular admins
             document.querySelectorAll('.admin-only').forEach(el=>el.style.display=adminRole==='super_admin'?'':'none');
             loadTab('dashboard');
         } else {
@@ -31,21 +34,37 @@ async function checkPin(){
         }
     } catch(e){ document.getElementById('loginError').innerText='❌ Gagal terhubung ke server.'; document.getElementById('loginError').classList.remove('hidden'); }
 }
+// Auto-restore session from localStorage
+(function(){
+    const savedAuth=localStorage.getItem('adminAuth');
+    if(savedAuth){
+        currentAuth=savedAuth;
+        adminRole=localStorage.getItem('adminRole')||'';
+        adminUsername=localStorage.getItem('adminUsername')||'';
+        adminPermissions=localStorage.getItem('adminPermissions')?JSON.parse(localStorage.getItem('adminPermissions')):[];
+        document.getElementById('pinOverlay').style.display='none';
+        document.getElementById('sidebar').style.display='flex';
+        document.getElementById('mainContent').style.display='block';
+        document.getElementById('adminRoleBadge').innerText=adminRole==='super_admin'?'👑 Super Admin':'🔑 Admin — '+adminUsername;
+        document.querySelectorAll('.admin-only').forEach(el=>el.style.display=adminRole==='super_admin'?'':'none');
+        loadTab('dashboard');
+    }
+})();
 
 // ================= ADMIN MANAGEMENT =================
 async function addAdmin(){
     const username=document.getElementById('adm-username').value.trim();
     const pin=document.getElementById('adm-pin').value.trim();
     const perms=document.getElementById('adm-perms').value.trim().split(',').map(s=>s.trim()).filter(Boolean);
-    if(!username||!pin) return alert('Username dan PIN wajib diisi!');
+    if(!username||!pin) return showToast('Username dan PIN wajib diisi!','error');
     const r=await api('/api/admin/admins/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,pin,permissions:perms})});
     const d=await r.json();
-    if(d.success){alert('Admin ditambahkan!');loadTab('admins');} else alert(d.message||'Gagal');
+    if(d.success){showToast('Admin ditambahkan!');loadTab('admins');} else showToast(d.message||'Gagal','error');
 }
 async function editAdmin(id){
     const r=await api('/api/admin/admins').then(r=>r.json());
     const a=(r.admins||[]).find(x=>x.id===id);
-    if(!a) return alert('Admin tidak ditemukan.');
+    if(!a) return showToast('Admin tidak ditemukan.','error');
     const np=prompt('PIN baru (kosongkan jika tidak diubah):',a.pin);
     if(np===null) return;
     const nu=prompt('Username baru:',a.username)||a.username;
@@ -54,13 +73,13 @@ async function editAdmin(id){
     const perms=nperms.split(',').map(s=>s.trim()).filter(Boolean);
     const res=await api('/api/admin/admins/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,username:nu,pin:np,permissions:perms})});
     const d=await res.json();
-    if(d.success){alert('Admin diperbarui!');loadTab('admins');} else alert(d.message||'Gagal');
+    if(d.success){showToast('Admin diperbarui!');loadTab('admins');} else showToast(d.message||'Gagal','error');
 }
 async function deleteAdmin(id){
     if(!confirm('Hapus admin ini?')) return;
     const r=await api('/api/admin/admins/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
     const d=await r.json();
-    if(d.success){alert('Admin dihapus!');loadTab('admins');} else alert(d.message||'Gagal');
+    if(d.success){showToast('Admin dihapus!');loadTab('admins');} else showToast(d.message||'Gagal','error');
 }
 
 function api(path, options={}) {
@@ -80,11 +99,39 @@ document.querySelectorAll('.menu-item').forEach(m=>{
 
 function truncate(txt,len=200){return txt?.length>len?txt.substring(0,len)+'...':txt||'-'}
 
+// ==================== TOAST SYSTEM ====================
+function showToast(message, type='success'){
+    const colors={success:'bg-emerald-600',error:'bg-red-600',warning:'bg-amber-600',info:'bg-violet-600'};
+    const icons={success:'fa-check-circle',error:'fa-times-circle',warning:'fa-exclamation-triangle',info:'fa-info-circle'};
+    const t=document.createElement('div');
+    t.className=`fixed top-5 right-5 z-[9999] ${colors[type]||colors.success} text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold transition-all duration-300`;
+    t.style.transform='translateX(120%)';t.style.opacity='0';
+    t.innerHTML=`<i class="fa-solid ${icons[type]||icons.success}"></i> ${message}`;
+    document.body.appendChild(t);
+    requestAnimationFrame(()=>{t.style.transform='translateX(0)';t.style.opacity='1';});
+    setTimeout(()=>{t.style.transform='translateX(120%)';t.style.opacity='0';setTimeout(()=>t.remove(),300);},3500);
+}
+// ==================== PAGINATION STATE ====================
+const pagState={users:{page:1,perPage:50},orders:{page:1,perPage:50}};
+
+// ==================== LOGOUT ====================
+window.logout=function(){
+    if(!confirm('Yakin ingin logout?')) return;
+    currentAuth='';adminRole='';adminPermissions=[];adminUsername='';
+    localStorage.removeItem('adminAuth');localStorage.removeItem('adminRole');localStorage.removeItem('adminUsername');localStorage.removeItem('adminPermissions');
+    document.getElementById('pinOverlay').style.display='flex';
+    document.getElementById('sidebar').style.display='none';
+    document.getElementById('mainContent').style.display='none';
+    document.getElementById('pinInput').value='';
+    document.getElementById('adminUsername').value='';
+    showToast('Berhasil logout');
+};
+
 async function loadTab(tab){
     const c=document.getElementById('tab-content');
     c.innerHTML='<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-3xl text-violet-500"></i><p class="mt-2 text-slate-400 text-sm">Memuat data...</p></div>';
     // Permission map: tab name → required permission
-    const permMap={orders:'orders',withdraws:'withdraws',users:'users',affiliates:'users',products:'products',config:'config',broadcast:'broadcast',security:'settings',groups:'settings',botstatus:'settings',admins:'admins',database:'settings',system:'settings',checkip:'settings',resellers:'users'};
+    const permMap={orders:'orders',withdraw:'withdraws',withdraws:'withdraws',users:'users',affiliate:'users',affconfig:'config',products:'products',config:'config',broadcast:'broadcast',security:'settings',groups:'settings',botstatus:'settings',admins:'admins',database:'settings',system:'settings',checkip:'settings',resellers:'users'};
     const reqPerm=permMap[tab];
     if(reqPerm && adminRole!=='super_admin' && !adminPermissions.includes(reqPerm)){
         c.innerHTML=`<div class="text-center py-20"><i class="fa-solid fa-lock text-4xl text-slate-600 mb-4"></i><p class="text-slate-500 text-sm">Akses ditolak. Tidak ada izin untuk menu ini.</p></div>`;
@@ -93,7 +140,7 @@ async function loadTab(tab){
         return;
     }
     try{
-        // =============== 1. DASHBOARD ===============
+        // =============== 1. DASHBOARD (with chart) ===============
         if(tab==='dashboard'){
             const [users,orders,statsRes,wdRes]=await Promise.all([
                 api('/api/admin/users').then(r=>r.json()),
@@ -108,6 +155,26 @@ async function loadTab(tab){
             const aff=users.filter(u=>u.isAffiliate);
             const revMonth=statsRes.revenue?.thisMonth||0;
             const commTotal=statsRes.affiliate?.totalCommission||0;
+            // Revenue by month for chart
+            const byMonth={};
+            const monthNames=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+            sukses.forEach(o=>{
+                const m=(o.completedAt||o.createdAt||'').substring(0,7);
+                if(m){byMonth[m]=(byMonth[m]||0)+(o.displayPrice||0);}
+            });
+            const sortedMonths=Object.entries(byMonth).sort(([a],[b])=>a.localeCompare(b));
+            const maxRev=Math.max(...sortedMonths.map(([,v])=>v),1);
+            const chartBars=sortedMonths.map(([m,v])=>{
+                const pct=(v/maxRev*100).toFixed(1);
+                const shortM=monthNames[parseInt(m.substring(5,7))-1]||m;
+                return `<div class="flex flex-col items-center gap-1" style="flex:1">
+                    <span class="text-[8px] text-slate-400 font-bold">${formatRp(v).replace('Rp ','')}</span>
+                    <div class="w-full bg-white/5 rounded-full relative" style="height:60px">
+                        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-violet-600 to-purple-500 rounded-full transition-all duration-500" style="height:${pct}%"></div>
+                    </div>
+                    <span class="text-[9px] text-slate-500">${shortM}</span>
+                </div>`;
+            }).join('');
             c.innerHTML=`<h2 class="text-2xl font-black mb-6">Dashboard Utama</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div class="card stat-card"><p class="text-[10px] text-slate-400 uppercase font-bold">Total User</p><h3 class="text-2xl font-black mt-1 text-white">${users.length}</h3></div>
@@ -119,6 +186,9 @@ async function loadTab(tab){
                 <div class="card stat-card"><p class="text-[10px] text-slate-400 uppercase font-bold">Affiliate Aktif</p><h3 class="text-2xl font-black mt-1 text-indigo-400">${aff.length}</h3></div>
                 <div class="card stat-card"><p class="text-[10px] text-slate-400 uppercase font-bold">Komisi Teralokasi</p><h3 class="text-xl font-black mt-1 text-rose-400">${formatRp(commTotal)}</h3></div>
             </div>
+            ${sortedMonths.length>1?`<div class="card p-4 mb-6"><h3 class="font-bold text-sm text-white mb-4"><i class="fa-solid fa-chart-bar text-violet-400 mr-2"></i>Revenue Per Bulan</h3>
+                <div class="flex items-end gap-1 px-2 pt-4 pb-2">${chartBars}</div>
+            </div>`:''}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div class="card p-4"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-clock text-amber-400 mr-2"></i>Withdraw Pending</h3>
                     ${pendingWd.length?pendingWd.slice(0,5).map(w=>`<div class="flex justify-between items-center py-1.5 border-b border-white/5 text-xs"><span class="text-slate-400">${w.bankDetails}</span><span class="font-bold text-amber-400">${formatRp(w.amount)}</span></div>`).join(''):'<p class="text-xs text-slate-500">Tidak ada withdraw pending.</p>'}
@@ -130,22 +200,24 @@ async function loadTab(tab){
                 </div>
             </div>`;
         }
-        // =============== 2. USERS ===============
+        // =============== 2. USERS (with pagination) ===============
         else if(tab==='users'){
             const u=await api('/api/admin/users').then(r=>r.json());
-            let h=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Manajemen Pengguna (${u.length})</h2>
-                <div class="flex gap-2">
+            const total=u.length;
+            const ps=pagState.users;
+            const totalPages=Math.ceil(total/ps.perPage)||1;
+            if(ps.page>totalPages) ps.page=totalPages;
+            const start=(ps.page-1)*ps.perPage;
+            const pageUsers=u.slice(start,start+ps.perPage);
+            let h=`<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="text-xl font-black">Manajemen Pengguna (${total})</h2>
+                <div class="flex gap-2 ml-auto">
                     <button onclick="showCreateUserModal()" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg"><i class="fa-solid fa-plus mr-1"></i>Buat User</button>
-                    <button onclick="this.nextElementSibling.classList.toggle('hidden')" class="text-xs bg-violet-600 text-white px-3 py-1.5 rounded-lg"><i class="fa-solid fa-search mr-1"></i>Cari</button>
-                    <div class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
-                        <div class="card p-6 max-w-lg w-full"><input type="text" id="userSearch" placeholder="Cari nama atau ID..." class="input-dark mb-3" oninput="filterUserTable(this.value)">
-                        <div id="userSearchResults" class="max-h-60 overflow-y-auto text-sm"></div></div>
-                    </div>
+                    <button onclick="showUserSearchModal()" class="text-xs bg-violet-600 text-white px-3 py-1.5 rounded-lg"><i class="fa-solid fa-search mr-1"></i>Cari</button>
                 </div>
             </div>
             <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
                 <tr><th class="p-2.5 text-[10px]">Nama</th><th class="p-2.5 text-[10px]">ID</th><th class="p-2.5 text-[10px]">ChatID</th><th class="p-2.5 text-[10px] text-center">Role</th><th class="p-2.5 text-[10px] text-right">Saldo</th><th class="p-2.5 text-[10px] text-right">Komisi</th><th class="p-2.5 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
-            u.forEach(x=>{
+            pageUsers.forEach(x=>{
                 h+=`<tr class="border-b border-white/5"><td class="p-2.5 font-bold text-xs">${x.firstName||'-'}</td>
                 <td class="p-2.5"><code class="text-[10px] text-violet-300">${x.randomId||'-'}</code></td>
                 <td class="p-2.5 font-mono text-[10px] text-slate-400">${x.chatId||'-'}</td>
@@ -153,29 +225,41 @@ async function loadTab(tab){
                 <td class="p-2.5 text-right font-bold text-emerald-400 text-xs">${formatRp(x.balance)}</td>
                 <td class="p-2.5 text-right font-bold text-violet-400 text-xs">${formatRp(x.affiliateBalance)}</td>
                 <td class="p-2.5 text-center">
-                    <button onclick="editUser('${x.randomId}')" class="text-[10px] bg-sky-600/20 text-sky-400 px-2 py-1 rounded hover:bg-sky-600 hover:text-white mr-1"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="showEditUserModal('${x.randomId}')" class="text-[10px] bg-sky-600/20 text-sky-400 px-2 py-1 rounded hover:bg-sky-600 hover:text-white mr-1"><i class="fa-solid fa-pen"></i></button>
                     <button onclick="deleteUser('${x.randomId}')" class="text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded hover:bg-red-500 hover:text-white"><i class="fa-solid fa-trash"></i></button>
                 </td></tr>`;
             });
-            h+=`</tbody></table></div>`;
+            h+=`</tbody></table></div>
+            <div class="flex justify-between items-center mt-3 text-xs text-slate-400">
+                <span>Halaman ${ps.page} dari ${totalPages} (${total} total)</span>
+                <div class="flex gap-1">
+                    <button onclick="paginateUsers(${ps.page-1})" class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 ${ps.page<=1?'opacity-30 pointer-events-none':''}"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button onclick="paginateUsers(${ps.page+1})" class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 ${ps.page>=totalPages?'opacity-30 pointer-events-none':''}"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>`;
             c.innerHTML=h;
         }
-        // =============== 3. ORDERS ===============
+        // =============== 3. ORDERS (with pagination) ===============
         else if(tab==='orders'){
             const o=await api('/api/admin/orders').then(r=>r.json());
             o.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+            const f=document.getElementById('orderFilter')?.value||'all';
+            const filtered=f==='all'?o:o.filter(x=>x.status===f);
+            const total=filtered.length;
+            const ps=pagState.orders;
+            const totalPages=Math.ceil(total/ps.perPage)||1;
+            if(ps.page>totalPages) ps.page=totalPages;
+            const start=(ps.page-1)*ps.perPage;
+            const pageOrders=filtered.slice(start,start+ps.perPage);
             let h=`<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="text-xl font-black">Pesanan (${o.length})</h2>
-                <select id="orderFilter" onchange="loadTab('orders')" class="input-dark text-xs py-1.5 w-auto ml-auto">
-                    <option value="all">Semua</option><option value="SUKSES">Sukses</option><option value="PROSES_PUSAT">Proses</option><option value="MENUNGGU_BAYAR">Pending</option><option value="GAGAL">Gagal</option>
+                <select id="orderFilter" onchange="pagState.orders.page=1;loadTab('orders')" class="input-dark text-xs py-1.5 w-auto">
+                    <option value="all" ${f==='all'?'selected':''}>Semua</option><option value="SUKSES" ${f==='SUKSES'?'selected':''}>Sukses</option><option value="PROSES_PUSAT" ${f==='PROSES_PUSAT'?'selected':''}>Proses</option><option value="MENUNGGU_BAYAR" ${f==='MENUNGGU_BAYAR'?'selected':''}>Pending</option><option value="GAGAL" ${f==='GAGAL'?'selected':''}>Gagal</option>
                 </select>
-                <span id="orderCount" class="text-xs text-slate-500"></span>
+                <span class="text-xs text-slate-500 ml-auto">${filtered.length} dari ${o.length} pesanan</span>
             </div>
             <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
                 <tr><th class="p-2.5 text-[10px]">Waktu</th><th class="p-2.5 text-[10px]">Produk</th><th class="p-2.5 text-[10px]">Target</th><th class="p-2.5 text-[10px] text-right">Harga</th><th class="p-2.5 text-[10px] text-center">Status</th><th class="p-2.5 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
-            const f=document.getElementById('orderFilter')?.value||'all';
-            const filtered=f==='all'?o:o.filter(x=>x.status===f);
-            document.getElementById('orderCount')&&(document.getElementById('orderCount').textContent=`${filtered.length} ditampilkan`);
-            filtered.slice(0,200).forEach(x=>{
+            pageOrders.forEach(x=>{
                 let st='badge-warn';if(x.status==='SUKSES')st='badge-ok';if(x.status==='GAGAL'||x.status==='DIBATALKAN')st='badge-err';
                 h+=`<tr class="border-b border-white/5"><td class="p-2.5 text-[10px] text-slate-400">${x.createdAt?.substring(0,16).replace('T',' ')||'-'}</td>
                 <td class="p-2.5 font-bold text-xs max-w-[140px] truncate">${x.productName||'-'}</td>
@@ -187,10 +271,17 @@ async function loadTab(tab){
                     ${x.status==='MENUNGGU_BAYAR'||x.status==='PROSES_PUSAT'?`<button onclick="forceOrderStatus('${x.idDeposit||x.idOrder}','GAGAL')" class="text-[10px] bg-red-600 px-2 py-0.5 rounded hover:bg-red-500">X</button>`:''}
                 </td></tr>`;
             });
-            h+=`</tbody></table></div>`;
+            h+=`</tbody></table></div>
+            <div class="flex justify-between items-center mt-3 text-xs text-slate-400">
+                <span>Halaman ${ps.page} dari ${totalPages} (${total} ditampilkan)</span>
+                <div class="flex gap-1">
+                    <button onclick="paginateOrders(${ps.page-1})" class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 ${ps.page<=1?'opacity-30 pointer-events-none':''}"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button onclick="paginateOrders(${ps.page+1})" class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 ${ps.page>=totalPages?'opacity-30 pointer-events-none':''}"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>`;
             c.innerHTML=h;
         }
-        // =============== 4. FINANCIAL REPORTS ===============
+        // =============== 4. FINANCIAL REPORTS (with chart) ===============
         else if(tab==='reports'){
             const [orders,wdRes]=await Promise.all([api('/api/admin/orders').then(r=>r.json()),api('/api/admin/withdraws').then(r=>r.json())]);
             const sukses=orders.filter(x=>x.status==='SUKSES');
@@ -199,10 +290,24 @@ async function loadTab(tab){
             const totalWdPaid=wdRes.filter(w=>w.status==='SUKSES').reduce((s,w)=>s+(w.amount||0),0);
             const netProfit=totalRev-totalComm-totalWdPaid;
             const byMonth={};
+            const monthNames=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
             sukses.forEach(o=>{
                 const m=(o.completedAt||o.createdAt||'').substring(0,7);
                 if(m){byMonth[m]=(byMonth[m]||0)+(o.displayPrice||0);}
             });
+            const sortedMonths=Object.entries(byMonth).sort(([a],[b])=>a.localeCompare(b));
+            const maxRev=Math.max(...sortedMonths.map(([,v])=>v),1);
+            const chartBars=sortedMonths.map(([m,v])=>{
+                const pct=(v/maxRev*100).toFixed(1);
+                const label=monthNames[parseInt(m.substring(5,7))-1]+' '+m.substring(0,4);
+                return `<div class="flex flex-col items-center gap-1" style="flex:1">
+                    <span class="text-[8px] text-slate-400 font-bold">${formatRp(v).replace('Rp ','')}</span>
+                    <div class="w-full bg-white/5 rounded-full relative" style="height:60px">
+                        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-violet-600 to-purple-500 rounded-full transition-all duration-500" style="height:${pct}%"></div>
+                    </div>
+                    <span class="text-[9px] text-slate-500">${label}</span>
+                </div>`;
+            }).join('');
             c.innerHTML=`<h2 class="text-xl font-black mb-4">Laporan Keuangan</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div class="card p-4 text-center"><p class="text-[10px] text-slate-400 uppercase font-bold">Total Revenue</p><h3 class="text-lg font-black mt-1 text-emerald-400">${formatRp(totalRev)}</h3></div>
@@ -210,8 +315,16 @@ async function loadTab(tab){
                 <div class="card p-4 text-center"><p class="text-[10px] text-slate-400 uppercase font-bold">Total WD Terbayar</p><h3 class="text-lg font-black mt-1 text-red-400">${formatRp(totalWdPaid)}</h3></div>
                 <div class="card p-4 text-center"><p class="text-[10px] text-slate-400 uppercase font-bold">Estimasi Laba</p><h3 class="text-lg font-black mt-1 text-violet-400">${formatRp(netProfit)}</h3></div>
             </div>
-            <div class="card p-4"><h3 class="font-bold text-sm text-white mb-3">Revenue Per Bulan</h3>
-                ${Object.entries(byMonth).sort().map(([m,v])=>`<div class="flex justify-between items-center py-1.5 border-b border-white/5 text-xs"><span class="text-white">${m}</span><span class="font-bold text-emerald-400">${formatRp(v)}</span></div>`).join('')}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="card p-4"><h3 class="font-bold text-sm text-white mb-4"><i class="fa-solid fa-chart-bar text-violet-400 mr-2"></i>Revenue Per Bulan</h3>
+                    ${sortedMonths.length>0?`<div class="flex items-end gap-1 px-2 pt-4 pb-2">${chartBars}</div>`:'<p class="text-xs text-slate-500">Belum ada data.</p>'}
+                </div>
+                <div class="card p-4"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-list text-slate-400 mr-2"></i>Rincian Bulanan</h3>
+                    <div class="space-y-1 max-h-64 overflow-y-auto">${sortedMonths.reverse().map(([m,v])=>{
+                        const label=monthNames[parseInt(m.substring(5,7))-1]+' '+m.substring(0,4);
+                        return `<div class="flex justify-between items-center py-1.5 border-b border-white/5 text-xs"><span class="text-white">${label}</span><span class="font-bold text-emerald-400">${formatRp(v)}</span></div>`;
+                    }).join('')}</div>
+                </div>
             </div>`;
         }
         // =============== 5. PRODUCTS (Mixed) ===============
@@ -631,7 +744,7 @@ async function loadTab(tab){
                     </div>
                 </div>
                 <div class="card p-5"><h3 class="font-bold text-sm text-white mb-3">Management</h3>
-                    <button onclick="if(confirm('Reset all data?'))fetch('/api/admin/database/reset',{method:'POST'}).then(()=>loadTab('database'))" class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-500"><i class="fa-solid fa-trash mr-1"></i>Reset Database</button>
+                    <button onclick="resetDatabase()" class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-500"><i class="fa-solid fa-trash mr-1"></i>Reset Database</button>
                     <p class="text-[10px] text-slate-500 mt-2">Hati-hati! Aksi ini menghapus semua data.</p>
                 </div>
             </div>`;
@@ -832,8 +945,8 @@ async function saveConfig() {
         };
         const res=await api('/api/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
         const json=await res.json();
-        alert(json.message||'Konfigurasi disimpan!');
-    } catch(e){ alert("Gagal: "+e.message); }
+        showToast(json.message||'Konfigurasi disimpan!');
+    } catch(e){ showToast("Gagal: "+e.message,'error'); }
 }
 
 async function saveAffConfig(){
@@ -846,7 +959,7 @@ async function saveAffConfig(){
         affiliateWelcomeMsg: document.getElementById('ac-welcome').value.trim()
     };
     await api('/api/admin/affiliate-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-    alert('Pengaturan Affiliate disimpan!');
+    showToast('Pengaturan Affiliate disimpan!');
 }
 
 window.filterUserTable=async function(q){
@@ -860,6 +973,7 @@ window.filterUserTable=async function(q){
 window.deleteUser=async function(rid){
     if(!confirm('Yakin hapus user ini?')) return;
     await api('/api/admin/users/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid})});
+    showToast('User berhasil dihapus!');
     loadTab('users');
 };
 window.showCreateUserModal=function(){
@@ -882,11 +996,11 @@ window.createUser=async function(){
     const balance=document.getElementById('cu-balance').value;
     const isReseller=document.getElementById('cu-reseller').checked;
     const isAffiliate=document.getElementById('cu-affiliate').checked;
-    if(!name) return alert('Nama wajib diisi!');
+    if(!name) return showToast('Nama wajib diisi!','error');
     const r=await api('/api/admin/users/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,balance,isReseller,isAffiliate})});
     const d=await r.json();
-    if(d.success){alert(d.message);document.querySelector('.fixed.inset-0')?.remove();loadTab('users');}
-    else alert(d.message||'Gagal');
+    if(d.success){showToast(d.message);document.querySelector('.fixed.inset-0')?.remove();loadTab('users');}
+    else showToast(d.message||'Gagal','error');
 };
 
 window.showCreateAffiliateModal=function(){
@@ -907,16 +1021,15 @@ window.createAffiliate=async function(){
     const name=document.getElementById('ca-name').value.trim();
     const balance=document.getElementById('ca-balance').value;
     const commissionPercent=document.getElementById('ca-comm').value;
-    if(!name) return alert('Nama wajib diisi!');
+    if(!name) return showToast('Nama wajib diisi!','error');
     const r=await api('/api/admin/affiliate/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,balance,commissionPercent})});
     const d=await r.json();
-    if(d.success){alert(d.message);document.querySelector('.fixed.inset-0')?.remove();loadTab('affiliate');}
-    else alert(d.message||'Gagal');
+    if(d.success){showToast(d.message);document.querySelector('.fixed.inset-0')?.remove();loadTab('affiliate');}
+    else showToast(d.message||'Gagal','error');
 };
 window.setAffiliateBalance=async function(rid){
     const amt=prompt('Edit saldo komisi (masukkan nominal baru):');
     if(amt&&!isNaN(parseInt(amt))){
-        // Get current user balance, set new affiliateBalance
         const users=await api('/api/admin/users').then(r=>r.json());
         const u=users.find(x=>x.randomId===rid);
         const currentBalance=u?u.balance:0;
@@ -924,27 +1037,76 @@ window.setAffiliateBalance=async function(rid){
         loadTab('affiliate');
     }
 };
-window.editUser=async function(rid){
-    const p=prompt('Format: Nama,Saldo,Komisi (contoh: Nama Baru,50000,10000)\nKosongkan jika tidak ingin mengubah.');
-    if(p){
-        const parts=p.split(',');
-        await api('/api/admin/users/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid,name:parts[0]||'',balance:parts[1]?parseInt(parts[1]):undefined,affiliateBalance:parts[2]?parseInt(parts[2]):undefined})});
-        loadTab('users');
-    }
+// ==================== PAGINATION FUNCTIONS ====================
+window.paginateUsers=function(page){
+    if(page<1) return;
+    pagState.users.page=page;
+    loadTab('users');
+};
+window.paginateOrders=function(page){
+    if(page<1) return;
+    pagState.orders.page=page;
+    loadTab('orders');
+};
+// ==================== EDIT USER MODAL ====================
+window.showEditUserModal=async function(rid){
+    const users=await api('/api/admin/users').then(r=>r.json());
+    const u=users.find(x=>x.randomId===rid);
+    if(!u) return showToast('User tidak ditemukan','error');
+    const div=document.createElement('div');
+    div.className='fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4';
+    div.onclick=function(e){if(e.target===this)this.remove()};
+    div.innerHTML=`<div class="card p-6 max-w-sm w-full">
+        <h3 class="font-bold text-white mb-1">Edit User</h3>
+        <p class="text-[10px] text-slate-400 mb-4"><code class="text-violet-300">${u.randomId}</code></p>
+        <input type="text" id="eu-name" class="input-dark mb-2" placeholder="Nama" value="${(u.firstName||'').replace(/"/g,'&quot;')}">
+        <input type="number" id="eu-balance" class="input-dark mb-2" placeholder="Saldo" value="${u.balance||0}">
+        <input type="number" id="eu-aff-balance" class="input-dark mb-4" placeholder="Saldo Komisi" value="${u.affiliateBalance||0}">
+        <button onclick="saveEditUser('${rid}')" class="btn-primary w-full mb-2">Simpan</button>
+        <button onclick="this.closest('.fixed').remove()" class="text-xs text-slate-400 w-full">Batal</button>
+    </div>`;
+    document.body.appendChild(div);
+    setTimeout(()=>document.getElementById('eu-name')?.focus(),100);
+};
+window.saveEditUser=async function(rid){
+    const name=document.getElementById('eu-name').value.trim();
+    const balance=parseInt(document.getElementById('eu-balance').value)||0;
+    const affBalance=parseInt(document.getElementById('eu-aff-balance').value)||0;
+    const r=await api('/api/admin/users/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid,name,balance,affiliateBalance:affBalance})});
+    const d=await r.json();
+    if(d.success){showToast('User berhasil diperbarui!');document.querySelector('.fixed.inset-0')?.remove();loadTab('users');}
+    else showToast(d.message||'Gagal','error');
+};
+// ==================== USER SEARCH MODAL ====================
+window.showUserSearchModal=function(){
+    const div=document.createElement('div');
+    div.className='fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4';
+    div.onclick=function(e){if(e.target===this)this.remove()};
+    div.innerHTML=`<div class="card p-6 max-w-lg w-full">
+        <h3 class="font-bold text-white mb-4">Cari User</h3>
+        <input type="text" id="userSearchInput" placeholder="Cari nama atau ID..." class="input-dark mb-3" oninput="window.filterUserTable(this.value)">
+        <div id="userSearchResults" class="max-h-60 overflow-y-auto text-sm"></div>
+        <button onclick="this.closest('.fixed').remove()" class="text-xs text-slate-400 w-full mt-2">Tutup</button>
+    </div>`;
+    document.body.appendChild(div);
+    setTimeout(()=>document.getElementById('userSearchInput')?.focus(),100);
 };
 
 window.approveAffiliate=async function(rid){
     if(!confirm('Setujui affiliate ini?')) return;
     await api('/api/admin/affiliate/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid})});
+    showToast('Affiliate disetujui!');
     loadTab('affiliate');
 };
 window.rejectAffiliate=async function(rid){
     const r=prompt('Alasan penolakan:');
     await api('/api/admin/affiliate/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid,reason:r||''})});
+    showToast('Affiliate ditolak!');
     loadTab('affiliate');
 };
 window.togglePPOB=async function(rid){
     await api('/api/admin/affiliate/toggle-ppob',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid})});
+    showToast('Status PPOB diubah!');
     loadTab('affiliate');
 };
 window.addAffiliateBalance=async function(rid){
@@ -957,17 +1119,18 @@ window.addAffiliateBalance=async function(rid){
 window.processWd=async function(id,st){
     if(!confirm(`Proses withdraw menjadi ${st}?`)) return;
     await api('/api/admin/withdraw/process',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status:st})});
+    showToast(`Withdraw diubah menjadi ${st}`);
     loadTab('withdraw');
 };
 window.sendBroadcast=async function(){
     const m=document.getElementById('bc-msg').value.trim();
-    if(!m) return alert('Pesan kosong!');
+    if(!m) return showToast('Pesan kosong!','error');
     document.querySelector('#tab-content button').disabled=true;
     try {
         const r=await api('/api/admin/broadcast',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m})});
         const d=await r.json();
-        alert(d.message);
-    } catch(e){ alert('Gagal: '+e.message); }
+        showToast(d.message);
+    } catch(e){ showToast('Gagal: '+e.message,'error'); }
     loadTab('broadcast');
 };
 window.editAffiliate=async function(rid,comm,markup,banned){
@@ -977,41 +1140,44 @@ window.editAffiliate=async function(rid,comm,markup,banned){
         if(parts.length>=3){
             const b={randomId:rid,commissionPercent:parseInt(parts[0]),maxMarkup:parseInt(parts[1]),isBanned:parts[2].trim()==='true',bannedReason:parts[3]||''};
             await api('/api/admin/affiliate/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+            showToast('Affiliate diperbarui!');
             loadTab('affiliate');
-        } else alert('Format salah!');
+        } else showToast('Format salah!','error');
     }
 };
 
 window.forceOrderStatus=async function(id,status){
     if(!confirm(`Ubah status order ${id} menjadi ${status}?`)) return;
     await api('/api/admin/order/force-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status})});
+    showToast(`Order ${id} diubah ke ${status}`);
     loadTab('orders');
 };
 window.refreshProducts=async function(){
     const btn=event.target;btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>';
     try {
-        await fetch('/api/mixed-products'); // force refresh
+        await fetch('/api/mixed-products');
+        showToast('Produk di-refresh!');
         loadTab('products');
-    } catch(e){ alert('Gagal refresh'); }
+    } catch(e){ showToast('Gagal refresh','error'); }
     btn.disabled=false;
 };
 window.saveBadges=async function(){
     try {
         const data=JSON.parse(document.getElementById('badgeData').value);
         await api('/api/admin/badge-settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-        alert('Badge disimpan!');
-    } catch(e){ alert('JSON tidak valid: '+e.message); }
+        showToast('Badge disimpan!');
+    } catch(e){ showToast('JSON tidak valid: '+e.message,'error'); }
 };
 
 window.changePin=async function(){
     const oldPin=document.getElementById('oldPin')?.value||currentPin;
     const newPin=document.getElementById('newPin').value;
     const confirmPin=document.getElementById('confirmPin').value;
-    if(!newPin||newPin.length<4) return alert('PIN minimal 4 karakter');
-    if(newPin!==confirmPin) return alert('PIN tidak cocok');
+    if(!newPin||newPin.length<4) return showToast('PIN minimal 4 karakter','error');
+    if(newPin!==confirmPin) return showToast('PIN tidak cocok','error');
     const r=await api('/api/admin/change-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldPin,newPin})});
     const d=await r.json();
-    if(d.success){alert('PIN berhasil diganti!');currentAuth=adminUsername+':'+newPin;} else alert(d.message||'Gagal ganti PIN');
+    if(d.success){showToast('PIN berhasil diganti!');currentAuth=adminUsername+':'+newPin;} else showToast(d.message||'Gagal ganti PIN','error');
 };
 
 window.saveGroups=async function(){
@@ -1022,15 +1188,15 @@ window.saveGroups=async function(){
     });
     const r=await api('/api/admin/save-groups',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({groupIds})});
     const d=await r.json();
-    alert(d.success?'Grup berhasil disimpan!':(d.message||'Gagal'));
+    showToast(d.success?'Grup berhasil disimpan!':(d.message||'Gagal'));
 };
 
 window.testGroup=async function(groupId){
     const inp=document.getElementById(`grp-${groupId}`);
-    if(!inp.value.trim()) return alert('Isi ID grup terlebih dahulu');
+    if(!inp.value.trim()) return showToast('Isi ID grup terlebih dahulu','error');
     const r=await api('/api/admin/test-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({groupId:inp.value.trim()})});
     const d=await r.json();
-    alert(d.success?'Pesan test terkirim!':(d.message||'Gagal'));
+    showToast(d.success?'Pesan test terkirim!':(d.message||'Gagal'));
 };
 
 // API Test Functions
@@ -1056,35 +1222,35 @@ window.saveTestimoni=async function(){
     const service=document.getElementById('tm-service').value.trim();
     const rating=parseInt(document.getElementById('tm-rating').value)||5;
     const content=document.getElementById('tm-content').value.trim();
-    if(!name||!content) return alert('Nama dan testimoni wajib diisi');
+    if(!name||!content) return showToast('Nama dan testimoni wajib diisi','error');
     const r=await api('/api/admin/testimonials',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,service,rating,content})});
     const d=await r.json();
-    alert(d.message);
+    showToast(d.message);
     if(d.success){document.getElementById('tm-name').value='';document.getElementById('tm-service').value='';document.getElementById('tm-content').value='';}
     loadTab('testimoni');
 };
 window.toggleTestimoni=async function(id){
     const r=await api('/api/admin/testimonials').then(r=>r.json());
     const t=(r.testimonials||[]).find(x=>x.id===id);
-    if(!t) return alert('Testimoni tidak ditemukan');
+    if(!t) return showToast('Testimoni tidak ditemukan','error');
     const newVal=t.approved!==false?false:true;
     const r2=await api('/api/admin/testimonials/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({approved:newVal})});
     const d=await r2.json();
-    alert(d.message);
+    showToast(d.message);
     loadTab('testimoni');
 };
 window.deleteTestimoni=async function(id){
     if(!confirm('Hapus testimoni ini?')) return;
     const r=await api('/api/admin/testimonials/'+id,{method:'DELETE'});
     const d=await r.json();
-    alert(d.message);
+    showToast(d.message);
     loadTab('testimoni');
 };
 window.seedTestimoni=async function(){
-    if(!confirm('Tambahkan 10 testimoni dummy? Testimoni yang sudah ada TIDAK akan dihapus.')) return;
+    if(!confirm('Tambahkan 10 testimoni dummy?')) return;
     const r=await api('/api/admin/testimonials/seed',{method:'POST'});
     const d=await r.json();
-    alert(d.message);
+    showToast(d.message);
     loadTab('testimoni');
 };
 // Panel functions
@@ -1114,23 +1280,23 @@ window.savePanelProduct = async function(){
         shortDesc: document.getElementById('ap-short-desc').value.trim(),
         description: document.getElementById('ap-desc').value.trim()
     };
-    if (!data.name) return alert('Nama produk wajib diisi!');
+    if (!data.name) return showToast('Nama produk wajib diisi!','error');
     let url = '/api/admin/panel/products';
     if (editingPanelId) {
         const r = await api(url + '/' + editingPanelId, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
         const d = await r.json();
-        alert(d.message);
+        showToast(d.message);
     } else {
         const r = await api(url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
         const d = await r.json();
-        alert(d.message);
+        showToast(d.message);
     }
     loadTab('panel');
 };
 window.editPanelProduct = async function(id){
     const r = await api('/api/admin/panel/products').then(r=>r.json());
     const p = (r.products||[]).find(x=>x.id===id);
-    if (!p) return alert('Produk tidak ditemukan');
+    if (!p) return showToast('Produk tidak ditemukan','error');
     editingPanelId = id;
     document.getElementById('ap-name').value = p.name||'';
     document.getElementById('ap-price').value = p.price||0;
@@ -1151,7 +1317,7 @@ window.deletePanelProduct = async function(id){
     if (!confirm('Hapus produk panel ini?')) return;
     const r = await api('/api/admin/panel/products/' + id, {method:'DELETE'});
     const d = await r.json();
-    alert(d.message);
+    showToast(d.message);
     loadTab('panel');
 };
 window.deliverPanel = function(id){
@@ -1167,11 +1333,11 @@ window.confirmDeliverPanel = async function(){
     const url = document.getElementById('dp-url').value.trim();
     const email = document.getElementById('dp-email').value.trim();
     const password = document.getElementById('dp-pass').value.trim();
-    if (!url || !email || !password) return alert('URL, Email, dan Password wajib diisi');
+    if (!url || !email || !password) return showToast('URL, Email, dan Password wajib diisi','error');
     if (!confirm('Kirim panel ini ke pembeli?')) return;
     const r = await api('/api/admin/panel/deliver/' + deliveringPanelId, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,email,password})});
     const d = await r.json();
-    alert(d.message);
+    showToast(d.message);
     document.getElementById('deliverPanelForm').style.display = 'none';
     loadTab('panel');
 };
@@ -1191,5 +1357,14 @@ window.saveBanners=async function(){
     rows.forEach(r=>{const img=r.querySelector('.b-img').value.trim(),link=r.querySelector('.b-link').value.trim();if(img)banners.push({image:img,link:link});});
     const res=await api('/api/admin/banners',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({banners})});
     const d=await res.json();
-    alert(d.success?'Banner disimpan!':'Gagal');
+    showToast(d.success?'Banner disimpan!':'Gagal');
+};
+// ==================== DATABASE RESET ====================
+window.resetDatabase=async function(){
+    if(!confirm('⚠️ RESET DATABASE? Semua data akan hilang!')) return;
+    if(!confirm('⚠️⚠️ Yakin benar? Data TIDAK bisa dikembalikan!')) return;
+    const r=await fetch('/api/admin/database/reset',{method:'POST'});
+    const d=await r.json();
+    showToast(d.message||'Database di-reset!');
+    loadTab('database');
 };
