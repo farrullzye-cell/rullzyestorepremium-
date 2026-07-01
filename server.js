@@ -359,6 +359,13 @@ app.get('/api/admin/config', (req, res) => {
     if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
     res.json(getConfig());
 });
+app.post('/api/admin/test-email', async (req, res) => {
+    if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
+    const { to } = req.body;
+    if (!to) return res.json({ success: false, message: 'Email tujuan wajib diisi.' });
+    const ok = await sendEmail(to, 'Test Email — Rullzye Store', '<h2 style="color:#a78bfa">Test Berhasil!</h2><p style="color:#e2e8f0">Konfigurasi SMTP berfungsi dengan baik.</p>');
+    res.json({ success: ok, message: ok ? 'Email test terkirim!' : 'Gagal kirim email. Cek konfigurasi SMTP.' });
+});
 
 // ================= ADMIN: EXPORT DATABASE =================
 app.get('/api/admin/database/export/:type', async (req, res) => {

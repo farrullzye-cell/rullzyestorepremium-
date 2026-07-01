@@ -585,6 +585,8 @@ async function loadTab(tab){
                     <input type="text" id="cfg-smtp-user" class="input-dark" placeholder="Email / Username" value="${cfg.smtpUser||''}"></div>
                     <input type="password" id="cfg-smtp-pass" class="input-dark mb-2" placeholder="Password / App Password" value="${cfg.smtpPass||''}">
                     <input type="text" id="cfg-smtp-from" class="input-dark" placeholder="Nama Pengirim (optional)" value="${cfg.smtpFrom||''}">
+                    <div class="flex gap-2 mt-3"><input type="email" id="cfg-test-email-to" class="input-dark flex-1" placeholder="email tujuan test">
+                    <button onclick="testEmail()" class="bg-emerald-600 px-4 py-2 rounded-xl text-xs font-bold text-white hover:bg-emerald-500"><i class="fa-solid fa-paper-plane mr-1"></i>Test</button></div>
                 </div>
                 <div class="card p-5 md:col-span-2"><h3 class="font-bold text-rose-400 mb-3 text-sm"><i class="fa-solid fa-credit-card mr-2"></i>API Games (Cek Nickname)</h3>
                     <div class="grid grid-cols-2 gap-2"><input type="text" id="cfg-api-merchant" class="input-dark" placeholder="Merchant ID" value="${cfg.apigamesMerchantId||''}">
@@ -1175,6 +1177,15 @@ window.saveBadges=async function(){
     } catch(e){ showToast('JSON tidak valid: '+e.message,'error'); }
 };
 
+async function testEmail(){
+    const to = document.getElementById('cfg-test-email-to')?.value.trim();
+    if (!to) return showToast('Masukkan email tujuan test','error');
+    try {
+        const res = await api('/api/admin/test-email', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to})});
+        const d = await res.json();
+        showToast(d.message || (d.success ? 'Terkirim!' : 'Gagal'));
+    } catch(e) { showToast('Gagal: '+e.message,'error'); }
+}
 window.changePin=async function(){
     const oldPin=document.getElementById('oldPin')?.value||currentPin;
     const newPin=document.getElementById('newPin').value;
