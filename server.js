@@ -100,6 +100,14 @@ const savePromos = async (data) => { try { await axios.put(`${FIREBASE_URL}/prom
 const sendEmail = async (to, subject, html) => {
     try {
         const c = getConfig();
+        if (c.emailProvider === 'resend' && c.resendKey) {
+            const se = c.senderEmail || 'onboarding@resend.dev';
+            const resp = await axios.post('https://api.resend.com/emails', {
+                from: `${c.smtpFrom||'Rullzye Store'} <${se}>`,
+                to: [to], subject, html
+            }, { headers: { 'Authorization': `Bearer ${c.resendKey}`, 'Content-Type': 'application/json' }, timeout: 15000 });
+            return true;
+        }
         if (c.emailProvider === 'brevo' && c.brevoKey) {
             const senderEmail = c.senderEmail || c.smtpUser || 'noreply@rullzyestore.com';
             const resp = await axios.post('https://api.brevo.com/v3/smtp/email', {
@@ -377,9 +385,17 @@ app.get('/api/admin/config', (req, res) => {
 });
 app.post('/api/admin/test-email', async (req, res) => {
     if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
-    const { to, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, emailProvider, brevoKey, senderEmail } = req.body;
+    const { to, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, emailProvider, brevoKey, resendKey, senderEmail } = req.body;
     if (!to) return res.json({ success: false, message: 'Email tujuan wajib diisi.' });
     try {
+        if (emailProvider === 'resend' && resendKey) {
+            const se = senderEmail || 'onboarding@resend.dev';
+            await axios.post('https://api.resend.com/emails', {
+                from: `${smtpFrom||'Rullzye Store'} <${se}>`,
+                to: [to], subject: 'Test Email — Rullzye Store', html: '<h2 style="color:#a78bfa">✓ Test Berhasil!</h2><p style="color:#e2e8f0">Resend berfungsi dengan baik.</p>'
+            }, { headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' }, timeout: 15000 });
+            return res.json({ success: true, message: 'Email test terkirim via Resend!' });
+        }
         if (emailProvider === 'brevo' && brevoKey) {
             const se = senderEmail || smtpUser || 'noreply@rullzyestore.com';
             const resp = await axios.post('https://api.brevo.com/v3/smtp/email', {

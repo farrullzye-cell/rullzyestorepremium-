@@ -581,9 +581,10 @@ async function loadTab(tab){
 
                 <div class="card p-5"><h3 class="font-bold text-sky-400 mb-3 text-sm"><i class="fa-solid fa-envelope mr-2"></i>Email (Kirim Akun)</h3>
                     <div class="flex gap-2 mb-2 items-center"><label class="text-[10px] font-bold text-slate-400">Metode:</label>
-                    <select id="cfg-email-provider" class="input-dark text-xs flex-1" onchange="document.getElementById('smtp-fields').style.display=this.value==='smtp'?'block':'none';document.getElementById('brevo-fields').style.display=this.value==='brevo'?'block':'none'">
-                        <option value="smtp" ${cfg.emailProvider!=='brevo'?'selected':''}>SMTP (Gmail, dll)</option>
-                        <option value="brevo" ${cfg.emailProvider==='brevo'?'selected':''}>Brevo API (Rekomendasi)</option>
+                    <select id="cfg-email-provider" class="input-dark text-xs flex-1" onchange="var v=this.value;document.getElementById('smtp-fields').style.display=v==='smtp'?'block':'none';document.getElementById('brevo-fields').style.display=v==='brevo'?'block':'none';document.getElementById('resend-fields').style.display=v==='resend'?'block':'none'">
+                        <option value="smtp" ${cfg.emailProvider==='smtp'||!cfg.emailProvider?'selected':''}>SMTP (Gmail, Brevo SMTP)</option>
+                        <option value="brevo" ${cfg.emailProvider==='brevo'?'selected':''}>Brevo API</option>
+                        <option value="resend" ${cfg.emailProvider==='resend'?'selected':''}>Resend.com ⭐</option>
                     </select></div>
                     <div id="smtp-fields" style="display:${cfg.emailProvider==='brevo'?'none':'block'}">
                         <input type="text" id="cfg-smtp-host" class="input-dark mb-2" placeholder="SMTP Host (ex: smtp.gmail.com)" value="${cfg.smtpHost||''}">
@@ -593,7 +594,11 @@ async function loadTab(tab){
                     </div>
                     <div id="brevo-fields" style="display:${cfg.emailProvider==='brevo'?'block':'none'}">
                         <input type="password" id="cfg-brevo-key" class="input-dark mb-2" placeholder="Brevo API Key (v3)" value="${cfg.brevoKey||''}">
-                        <p class="text-[9px] text-slate-500">Daftar gratis di <a href="https://brevo.com" target="_blank" class="text-violet-400 underline">brevo.com</a> → SMTP & API → API Keys → Buat key baru</p>
+                        <p class="text-[9px] text-slate-500">Daftar gratis di <a href="https://brevo.com" target="_blank" class="text-violet-400 underline">brevo.com</a> → SMTP & API → API Keys</p>
+                    </div>
+                    <div id="resend-fields" style="display:${cfg.emailProvider==='resend'?'block':'none'}">
+                        <input type="password" id="cfg-resend-key" class="input-dark mb-2" placeholder="Resend API Key" value="${cfg.resendKey||''}">
+                        <p class="text-[9px] text-slate-500">Daftar gratis di <a href="https://resend.com" target="_blank" class="text-violet-400 underline">resend.com</a> → API Keys → Buat key baru. <b>Tanpa verifikasi domain bisa pake <code>onboarding@resend.dev</code></b></p>
                     </div>
                     <input type="text" id="cfg-smtp-from" class="input-dark" placeholder="Nama Pengirim (optional)" value="${cfg.smtpFrom||''}">
                     <input type="email" id="cfg-sender-email" class="input-dark" placeholder="Email Pengirim (verified di Brevo)" value="${cfg.senderEmail||''}">
@@ -955,6 +960,7 @@ async function saveConfig() {
             smtpUser: document.getElementById('cfg-smtp-user')?.value||'',
             smtpPass: document.getElementById('cfg-smtp-pass')?.value||'',
             brevoKey: document.getElementById('cfg-brevo-key')?.value||'',
+            resendKey: document.getElementById('cfg-resend-key')?.value||'',
             senderEmail: document.getElementById('cfg-sender-email')?.value||'',
             smtpFrom: document.getElementById('cfg-smtp-from')?.value||'',
             firebaseConfig: {
@@ -1197,8 +1203,9 @@ async function testEmail(){
     if (!to) return showToast('Masukkan email tujuan test','error');
     const emailProvider = document.getElementById('cfg-email-provider')?.value||'smtp';
     const brevoKey = document.getElementById('cfg-brevo-key')?.value||'';
+    const resendKey = document.getElementById('cfg-resend-key')?.value||'';
     const config = {
-        to, emailProvider, brevoKey,
+        to, emailProvider, brevoKey, resendKey,
         smtpHost: document.getElementById('cfg-smtp-host')?.value||'',
         smtpPort: document.getElementById('cfg-smtp-port')?.value||'587',
         smtpUser: document.getElementById('cfg-smtp-user')?.value||'',
@@ -1206,11 +1213,9 @@ async function testEmail(){
         smtpFrom: document.getElementById('cfg-smtp-from')?.value||'',
         senderEmail: document.getElementById('cfg-sender-email')?.value||''
     };
-    if (emailProvider === 'brevo') {
-        if (!brevoKey) return showToast('Isi Brevo API Key dulu','error');
-    } else {
-        if (!config.smtpHost || !config.smtpUser || !config.smtpPass) return showToast('Isi SMTP Host, Email, dan Password dulu','error');
-    }
+    if (emailProvider === 'brevo' && !brevoKey) return showToast('Isi Brevo API Key dulu','error');
+    if (emailProvider === 'resend' && !resendKey) return showToast('Isi Resend API Key dulu','error');
+    if (emailProvider === 'smtp' && (!config.smtpHost || !config.smtpUser || !config.smtpPass)) return showToast('Isi SMTP Host, Email, dan Password dulu','error');
     try {
         const res = await api('/api/admin/test-email', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)});
         const d = await res.json();
