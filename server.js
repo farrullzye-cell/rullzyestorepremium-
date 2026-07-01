@@ -97,13 +97,24 @@ const savePanelOrders = async (data) => { try { await axios.put(`${FIREBASE_URL}
 
 const getPromos = async () => { try { const r = await axios.get(`${FIREBASE_URL}/promos.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const savePromos = async (data) => { try { await axios.put(`${FIREBASE_URL}/promos.json`, data); } catch(e) {} };
-const createMailTransport = () => {
-    const c = getConfig();
-    if (!c.smtpHost || !c.smtpUser || !c.smtpPass) return null;
-    return nodemailer.createTransport({ host: c.smtpHost, port: parseInt(c.smtpPort)||587, secure: parseInt(c.smtpPort)===465, auth: { user: c.smtpUser, pass: c.smtpPass }, tls: { rejectUnauthorized: false }, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000 });
-};
 const sendEmail = async (to, subject, html) => {
-    try { const c = getConfig(); const t = createMailTransport(); if (!t) return false; const from = c.smtpFrom ? `"${c.smtpFrom}" <${c.smtpUser}>` : c.smtpUser; await t.sendMail({ from, to, subject, html }); return true; } catch(e) { console.error('Email error:', e.message); return false; }
+    try {
+        const c = getConfig();
+        if (c.emailProvider === 'brevo' && c.brevoKey) {
+            await axios.post('https://api.brevo.com/v3/smtp/email', {
+                sender: { name: c.smtpFrom||'Rullzye Store', email: c.smtpUser||'noreply@rullzyestore.com' },
+                to: [{ email: to }], subject, htmlContent: html
+            }, { headers: { 'api-key': c.brevoKey, 'Content-Type': 'application/json' }, timeout: 15000 });
+            return true;
+        }
+        if (c.smtpHost && c.smtpUser && c.smtpPass) {
+            const t = nodemailer.createTransport({ host: c.smtpHost, port: parseInt(c.smtpPort)||587, secure: parseInt(c.smtpPort)===465, auth: { user: c.smtpUser, pass: c.smtpPass }, tls: { rejectUnauthorized: false }, connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 20000 });
+            const from = c.smtpFrom ? `"${c.smtpFrom}" <${c.smtpUser}>` : c.smtpUser;
+            await t.sendMail({ from, to, subject, html });
+            return true;
+        }
+        return false;
+    } catch(e) { console.error('Email error:', e.message); return false; }
 };
 
 const getPremkuBasePrice = async (productId) => {
@@ -361,11 +372,18 @@ app.get('/api/admin/config', (req, res) => {
 });
 app.post('/api/admin/test-email', async (req, res) => {
     if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
-    const { to, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom } = req.body;
+    const { to, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, emailProvider, brevoKey } = req.body;
     if (!to) return res.json({ success: false, message: 'Email tujuan wajib diisi.' });
-    if (!smtpHost || !smtpUser || !smtpPass) return res.json({ success: false, message: 'SMTP Host, User, dan Password wajib diisi.' });
     try {
-        const t = nodemailer.createTransport({ host: smtpHost, port: parseInt(smtpPort)||587, secure: parseInt(smtpPort)===465, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false }, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000 });
+        if (emailProvider === 'brevo' && brevoKey) {
+            await axios.post('https://api.brevo.com/v3/smtp/email', {
+                sender: { name: smtpFrom||'Rullzye Store', email: smtpUser||'noreply@rullzyestore.com' },
+                to: [{ email: to }], subject: 'Test Email — Rullzye Store', htmlContent: '<h2 style="color:#a78bfa">✓ Test Berhasil!</h2><p style="color:#e2e8f0">Konfigurasi Email via Brevo berfungsi dengan baik.</p>'
+            }, { headers: { 'api-key': brevoKey, 'Content-Type': 'application/json' }, timeout: 15000 });
+            return res.json({ success: true, message: 'Email test terkirim via Brevo!' });
+        }
+        if (!smtpHost || !smtpUser || !smtpPass) return res.json({ success: false, message: 'Isi SMTP Host, Email, Password atau pake Brevo.' });
+        const t = nodemailer.createTransport({ host: smtpHost, port: parseInt(smtpPort)||587, secure: parseInt(smtpPort)===465, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false }, connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 20000 });
         const from = smtpFrom ? `"${smtpFrom}" <${smtpUser}>` : smtpUser;
         await t.sendMail({ from, to, subject: 'Test Email — Rullzye Store', html: '<h2 style="color:#a78bfa">✓ Test Berhasil!</h2><p style="color:#e2e8f0">Konfigurasi SMTP berfungsi dengan baik.</p>' });
         res.json({ success: true, message: 'Email test terkirim! Cek inbox/spam.' });

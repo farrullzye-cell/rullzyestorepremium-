@@ -579,11 +579,22 @@ async function loadTab(tab){
                     <input type="text" id="cfg-flow-key" class="input-dark" placeholder="API Key" value="${cfg.flowixApiKey||''}">
                 </div>
 
-                <div class="card p-5"><h3 class="font-bold text-sky-400 mb-3 text-sm"><i class="fa-solid fa-envelope mr-2"></i>SMTP Email (Kirim Akun)</h3>
-                    <input type="text" id="cfg-smtp-host" class="input-dark mb-2" placeholder="SMTP Host (ex: smtp.gmail.com)" value="${cfg.smtpHost||''}">
-                    <div class="grid grid-cols-2 gap-2 mb-2"><input type="text" id="cfg-smtp-port" class="input-dark" placeholder="Port (587)" value="${cfg.smtpPort||'587'}">
-                    <input type="text" id="cfg-smtp-user" class="input-dark" placeholder="Email / Username" value="${cfg.smtpUser||''}"></div>
-                    <input type="password" id="cfg-smtp-pass" class="input-dark mb-2" placeholder="Password / App Password" value="${cfg.smtpPass||''}">
+                <div class="card p-5"><h3 class="font-bold text-sky-400 mb-3 text-sm"><i class="fa-solid fa-envelope mr-2"></i>Email (Kirim Akun)</h3>
+                    <div class="flex gap-2 mb-2 items-center"><label class="text-[10px] font-bold text-slate-400">Metode:</label>
+                    <select id="cfg-email-provider" class="input-dark text-xs flex-1" onchange="document.getElementById('smtp-fields').style.display=this.value==='smtp'?'block':'none';document.getElementById('brevo-fields').style.display=this.value==='brevo'?'block':'none'">
+                        <option value="smtp" ${cfg.emailProvider!=='brevo'?'selected':''}>SMTP (Gmail, dll)</option>
+                        <option value="brevo" ${cfg.emailProvider==='brevo'?'selected':''}>Brevo API (Rekomendasi)</option>
+                    </select></div>
+                    <div id="smtp-fields" style="display:${cfg.emailProvider==='brevo'?'none':'block'}">
+                        <input type="text" id="cfg-smtp-host" class="input-dark mb-2" placeholder="SMTP Host (ex: smtp.gmail.com)" value="${cfg.smtpHost||''}">
+                        <div class="grid grid-cols-2 gap-2 mb-2"><input type="text" id="cfg-smtp-port" class="input-dark" placeholder="Port (587)" value="${cfg.smtpPort||'587'}">
+                        <input type="text" id="cfg-smtp-user" class="input-dark" placeholder="Email / Username" value="${cfg.smtpUser||''}"></div>
+                        <input type="password" id="cfg-smtp-pass" class="input-dark mb-2" placeholder="Password / App Password" value="${cfg.smtpPass||''}">
+                    </div>
+                    <div id="brevo-fields" style="display:${cfg.emailProvider==='brevo'?'block':'none'}">
+                        <input type="password" id="cfg-brevo-key" class="input-dark mb-2" placeholder="Brevo API Key (v3)" value="${cfg.brevoKey||''}">
+                        <p class="text-[9px] text-slate-500">Daftar gratis di <a href="https://brevo.com" target="_blank" class="text-violet-400 underline">brevo.com</a> → SMTP & API → API Keys → Buat key baru</p>
+                    </div>
                     <input type="text" id="cfg-smtp-from" class="input-dark" placeholder="Nama Pengirim (optional)" value="${cfg.smtpFrom||''}">
                     <div class="flex gap-2 mt-3"><input type="email" id="cfg-test-email-to" class="input-dark flex-1" placeholder="email tujuan test">
                     <button onclick="testEmail()" class="bg-emerald-600 px-4 py-2 rounded-xl text-xs font-bold text-white hover:bg-emerald-500"><i class="fa-solid fa-paper-plane mr-1"></i>Test</button></div>
@@ -937,10 +948,12 @@ async function saveConfig() {
             flowixApiKey: document.getElementById('cfg-flow-key').value,
             apigamesMerchantId: document.getElementById('cfg-api-merchant')?.value||'',
             apigamesSecretKey: document.getElementById('cfg-api-secret')?.value||'',
+            emailProvider: document.getElementById('cfg-email-provider')?.value||'smtp',
             smtpHost: document.getElementById('cfg-smtp-host')?.value||'',
             smtpPort: document.getElementById('cfg-smtp-port')?.value||'587',
             smtpUser: document.getElementById('cfg-smtp-user')?.value||'',
             smtpPass: document.getElementById('cfg-smtp-pass')?.value||'',
+            brevoKey: document.getElementById('cfg-brevo-key')?.value||'',
             smtpFrom: document.getElementById('cfg-smtp-from')?.value||'',
             firebaseConfig: {
                 apiKey: document.getElementById('cfg-fb-api')?.value||'',
@@ -1180,17 +1193,23 @@ window.saveBadges=async function(){
 async function testEmail(){
     const to = document.getElementById('cfg-test-email-to')?.value.trim();
     if (!to) return showToast('Masukkan email tujuan test','error');
-    const smtpConfig = {
-        to,
+    const emailProvider = document.getElementById('cfg-email-provider')?.value||'smtp';
+    const brevoKey = document.getElementById('cfg-brevo-key')?.value||'';
+    const config = {
+        to, emailProvider, brevoKey,
         smtpHost: document.getElementById('cfg-smtp-host')?.value||'',
         smtpPort: document.getElementById('cfg-smtp-port')?.value||'587',
         smtpUser: document.getElementById('cfg-smtp-user')?.value||'',
         smtpPass: document.getElementById('cfg-smtp-pass')?.value||'',
         smtpFrom: document.getElementById('cfg-smtp-from')?.value||''
     };
-    if (!smtpConfig.smtpHost || !smtpConfig.smtpUser || !smtpConfig.smtpPass) return showToast('Isi SMTP Host, Email, dan Password dulu','error');
+    if (emailProvider === 'brevo') {
+        if (!brevoKey) return showToast('Isi Brevo API Key dulu','error');
+    } else {
+        if (!config.smtpHost || !config.smtpUser || !config.smtpPass) return showToast('Isi SMTP Host, Email, dan Password dulu','error');
+    }
     try {
-        const res = await api('/api/admin/test-email', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(smtpConfig)});
+        const res = await api('/api/admin/test-email', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)});
         const d = await res.json();
         showToast(d.message || (d.success ? 'Terkirim!' : 'Gagal'));
     } catch(e) { showToast('Gagal: '+e.message,'error'); }
