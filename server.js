@@ -101,8 +101,9 @@ const sendEmail = async (to, subject, html) => {
     try {
         const c = getConfig();
         if (c.emailProvider === 'brevo' && c.brevoKey) {
-            await axios.post('https://api.brevo.com/v3/smtp/email', {
-                sender: { name: c.smtpFrom||'Rullzye Store', email: c.smtpUser||'noreply@rullzyestore.com' },
+            const senderEmail = c.senderEmail || c.smtpUser || 'noreply@rullzyestore.com';
+            const resp = await axios.post('https://api.brevo.com/v3/smtp/email', {
+                sender: { name: c.smtpFrom||'Rullzye Store', email: senderEmail },
                 to: [{ email: to }], subject, htmlContent: html
             }, { headers: { 'api-key': c.brevoKey, 'Content-Type': 'application/json' }, timeout: 15000 });
             return true;
@@ -114,7 +115,11 @@ const sendEmail = async (to, subject, html) => {
             return true;
         }
         return false;
-    } catch(e) { console.error('Email error:', e.message); return false; }
+    } catch(e) {
+        const detail = e.response?.data ? JSON.stringify(e.response.data) : e.message;
+        console.error('Email error:', detail);
+        return false;
+    }
 };
 
 const getPremkuBasePrice = async (productId) => {
@@ -372,12 +377,13 @@ app.get('/api/admin/config', (req, res) => {
 });
 app.post('/api/admin/test-email', async (req, res) => {
     if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
-    const { to, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, emailProvider, brevoKey } = req.body;
+    const { to, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, emailProvider, brevoKey, senderEmail } = req.body;
     if (!to) return res.json({ success: false, message: 'Email tujuan wajib diisi.' });
     try {
         if (emailProvider === 'brevo' && brevoKey) {
-            await axios.post('https://api.brevo.com/v3/smtp/email', {
-                sender: { name: smtpFrom||'Rullzye Store', email: smtpUser||'noreply@rullzyestore.com' },
+            const se = senderEmail || smtpUser || 'noreply@rullzyestore.com';
+            const resp = await axios.post('https://api.brevo.com/v3/smtp/email', {
+                sender: { name: smtpFrom||'Rullzye Store', email: se },
                 to: [{ email: to }], subject: 'Test Email — Rullzye Store', htmlContent: '<h2 style="color:#a78bfa">✓ Test Berhasil!</h2><p style="color:#e2e8f0">Konfigurasi Email via Brevo berfungsi dengan baik.</p>'
             }, { headers: { 'api-key': brevoKey, 'Content-Type': 'application/json' }, timeout: 15000 });
             return res.json({ success: true, message: 'Email test terkirim via Brevo!' });
@@ -388,8 +394,9 @@ app.post('/api/admin/test-email', async (req, res) => {
         await t.sendMail({ from, to, subject: 'Test Email — Rullzye Store', html: '<h2 style="color:#a78bfa">✓ Test Berhasil!</h2><p style="color:#e2e8f0">Konfigurasi SMTP berfungsi dengan baik.</p>' });
         res.json({ success: true, message: 'Email test terkirim! Cek inbox/spam.' });
     } catch(e) {
-        console.error('Test email error:', e.message);
-        res.json({ success: false, message: 'Gagal: ' + e.message });
+        const detail = e.response?.data ? JSON.stringify(e.response.data) : e.message;
+        console.error('Test email error:', detail);
+        res.json({ success: false, message: 'Gagal: ' + (e.response?.data?.message || e.message) });
     }
 });
 

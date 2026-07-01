@@ -596,6 +596,7 @@ async function loadTab(tab){
                         <p class="text-[9px] text-slate-500">Daftar gratis di <a href="https://brevo.com" target="_blank" class="text-violet-400 underline">brevo.com</a> → SMTP & API → API Keys → Buat key baru</p>
                     </div>
                     <input type="text" id="cfg-smtp-from" class="input-dark" placeholder="Nama Pengirim (optional)" value="${cfg.smtpFrom||''}">
+                    <input type="email" id="cfg-sender-email" class="input-dark" placeholder="Email Pengirim (verified di Brevo)" value="${cfg.senderEmail||''}">
                     <div class="flex gap-2 mt-3"><input type="email" id="cfg-test-email-to" class="input-dark flex-1" placeholder="email tujuan test">
                     <button onclick="testEmail()" class="bg-emerald-600 px-4 py-2 rounded-xl text-xs font-bold text-white hover:bg-emerald-500"><i class="fa-solid fa-paper-plane mr-1"></i>Test</button></div>
                 </div>
@@ -954,6 +955,7 @@ async function saveConfig() {
             smtpUser: document.getElementById('cfg-smtp-user')?.value||'',
             smtpPass: document.getElementById('cfg-smtp-pass')?.value||'',
             brevoKey: document.getElementById('cfg-brevo-key')?.value||'',
+            senderEmail: document.getElementById('cfg-sender-email')?.value||'',
             smtpFrom: document.getElementById('cfg-smtp-from')?.value||'',
             firebaseConfig: {
                 apiKey: document.getElementById('cfg-fb-api')?.value||'',
@@ -1201,7 +1203,8 @@ async function testEmail(){
         smtpPort: document.getElementById('cfg-smtp-port')?.value||'587',
         smtpUser: document.getElementById('cfg-smtp-user')?.value||'',
         smtpPass: document.getElementById('cfg-smtp-pass')?.value||'',
-        smtpFrom: document.getElementById('cfg-smtp-from')?.value||''
+        smtpFrom: document.getElementById('cfg-smtp-from')?.value||'',
+        senderEmail: document.getElementById('cfg-sender-email')?.value||''
     };
     if (emailProvider === 'brevo') {
         if (!brevoKey) return showToast('Isi Brevo API Key dulu','error');
