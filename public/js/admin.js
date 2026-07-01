@@ -1180,8 +1180,17 @@ window.saveBadges=async function(){
 async function testEmail(){
     const to = document.getElementById('cfg-test-email-to')?.value.trim();
     if (!to) return showToast('Masukkan email tujuan test','error');
+    const smtpConfig = {
+        to,
+        smtpHost: document.getElementById('cfg-smtp-host')?.value||'',
+        smtpPort: document.getElementById('cfg-smtp-port')?.value||'587',
+        smtpUser: document.getElementById('cfg-smtp-user')?.value||'',
+        smtpPass: document.getElementById('cfg-smtp-pass')?.value||'',
+        smtpFrom: document.getElementById('cfg-smtp-from')?.value||''
+    };
+    if (!smtpConfig.smtpHost || !smtpConfig.smtpUser || !smtpConfig.smtpPass) return showToast('Isi SMTP Host, Email, dan Password dulu','error');
     try {
-        const res = await api('/api/admin/test-email', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to})});
+        const res = await api('/api/admin/test-email', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(smtpConfig)});
         const d = await res.json();
         showToast(d.message || (d.success ? 'Terkirim!' : 'Gagal'));
     } catch(e) { showToast('Gagal: '+e.message,'error'); }
