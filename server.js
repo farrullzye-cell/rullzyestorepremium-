@@ -100,7 +100,7 @@ const savePromos = async (data) => { try { await axios.put(`${FIREBASE_URL}/prom
 const createMailTransport = () => {
     const c = getConfig();
     if (!c.smtpHost || !c.smtpUser || !c.smtpPass) return null;
-    return nodemailer.createTransport({ host: c.smtpHost, port: parseInt(c.smtpPort)||587, secure: parseInt(c.smtpPort)===465, auth: { user: c.smtpUser, pass: c.smtpPass }, tls: { rejectUnauthorized: false } });
+    return nodemailer.createTransport({ host: c.smtpHost, port: parseInt(c.smtpPort)||587, secure: parseInt(c.smtpPort)===465, auth: { user: c.smtpUser, pass: c.smtpPass }, tls: { rejectUnauthorized: false }, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000 });
 };
 const sendEmail = async (to, subject, html) => {
     try { const c = getConfig(); const t = createMailTransport(); if (!t) return false; const from = c.smtpFrom ? `"${c.smtpFrom}" <${c.smtpUser}>` : c.smtpUser; await t.sendMail({ from, to, subject, html }); return true; } catch(e) { console.error('Email error:', e.message); return false; }
@@ -365,7 +365,7 @@ app.post('/api/admin/test-email', async (req, res) => {
     if (!to) return res.json({ success: false, message: 'Email tujuan wajib diisi.' });
     if (!smtpHost || !smtpUser || !smtpPass) return res.json({ success: false, message: 'SMTP Host, User, dan Password wajib diisi.' });
     try {
-        const t = nodemailer.createTransport({ host: smtpHost, port: parseInt(smtpPort)||587, secure: parseInt(smtpPort)===465, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false } });
+        const t = nodemailer.createTransport({ host: smtpHost, port: parseInt(smtpPort)||587, secure: parseInt(smtpPort)===465, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false }, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000 });
         const from = smtpFrom ? `"${smtpFrom}" <${smtpUser}>` : smtpUser;
         await t.sendMail({ from, to, subject: 'Test Email — Rullzye Store', html: '<h2 style="color:#a78bfa">✓ Test Berhasil!</h2><p style="color:#e2e8f0">Konfigurasi SMTP berfungsi dengan baik.</p>' });
         res.json({ success: true, message: 'Email test terkirim! Cek inbox/spam.' });
