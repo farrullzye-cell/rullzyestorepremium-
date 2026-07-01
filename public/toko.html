@@ -336,9 +336,31 @@ function renderProducts() {
     }).join('');
 }
 
+// State untuk promo
+let promoData = null;
+let promoCache = [];
+
+async function loadPromos() {
+    try { const r = await fetch('/api/promos'); const d = await r.json(); promoCache = d.promos || []; } catch(e) { promoCache = []; }
+}
+
+function getPromoForProduct(productId, qty) {
+    const pid = productId.startsWith('PREMKU-') ? productId.replace('PREMKU-','') : productId;
+    return promoCache.find(p => {
+        const targetMatch = !p.targetProductIds?.length || p.targetProductIds.includes(productId) || p.targetProductIds.includes('PREMKU-'+pid);
+        let qtyMatch = true;
+        if (p.type === 'qty_discount') qtyMatch = p.tiers?.some(t => t.qty == qty);
+        else if (p.type === 'bogo_same') qtyMatch = qty >= 2;
+        else qtyMatch = qty >= 1;
+        return targetMatch && qtyMatch;
+    }) || null;
+}
+
 function openOrder(id, name, price, source) {
+    loadPromos();
     const modal = document.getElementById('orderModal');
     const needTarget = source === 'ppob' || source === 'game';
+    const qty = 1;
     modal.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-bg';
     modal.style.background = 'rgba(0,0,0,0.7)';
     modal.innerHTML = `
@@ -349,7 +371,24 @@ function openOrder(id, name, price, source) {
             </div>
             <div class="bg-white/5 rounded-xl p-3 mb-4 flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:var(--accent,#7c3aed)">${getIcon(name)}</div>
-                <div><p class="font-bold text-white text-sm">${name}</p><p class="text-xs font-black" style="color:var(--accent)">Rp ${price.toLocaleString('id-ID')}</p></div>
+                <div class="flex-1"><p class="font-bold text-white text-sm">${name}</p>
+                <p id="m-unit-price" class="text-xs font-black" style="color:var(--accent)">Rp ${price.toLocaleString('id-ID')}</p></div>
+            </div>
+            <div id="promo-banner" class="hidden mb-3 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-bold text-emerald-400 flex items-center gap-2"><i class="fa-solid fa-tag"></i><span id="promo-text"></span></div>
+            <div class="mb-3">
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jumlah</label>
+                <div class="flex items-center gap-3 mt-1">
+                    <button onclick="changeQty(-1,'${id.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}',${price},'${source}')" class="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition font-bold text-lg"><i class="fa-solid fa-minus text-xs"></i></button>
+                    <span id="m-qty" class="text-2xl font-black text-white w-8 text-center">1</span>
+                    <button onclick="changeQty(1,'${id.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}',${price},'${source}')" class="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition font-bold text-lg"><i class="fa-solid fa-plus text-xs"></i></button>
+                </div>
+            </div>
+            <div class="bg-white/5 rounded-xl p-3 mb-4 flex items-center justify-between">
+                <span class="text-xs text-slate-400 font-bold">Total</span>
+                <div class="text-right">
+                    <p id="m-total-original" class="text-xs text-slate-500 line-through hidden"></p>
+                    <p id="m-total" class="text-lg font-black" style="color:var(--accent,#7c3aed)">Rp ${price.toLocaleString('id-ID')}</p>
+                </div>
             </div>
             <div class="space-y-3">
                 <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Random ID Telegram</label>
@@ -357,35 +396,101 @@ function openOrder(id, name, price, source) {
                 ${needTarget ? `<div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nomor / UID Tujuan</label>
                 <input type="text" id="m-target" placeholder="08xxx / 12345" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white mt-1 outline-none focus:border-violet-500 transition-colors"></div>` : ''}
             </div>
-            <button onclick="submitOrder('${id}','${name.replace(/'/g,"\\'")}',${price},'${source}')"
+            <button id="btn-submit" onclick="submitOrder('${id}','${name.replace(/'/g,"\\'")}',${price},'${source}')"
                     class="relative w-full mt-4 py-3.5 rounded-2xl font-bold text-sm text-white overflow-hidden transition-all duration-300 hover:shadow-lg"
                     style="background:var(--accent,#7c3aed)">
                 <span class="relative z-10"><i class="fa-solid fa-lock mr-1"></i> Bayar Sekarang</span>
                 <span class="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity duration-300"></span>
             </button>
         </div>`;
+    // Hitung harga awal
+    setTimeout(() => recalcPrice('${id.replace(/'/g,"\\'")}', ${price}), 100);
 }
 
-async function submitOrder(id, name, price, source) {
+async function changeQty(delta, id, name, unitPrice, source) {
+    const el = document.getElementById('m-qty');
+    let qty = parseInt(el.innerText) + delta;
+    if (qty < 1) qty = 1;
+    if (qty > 10) qty = 10;
+    el.innerText = qty;
+    await recalcPrice(id, unitPrice);
+}
+
+async function recalcPrice(id, unitPrice) {
+    const qty = parseInt(document.getElementById('m-qty').innerText) || 1;
+    const promo = getPromoForProduct(id, qty);
+    const originalTotal = unitPrice * qty;
+    const totalEl = document.getElementById('m-total');
+    const origEl = document.getElementById('m-total-original');
+    const banner = document.getElementById('promo-banner');
+    const promoText = document.getElementById('promo-text');
+
+    if (promo) {
+        promoData = { promoId: promo.id, qty, originalTotal };
+        try {
+            const pid = id.startsWith('PREMKU-') ? id.replace('PREMKU-','') : id;
+            const r = await fetch('/api/calculate-price', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ productId: pid, quantity: qty, promoId: promo.id }) });
+            const d = await r.json();
+            if (d.success) {
+                totalEl.innerText = 'Rp ' + d.finalPrice.toLocaleString('id-ID');
+                origEl.classList.remove('hidden');
+                origEl.innerText = 'Rp ' + d.originalTotal.toLocaleString('id-ID');
+                banner.classList.remove('hidden');
+                const tipeLabel = promo.type === 'bogo_same' ? '🎁 BOGO — Bayar 1 Dapat 2!' : promo.type === 'bogo_diff' ? '🎁 BOGO — Gratis Produk Lain!' : '🏷️ ' + promo.name;
+                promoText.innerText = tipeLabel + ' — Hemat Rp ' + d.discountRp.toLocaleString('id-ID');
+                promoData.finalPrice = d.finalPrice;
+                promoData.discountRp = d.discountRp;
+                promoData.promoName = d.promoName;
+                return;
+            }
+        } catch(e) {}
+    }
+    promoData = null;
+    totalEl.innerText = 'Rp ' + originalTotal.toLocaleString('id-ID');
+    origEl.classList.add('hidden');
+    banner.classList.add('hidden');
+}
+
+async function submitOrder(id, name, unitPrice, source) {
     const rid = document.getElementById('m-rid')?.value.trim().toUpperCase();
     const target = document.getElementById('m-target')?.value.trim();
+    const qty = parseInt(document.getElementById('m-qty')?.innerText) || 1;
     if (!rid) return alert('Masukkan Random ID!');
     if ((source==='ppob'||source==='game') && !target) return alert('Masukkan nomor tujuan!');
 
-    let endpoint = '/api/order', body = { service: id.replace(/^(PREMKU|PPOB|TOPUP)-/,''), productName:name, displayPrice:price, randomId:rid, target:target||rid };
-    if (source==='ppob') { endpoint='/api/ppob-order'; body.productId=id.replace('PPOB-',''); body.target=target; }
+    const pid = id.startsWith('PREMKU-') ? id.replace('PREMKU-','') : id;
+    let finalPrice = unitPrice * qty;
+    let body;
+    let endpoint;
+
+    if (source === 'ppob') {
+        endpoint = '/api/ppob-order';
+        body = { productId: id.replace('PPOB-',''), productName: name, displayPrice: finalPrice, randomId: rid, target: target || rid };
+    } else {
+        endpoint = '/api/order';
+        body = { service: pid, productName: name, displayPrice: finalPrice, randomId: rid, target: target || rid, quantity: qty };
+        if (promoData && promoData.promoId && promoData.finalPrice) {
+            body.promoId = promoData.promoId;
+            body.originalTotal = promoData.originalTotal || (unitPrice * qty);
+            body.displayPrice = promoData.finalPrice;
+            body.quantity = qty;
+        }
+    }
 
     try {
         const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
         const data = await res.json();
         const modal = document.getElementById('orderModal');
         if (data.status && data.invoice) {
+            let extraInfo = '';
+            if (promoData && promoData.promoName) extraInfo = `<p class="text-[10px] text-emerald-400 font-bold mt-1">🏷️ ${promoData.promoName}</p>`;
             modal.querySelector('.glass-strong').innerHTML = `<div class="text-center fade-up">
                 <div class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style="background:var(--accent)"><i class="fa-solid fa-qrcode text-white text-xl"></i></div>
                 <h3 class="text-lg font-black text-white mb-1">Scan QRIS</h3>
                 <p class="text-xs text-slate-400 mb-4">Scan QR di bawah untuk membayar</p>
                 <img src="${data.invoice.qr_url}" class="w-44 h-44 mx-auto rounded-2xl border border-white/10 mb-3">
                 <p class="text-xl font-black text-white">Rp ${data.invoice.amount.toLocaleString('id-ID')}</p>
+                ${extraInfo}
                 <a href="${data.invoice.botLink}" target="_blank" class="block mt-4 py-3 rounded-xl text-sm font-bold text-white transition-all hover:shadow-lg" style="background:var(--accent)"><i class="fa-brands fa-telegram mr-1"></i>Konfirmasi via Bot</a>
                 <button onclick="document.getElementById('orderModal').className='fixed inset-0 z-50 hidden'" class="mt-3 text-xs text-slate-400 hover:text-white transition-colors">Tutup</button>
             </div>`;

@@ -94,6 +94,12 @@ const savePanelProducts = async (data) => { try { await axios.put(`${FIREBASE_UR
 const getPanelOrders = async () => { try { const r = await axios.get(`${FIREBASE_URL}/panel_orders.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const savePanelOrders = async (data) => { try { await axios.put(`${FIREBASE_URL}/panel_orders.json`, data); } catch(e) {} };
 
+const getPromos = async () => { try { const r = await axios.get(`${FIREBASE_URL}/promos.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
+const savePromos = async (data) => { try { await axios.put(`${FIREBASE_URL}/promos.json`, data); } catch(e) {} };
+const getPremkuBasePrice = async (productId) => {
+    try { const cfg = getConfig(); const r = await axios.post('https://premku.com/api/products', { api_key: cfg.apiKey }); const p = r.data?.products?.find(x => x.id == productId); return p ? parseInt(p.price) : null; } catch(e) { return null; }
+};
+
 const config = getConfig();
 let isProcessing = false;
 
@@ -832,17 +838,113 @@ app.post('/api/ppob-retry', async (req, res) => {
     }
 });
 
-// ================= 11. ROUTE ORDER HYBRID LAMA =================
+// ================= 11. PROMO API =================
+app.get('/api/promos', async (req, res) => {
+    try {
+        const all = await getPromos(); const now = Date.now();
+        const active = all.filter(p => p.active && new Date(p.startDate).getTime() <= now && new Date(p.endDate).getTime() >= now && p.usedCount < p.maxUses);
+        res.json({ success: true, promos: active });
+    } catch(e) { res.json({ success: false, promos: [] }); }
+});
+app.get('/api/admin/promos', async (req, res) => {
+    if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
+    res.json({ success: true, promos: await getPromos() });
+});
+app.post('/api/admin/promos', async (req, res) => {
+    if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
+    try {
+        let promos = await getPromos(); const p = req.body;
+        if (p.id) {
+            const idx = promos.findIndex(x => x.id === p.id);
+            if (idx !== -1) promos[idx] = { ...promos[idx], ...p };
+        } else {
+            p.id = 'PRM-' + Date.now().toString(36).toUpperCase();
+            p.createdAt = new Date().toISOString(); p.usedCount = p.usedCount || 0;
+            promos.push(p);
+        }
+        await savePromos(promos); res.json({ success: true, id: p.id });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+app.delete('/api/admin/promos/:id', async (req, res) => {
+    if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
+    try { let promos = await getPromos(); await savePromos(promos.filter(x => x.id !== req.params.id)); res.json({ success: true }); } catch(e) { res.json({ success: false }); }
+});
+app.post('/api/calculate-price', async (req, res) => {
+    try {
+        const { productId, quantity, promoId } = req.body; const qty = parseInt(quantity) || 1;
+        const cfg = getConfig();
+        let originalTotal = 0; let baseCost = 0; let productName = '';
+        // Ambil harga produk dari data premku
+        try {
+            const premkuRes = await axios.post('https://premku.com/api/products', { api_key: cfg.apiKey });
+            const prod = premkuRes.data?.products?.find(x => x.id == productId);
+            if (!prod) return res.json({ success: false, message: 'Produk tidak ditemukan' });
+            baseCost = parseInt(prod.price);
+            const profit = cfg.productSettings?.[productId]?.profit ?? cfg.profit ?? 2000;
+            const pricePerUnit = baseCost + parseInt(profit);
+            originalTotal = pricePerUnit * qty;
+            productName = prod.name;
+        } catch(e) { return res.json({ success: false, message: 'Gagal ambil harga produk' }); }
+
+        let discountRp = 0; let promoName = ''; let promoType = '';
+        if (promoId) {
+            const promos = await getPromos(); const promo = promos.find(p => p.id === promoId && p.active);
+            if (!promo) return res.json({ success: false, message: 'Promo tidak ditemukan atau tidak aktif' });
+            if (new Date(promo.startDate).getTime() > Date.now() || new Date(promo.endDate).getTime() < Date.now())
+                return res.json({ success: false, message: 'Promo belum/sudah berakhir' });
+            if (promo.usedCount >= promo.maxUses) return res.json({ success: false, message: 'Promo sudah habis' });
+            if (promo.targetProductIds?.length && !promo.targetProductIds.includes('PREMKU-' + productId) && !promo.targetProductIds.includes(productId))
+                return res.json({ success: false, message: 'Produk tidak termasuk promo' });
+            promoName = promo.name; promoType = promo.type;
+
+            if (promo.type === 'qty_discount') {
+                const tier = promo.tiers?.find(t => t.qty == qty);
+                if (!tier) return res.json({ success: false, message: 'Kuantitas tidak sesuai tier promo' });
+                discountRp = parseInt(tier.discountRp);
+                // Validasi masih untung
+                if (originalTotal - discountRp - baseCost * qty < 0)
+                    return res.json({ success: false, message: 'Promo menyebabkan rugi' });
+            } else if (promo.type === 'bogo_same') {
+                if (qty < 2) return res.json({ success: false, message: 'Minimal 2 item untuk BOGO' });
+                discountRp = (baseCost + parseInt(cfg.productSettings?.[productId]?.profit ?? cfg.profit ?? 2000)); // harga 1 produk gratis
+                if (originalTotal - discountRp - baseCost * qty < 0)
+                    return res.json({ success: false, message: 'Promo menyebabkan rugi' });
+            } else if (promo.type === 'bogo_diff') {
+                if (!promo.freeProductId) return res.json({ success: false, message: 'Produk gratis belum ditentukan' });
+                const freeBaseCost = await getPremkuBasePrice(promo.freeProductId.replace('PREMKU-',''));
+                if (!freeBaseCost) return res.json({ success: false, message: 'Produk gratis tidak ditemukan' });
+                discountRp = parseInt(cfg.productSettings?.[productId]?.profit ?? cfg.profit ?? 2000) + baseCost - freeBaseCost;
+                if (discountRp < 0) discountRp = 0;
+                if (qty < 1) return res.json({ success: false, message: 'Minimal 1 item' });
+            }
+        }
+        const finalPrice = Math.max(0, originalTotal - discountRp);
+        res.json({ success: true, originalTotal, discountRp, finalPrice, qty, productName, promoName, promoType });
+    } catch(e) { res.json({ success: false, message: e.message }); }
+});
+
+// ================= 12. ROUTE ORDER HYBRID LAMA =================
 app.post('/api/order', async (req, res) => {
-    const { service, target, productName, displayPrice, randomId } = req.body;
+    const { service, target, productName, displayPrice, randomId, quantity, promoId, promoApplied, originalTotal } = req.body;
     const cfg = getConfig(); const user = await checkRandomId(randomId);
     if (!user) return res.json({ status: false, message: '❌ Random ID Tidak Valid! Daftar di Bot.' });
     try {
-        const finalTagihan = parseInt(displayPrice); 
+        let finalTagihan = parseInt(displayPrice);
+        let promoData = null;
+        if (promoId) {
+            const promos = await getPromos(); const promo = promos.find(p => p.id === promoId && p.active);
+            if (promo) {
+                promo.usedCount = (promo.usedCount || 0) + 1;
+                await savePromos(promos);
+                promoData = { promoId: promo.id, promoName: promo.name, type: promo.type, discountRp: (parseInt(originalTotal||0) - finalTagihan), originalTotal: parseInt(originalTotal||finalTagihan), finalPrice: finalTagihan };
+                if (promo.type === 'bogo_diff') promoData.freeProductId = promo.freeProductId;
+            }
+        }
+        const qty = parseInt(quantity) || 1;
         const resPay = await axios.post('https://premku.com/api/pay', { api_key: cfg.apiKey, amount: finalTagihan });
         if (resPay.data && resPay.data.success) {
             let orders = await getOrders();
-            orders.push({ idDeposit: resPay.data.data.invoice, idOrder: null, productId: service, productName, targetPhone: target, status: 'MENUNGGU_BAYAR', accountDetails: '-', telegramChatId: user.chatId, type: 'PREMKU', resellerProfit: parseInt(cfg.profit||2000) });
+            orders.push({ idDeposit: resPay.data.data.invoice, idOrder: null, productId: service, productName, targetPhone: target, status: 'MENUNGGU_BAYAR', accountDetails: '-', telegramChatId: user.chatId, type: 'PREMKU', resellerProfit: parseInt(cfg.profit||2000) * qty, quantity: qty, displayPrice: finalTagihan, promoApplied: promoData });
             await saveOrders(orders);
             res.json({ status: true, invoice: { orderId: resPay.data.data.invoice, amount: resPay.data.data.total_bayar, qr_url: resPay.data.data.qr_image, botLink: `https://t.me/${cfg.botUsername}?start=${resPay.data.data.invoice}` } });
         } else res.json({ status: false, message: 'Gagal membuat QRIS Premku' });
@@ -868,21 +970,42 @@ async function autoProc() {
                     try {
                         const resCek = await axios.post('https://premku.com/api/pay_status', { api_key: cfg.apiKey, invoice: o.idDeposit });
                         if (resCek.data?.data?.status === 'success' || resCek.data?.status === 'success') {
-                            const resBuy = await axios.post('https://premku.com/api/order', { api_key: cfg.apiKey, product_id: parseInt(o.productId), qty: 1, ref_id: o.idDeposit });
+                            const qty = o.quantity || 1;
+                            const resBuy = await axios.post('https://premku.com/api/order', { api_key: cfg.apiKey, product_id: parseInt(o.productId), qty: qty, ref_id: o.idDeposit });
                             if (resBuy.data && resBuy.data.success) {
                                 orders[i].status = 'PROSES_PUSAT'; orders[i].idOrder = resBuy.data.invoice; changed = true;
-                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, '✅ *PEMBAYARAN DITERIMA*\nMemproses Akun...', { parse_mode: "Markdown" }).catch(()=>{});
+                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `✅ *PEMBAYARAN DITERIMA*\nMemproses ${qty}x ${o.productName}...`, { parse_mode: "Markdown" }).catch(()=>{});
                             }
                         }
                     } catch (e) {}
                 } else if (o.status === 'PROSES_PUSAT' && o.idOrder) {
+                    const promo = o.promoApplied;
+                    // BOGO diff: order gratis setelah order utama sukses
+                    if (promo?.type === 'bogo_diff' && promo.freeProductId && !o.freeOrderId) {
+                        try {
+                            const freeBuy = await axios.post('https://premku.com/api/order', { api_key: cfg.apiKey, product_id: parseInt(promo.freeProductId.replace('PREMKU-','')), qty: 1, ref_id: o.idDeposit + '-FREE' });
+                            if (freeBuy.data?.success) { o.freeOrderId = freeBuy.data.invoice; changed = true; }
+                        } catch(e) {}
+                    }
                     try {
                         const resStatus = await axios.post('https://premku.com/api/status', { api_key: cfg.apiKey, invoice: o.idOrder });
-                        if (resStatus.data?.status === 'success' || resStatus.data?.status === 'completed') {
+                        let freeStatus = null;
+                        if (o.freeOrderId) {
+                            try { const fs = await axios.post('https://premku.com/api/status', { api_key: cfg.apiKey, invoice: o.freeOrderId }); freeStatus = fs.data; } catch(e) {}
+                        }
+                        const mainDone = resStatus.data?.status === 'success' || resStatus.data?.status === 'completed';
+                        let freeDone = !o.freeOrderId || (freeStatus?.status === 'success' || freeStatus?.status === 'completed');
+                        if (mainDone && freeDone) {
                             let acc = Array.isArray(resStatus.data.accounts) ? resStatus.data.accounts.map(a => `📧 \`${a.username || a.email}\` | 🔑 \`${a.password}\``).join('\n') : (resStatus.data.accounts || "Selesai");
+                            if (freeStatus?.accounts) {
+                                const freeAcc = Array.isArray(freeStatus.accounts) ? freeStatus.accounts.map(a => `📧 \`${a.username || a.email}\` | 🔑 \`${a.password}\``).join('\n') : (freeStatus.accounts || "Selesai");
+                                acc += `\n\n🎁 *PRODUK GRATIS (BOGO):*\n${freeAcc}`;
+                            }
                             orders[i].status = 'SUKSES'; orders[i].accountDetails = acc; orders[i].completedAt = new Date().toISOString(); orders[i].buyerName = orders[i].buyerName || 'Pelanggan'; changed = true;
                             if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
-                            if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `🎉 *PESANAN SELESAI!*\n📦 *${o.productName}*\n\n${acc}`, { parse_mode: "Markdown" }).catch(()=>{});
+                            let msg = `🎉 *PESANAN SELESAI!*\n📦 *${o.productName}*${o.quantity > 1 ? ' ×' + o.quantity : ''}\n\n${acc}`;
+                            if (promo) msg += `\n🏷️ *Promo:* ${promo.promoName}`;
+                            if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, msg, { parse_mode: "Markdown" }).catch(()=>{});
                         }
                     } catch (e) {}
                 }

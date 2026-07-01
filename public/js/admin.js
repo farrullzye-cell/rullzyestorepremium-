@@ -357,7 +357,43 @@ async function loadTab(tab){
                 <button onclick="saveBadges()" class="btn-primary w-full">Simpan Badge</button>
             </div>`;
         }
-        // =============== 7. PPOB PRODUCTS ===============
+        // =============== 7. PROMO ===============
+        else if(tab==='promo'){
+            const [promos, productsRes] = await Promise.all([
+                api('/api/admin/promos').then(r=>r.json()),
+                fetch('/api/products').then(r=>r.json()).catch(()=>({products:[]}))
+            ]);
+            const list = promos.promos||[];
+            const premkuProds = (productsRes.products||[]).filter(p => !p.id.toString().startsWith('PPOB'));
+            let h=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Promo & Diskon</h2>
+                <button onclick="showPromoForm(null)" class="btn-primary text-xs"><i class="fa-solid fa-plus"></i> Promo Baru</button></div>`;
+            if (list.length===0) h+=`<div class="card p-6 text-center"><i class="fa-solid fa-tags text-3xl text-slate-600 mb-3"></i><p class="text-slate-500 text-sm">Belum ada promo. Klik "Promo Baru" untuk membuat.</p></div>`;
+            else {
+                h+=`<div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
+                    <tr><th class="p-2 text-[10px]">Nama</th><th class="p-2 text-[10px]">Tipe</th><th class="p-2 text-[10px]">Target</th><th class="p-2 text-[10px]">Masa</th><th class="p-2 text-[10px] text-center">Pemakaian</th><th class="p-2 text-[10px] text-center">Aktif</th><th class="p-2 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
+                list.forEach(p=>{
+                    const tipeMap={qty_discount:'Qty Diskon',bogo_same:'BOGO Sama',bogo_diff:'BOGO Beda'};
+                    const tCount = p.targetProductIds?.length||0;
+                    const usedPct = p.maxUses ? Math.round((p.usedCount||0)/p.maxUses*100) : 0;
+                    h+=`<tr class="border-b border-white/5">
+                        <td class="p-2 text-xs font-bold">${p.name}</td>
+                        <td class="p-2 text-[10px]">${tipeMap[p.type]||p.type}</td>
+                        <td class="p-2 text-[10px]">${tCount ? tCount+' produk' : 'Semua'}</td>
+                        <td class="p-2 text-[10px]">${(p.startDate||'').substring(0,10)} — ${(p.endDate||'').substring(0,10)}</td>
+                        <td class="p-2 text-center text-[10px]">${p.usedCount||0}/${p.maxUses||'∞'} <span class="text-[8px] text-slate-500">(${usedPct}%)</span></td>
+                        <td class="p-2 text-center">${p.active?'<span class="badge-ok">Aktif</span>':'<span class="badge-err">Nonaktif</span>'}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="showPromoForm('${p.id}')" class="text-[10px] bg-sky-600 px-2 py-0.5 rounded mr-1">Edit</button>
+                            <button onclick="deletePromo('${p.id}')" class="text-[10px] bg-red-600 px-2 py-0.5 rounded">Hapus</button>
+                            <button onclick="togglePromo('${p.id}')" class="text-[10px] ${p.active?'bg-amber-600':'bg-emerald-600'} px-2 py-0.5 rounded">${p.active?'Nonaktifkan':'Aktifkan'}</button>
+                        </td></tr>`;
+                });
+                h+=`</tbody></table></div>`;
+            }
+            c.innerHTML=h;
+            window._premkuProds = premkuProds;
+        }
+        // =============== 8. PPOB PRODUCTS ===============
         else if(tab==='ppob'){
             const r=await fetch('/api/ppob-products-debug').then(r=>r.json());
             const pp=r.data||r.products||[];
@@ -1322,4 +1358,130 @@ window.resetDatabase=async function(){
     const d=await r.json();
     showToast(d.message||'Database di-reset!');
     loadTab('database');
+};
+// ==================== PROMO FUNCTIONS ====================
+window.showPromoForm = async function(id) {
+    const promos = await api('/api/admin/promos').then(r=>r.json());
+    const p = id ? (promos.promos||[]).find(x => x.id === id) : null;
+    const prods = window._premkuProds || [];
+    const types = ['qty_discount','bogo_same','bogo_diff'];
+    const tipeMap = {qty_discount:'Quantity Discount (beli 2+ dpt potongan)',bogo_same:'BOGO — Produk Sama',bogo_diff:'BOGO — Produk Beda'};
+    let tiersHtml = '';
+    const existingTiers = p?.tiers || [];
+    if (existingTiers.length === 0) existingTiers.push({qty:2,discountRp:0});
+    existingTiers.forEach((t,i) => {
+        tiersHtml += `<div class="flex gap-2 items-center tier-row mb-1">
+            <span class="text-[10px] text-slate-400 w-8">Beli</span>
+            <input type="number" class="input-dark text-[10px] py-1 h-8 w-16 tier-qty" value="${t.qty}">
+            <span class="text-[10px] text-slate-400">diskon</span>
+            <input type="number" class="input-dark text-[10px] py-1 h-8 w-24 tier-diskon" value="${t.discountRp}">
+            <span class="text-[10px] text-slate-400">Rp</span>
+            <button onclick="this.parentElement.remove()" class="text-red-400 text-xs ml-1"><i class="fa-solid fa-xmark"></i></button>
+        </div>`;
+    });
+    const targetIds = p?.targetProductIds || [];
+    const today = new Date().toISOString().split('T')[0];
+    const endDefault = p?.endDate ? p.endDate.substring(0,10) : new Date(Date.now()+30*86400000).toISOString().split('T')[0];
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
+    overlay.style.background = 'rgba(0,0,0,0.7)';
+    overlay.innerHTML = `<div class="card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6" style="animation:fadeUp 0.3s ease">
+        <style>@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}</style>
+        <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-black text-white">${p?'Edit':'Tambah'} Promo</h3>
+        <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+        <div class="space-y-3">
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase">Nama Promo</label>
+            <input type="text" id="pf-name" class="input-dark" value="${p?.name||''}" placeholder="Contoh: Beli 2 Hemat 5rb"></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase">Tipe Promo</label>
+            <select id="pf-type" class="input-dark" onchange="togglePromoTiers(this.value)">
+                ${types.map(t => `<option value="${t}" ${p?.type===t?'selected':''}>${tipeMap[t]}</option>`).join('')}
+            </select></div>
+            <div id="pf-tiers-container"><label class="text-[10px] font-bold text-slate-400 uppercase">Tier Diskon</label>
+                <div id="pf-tiers">${tiersHtml}</div>
+                <button onclick="addTierRow()" class="text-[10px] text-violet-400 mt-1"><i class="fa-solid fa-plus"></i> Tambah Tier</button>
+            </div>
+            <div id="pf-free-prod-container" style="display:${p?.type==='bogo_diff'?'block':'none'}"><label class="text-[10px] font-bold text-slate-400 uppercase">Produk Gratis (BOGO Beda)</label>
+                <select id="pf-free-prod" class="input-dark">
+                    <option value="">Pilih produk gratis...</option>
+                    ${prods.map(x => `<option value="${x.id}" ${p?.freeProductId===x.id?'selected':''}>${x.name} — Rp ${(x.price).toLocaleString('id-ID')}</option>`).join('')}
+                </select></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase">Target Produk</label>
+                <div class="max-h-32 overflow-y-auto bg-white/5 rounded-xl p-2 space-y-1">
+                    <label class="flex items-center gap-2 text-xs"><input type="checkbox" onchange="document.querySelectorAll('.pf-target').forEach(c=>c.checked=this.checked)" ${targetIds.length===0?'checked':''}> <span class="text-slate-300">Semua Produk Premku</span></label>
+                    ${prods.map(x => `<label class="flex items-center gap-2 text-[10px] ml-4"><input type="checkbox" class="pf-target" value="${x.id}" ${!targetIds.length||targetIds.includes(x.id)?'checked':''}> ${x.name}</label>`).join('')}
+                </div></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase">Mulai</label>
+                <input type="date" id="pf-start" class="input-dark" value="${p?.startDate?p.startDate.substring(0,10):today}"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase">Selesai</label>
+                <input type="date" id="pf-end" class="input-dark" value="${endDefault}"></div>
+            </div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase">Maks Pemakaian</label>
+            <input type="number" id="pf-max" class="input-dark" value="${p?.maxUses||100}" min="1"></div>
+            <div class="flex gap-2"><label class="flex items-center gap-2 text-xs"><input type="checkbox" id="pf-active" ${p?.active!==false?'checked':''}> <span class="text-slate-300">Aktif</span></label></div>
+        </div>
+        <div class="flex gap-2 mt-5">
+            <button onclick="savePromo('${p?.id||''}')" class="btn-primary flex-1"><i class="fa-solid fa-save"></i> Simpan Promo</button>
+            <button onclick="this.closest('.fixed').remove()" class="bg-white/5 text-slate-400 px-5 py-2.5 rounded-xl text-sm font-bold border border-white/10 hover:bg-white/10">Batal</button>
+        </div>
+    </div>`;
+    document.body.appendChild(overlay);
+};
+window.togglePromoTiers = function(type) {
+    document.getElementById('pf-tiers-container').style.display = (type==='qty_discount'||type==='bogo_same') ? 'block' : 'none';
+    document.getElementById('pf-free-prod-container').style.display = type==='bogo_diff' ? 'block' : 'none';
+};
+window.addTierRow = function() {
+    const div = document.createElement('div');
+    div.className = 'flex gap-2 items-center tier-row mb-1';
+    div.innerHTML = `<span class="text-[10px] text-slate-400 w-8">Beli</span>
+        <input type="number" class="input-dark text-[10px] py-1 h-8 w-16 tier-qty" value="2">
+        <span class="text-[10px] text-slate-400">diskon</span>
+        <input type="number" class="input-dark text-[10px] py-1 h-8 w-24 tier-diskon" value="0">
+        <span class="text-[10px] text-slate-400">Rp</span>
+        <button onclick="this.parentElement.remove()" class="text-red-400 text-xs ml-1"><i class="fa-solid fa-xmark"></i></button>`;
+    document.getElementById('pf-tiers').appendChild(div);
+};
+window.savePromo = async function(id) {
+    const name = document.getElementById('pf-name').value.trim();
+    const type = document.getElementById('pf-type').value;
+    const startDate = document.getElementById('pf-start').value;
+    const endDate = document.getElementById('pf-end').value;
+    const maxUses = parseInt(document.getElementById('pf-max').value) || 100;
+    const active = document.getElementById('pf-active').checked;
+    if (!name) return showToast('Nama promo wajib diisi','error');
+    if (!startDate || !endDate) return showToast('Tanggal mulai dan selesai wajib diisi','error');
+    // Collect tiers
+    const tiers = [];
+    if (type === 'qty_discount') {
+        document.querySelectorAll('.tier-row').forEach(row => {
+            const qty = parseInt(row.querySelector('.tier-qty').value) || 0;
+            const discountRp = parseInt(row.querySelector('.tier-diskon').value) || 0;
+            if (qty > 0 && discountRp > 0) tiers.push({qty, discountRp});
+        });
+        if (tiers.length === 0) return showToast('Minimal 1 tier diskon','error');
+    }
+    // Collect target products
+    const allChecked = document.querySelector('.pf-target') && !document.querySelectorAll('.pf-target').length;
+    const targetProductIds = allChecked ? [] : Array.from(document.querySelectorAll('.pf-target:checked')).map(c => c.value);
+    const freeProductId = type === 'bogo_diff' ? document.getElementById('pf-free-prod').value : '';
+    if (type === 'bogo_diff' && !freeProductId) return showToast('Pilih produk gratis untuk BOGO Beda','error');
+    const body = { id: id || null, name, type, tiers, targetProductIds, freeProductId, startDate, endDate, maxUses, active };
+    const res = await api('/api/admin/promos', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await res.json();
+    showToast(d.success ? 'Promo disimpan!' : d.message||'Gagal');
+    if (d.success) { document.querySelector('.fixed').remove(); loadTab('promo'); }
+};
+window.deletePromo = async function(id) {
+    if (!confirm('Hapus promo ini?')) return;
+    const res = await api('/api/admin/promos/' + id, {method:'DELETE'});
+    showToast('Promo dihapus!'); loadTab('promo');
+};
+window.togglePromo = async function(id) {
+    const promos = await api('/api/admin/promos').then(r=>r.json());
+    const p = (promos.promos||[]).find(x => x.id === id);
+    if (!p) return;
+    p.active = !p.active;
+    await api('/api/admin/promos', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    showToast(p.active ? 'Promo diaktifkan!' : 'Promo dinonaktifkan!'); loadTab('promo');
 };
