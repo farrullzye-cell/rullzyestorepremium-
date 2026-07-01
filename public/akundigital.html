@@ -298,12 +298,17 @@
         const f = document.getElementById('modal-final-content');
         f.classList.remove('hidden');
         if (res.status) {
+          const depositId = res.invoice.orderId;
           f.innerHTML = `
-            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Tagihan</p>
-            <h2 class="text-3xl font-black text-violet-400 mb-4">Rp ${res.invoice.amount.toLocaleString('id-ID')}</h2>
-            <div class="bg-white/5 p-4 rounded-3xl mb-4 flex justify-center border border-white/10"><img src="${res.invoice.qr_url}" class="w-40 h-40 rounded-xl border-4 border-white/10 shadow"></div>
-            <a href="${res.invoice.botLink}" target="_blank" class="block w-full bg-violet-600 text-white font-bold py-4 rounded-2xl shadow mb-2"><i class="fa-brands fa-telegram mr-2"></i> Konfirmasi Pembayaran</a>
-            <button onclick="closeModal()" class="text-slate-500 text-xs font-bold uppercase">Tutup</button>`;
+            <div id="payment-screen">
+              <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Tagihan</p>
+              <h2 class="text-3xl font-black text-violet-400 mb-4">Rp ${res.invoice.amount.toLocaleString('id-ID')}</h2>
+              <div class="bg-white/5 p-4 rounded-3xl mb-4 flex justify-center border border-white/10"><img src="${res.invoice.qr_url}" class="w-40 h-40 rounded-xl border-4 border-white/10 shadow"></div>
+              <p class="text-[10px] text-slate-400 mb-4 flex items-center justify-center gap-1"><i class="fa-solid fa-envelope text-violet-400"></i> Akun dikirim ke: <span class="text-white font-bold">${emailVal || '(via Telegram)'}</span></p>
+              <button onclick="checkPayment('${depositId}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-2xl shadow mb-2 transition"><i class="fa-solid fa-rotate mr-2"></i> Cek Status Pembayaran</button>
+              <button onclick="closeModal()" class="w-full text-slate-500 text-xs font-bold uppercase py-2">Tutup</button>
+              <div id="payment-result" class="mt-4 hidden"></div>
+            </div>`;
         } else {
           f.innerHTML = `<p class="text-white font-bold mb-3">${res.message || 'Gagal membuat pesanan'}</p><button onclick="closeModal()" class="text-slate-500 text-xs font-bold uppercase">Tutup</button>`;
         }
@@ -313,6 +318,36 @@
         document.getElementById('modal-final-content').innerHTML =
           '<p class="text-white font-bold mb-3">Jaringan bermasalah</p><button onclick="closeModal()" class="text-slate-500 text-xs font-bold uppercase">Tutup</button>';
       });
+    };
+
+    window.checkPayment = async function(idDeposit) {
+      const btn = document.querySelector('#payment-screen button:first-of-type');
+      const resultDiv = document.getElementById('payment-result');
+      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengecek...';
+      try {
+        const r = await fetch('/api/check-payment', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idDeposit}) });
+        const d = await r.json();
+        if (d.paid) {
+          resultDiv.className = 'mt-4 text-center fade-up';
+          resultDiv.innerHTML = `
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6">
+              <div style="font-size:48px;margin-bottom:12px">✅</div>
+              <h3 class="text-xl font-black text-white mb-2">Pembayaran Berhasil!</h3>
+              <p class="text-sm text-slate-400 mb-3">Pesanan sedang diproses. Detail akun akan dikirim ke <strong class="text-white">${document.getElementById('target-email').value.trim() || 'Telegram'}</strong>.</p>
+              <div class="bg-white/5 rounded-xl px-4 py-3 mb-3 inline-block"><span class="text-slate-400 text-xs">Mengarahkan ke halaman utama...</span><br><span id="countdown" class="text-2xl font-black text-white">5</span></div>
+            </div>`;
+          closeBtn = document.querySelector('#payment-screen button:last-of-type');
+          if (closeBtn) closeBtn.style.display = 'none';
+          let sec = 5;
+          const iv = setInterval(() => { sec--; document.getElementById('countdown').innerText = sec; if (sec<=0) { clearInterval(iv); closeModal(); window.location.href='/'; } }, 1000);
+        } else {
+          resultDiv.className = 'mt-4';
+          resultDiv.innerHTML = `<div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center"><p class="text-amber-400 text-sm font-bold"><i class="fa-solid fa-clock mr-2"></i>Belum dibayar</p><p class="text-slate-400 text-xs mt-1">Scan QRIS di atas untuk membayar, lalu klik Cek Status lagi.</p></div>`;
+        }
+      } catch(e) {
+        resultDiv.innerHTML = `<p class="text-red-400 text-xs">Gagal cek status. Coba lagi.</p>`;
+      }
+      btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate mr-2"></i> Cek Status Pembayaran';
     };
   </script>
 </body>

@@ -1063,6 +1063,17 @@ app.post('/api/order', async (req, res) => {
 });
 
 
+app.post('/api/check-payment', async (req, res) => {
+    const { idDeposit } = req.body;
+    if (!idDeposit) return res.json({ status: false, message: 'ID deposit wajib.' });
+    try {
+        const orders = await getOrders();
+        const order = orders.find(o => o.idDeposit === idDeposit);
+        if (!order) return res.json({ status: false, message: 'Pesanan tidak ditemukan.', paid: false });
+        const paid = order.status !== 'MENUNGGU_BAYAR';
+        res.json({ status: true, paid, orderStatus: order.status, accountDetails: order.status === 'SUKSES' ? order.accountDetails : null });
+    } catch(e) { res.json({ status: false, message: e.message, paid: false }); }
+});
 
 // ================= 12. AUTO-PILOT HYBRID (optimized) =================
 const FINAL_STATUSES = new Set(['SUKSES','GAGAL','DIBATALKAN']);

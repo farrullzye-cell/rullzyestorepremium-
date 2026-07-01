@@ -423,17 +423,20 @@ function openOrder(id, name, price, source) {
             const data = await res.json();
             if (data.status) {
                 const invoice = data.invoice || {};
+                const depositId = invoice.orderId || '';
                 document.querySelector('#orderModal .modal-pop').innerHTML = `
-                    <div class="text-center">
-                        <h3 class="text-xl font-black text-white mb-4">Invoice Siap</h3>
+                    <div class="text-center" id="payment-screen-index">
+                        <h3 class="text-xl font-black text-white mb-4">Scan QRIS</h3>
                         <div class="bg-slate-900 border border-white/10 rounded-3xl p-5 mb-4 inline-block">
                             <p class="text-[11px] uppercase tracking-widest text-slate-500">Total Bayar</p>
                             <p class="text-2xl font-black text-amber-400 mb-3">Rp ${invoice.amount?.toLocaleString('id-ID') || price.toLocaleString('id-ID')}</p>
                             <img src="${invoice.qr_url || ''}" class="mx-auto mb-4 rounded-3xl max-w-full h-auto" alt="QRIS">
                             <p class="text-xs text-slate-400">Scan QRIS untuk menyelesaikan pembayaran.</p>
                         </div>
-                        <a href="${invoice.botLink || '#'}" target="_blank" class="inline-flex items-center justify-center gap-2 bg-violet-600 text-white font-bold px-6 py-3 rounded-2xl hover:bg-violet-500 transition">Buka Bot / Konfirmasi</a>
-                        <button onclick="document.getElementById('orderModal').remove()" class="mt-4 text-xs text-slate-400">Tutup</button>
+                        <p class="text-[10px] text-slate-400 mb-3"><i class="fa-solid fa-envelope text-violet-400 mr-1"></i> Akun dikirim ke: <span class="text-white font-bold">${emailVal || '(via Telegram)'}</span></p>
+                        <button onclick="checkIndexPayment('${depositId}')" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-2xl hover:bg-emerald-500 transition mb-2"><i class="fa-solid fa-rotate mr-2"></i> Cek Status Pembayaran</button>
+                        <button onclick="document.getElementById('orderModal').remove()" class="mt-2 text-xs text-slate-400">Tutup</button>
+                        <div id="payment-result-index" class="mt-3 hidden"></div>
                     </div>
                 `;
             } else {
@@ -446,7 +449,34 @@ function openOrder(id, name, price, source) {
         }
     };
 }
-
+window.checkIndexPayment = async function(idDeposit) {
+    const btn = document.querySelector('#payment-screen-index button');
+    const resultDiv = document.getElementById('payment-result-index');
+    if (!btn || !resultDiv) return;
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengecek...';
+    try {
+        const r = await fetch('/api/check-payment', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idDeposit}) });
+        const d = await r.json();
+        if (d.paid) {
+            resultDiv.className = 'mt-3 fade-up';
+            resultDiv.innerHTML = `
+                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-5 text-center">
+                    <div style="font-size:40px;margin-bottom:8px">✅</div>
+                    <h3 class="text-lg font-black text-white mb-1">Pembayaran Berhasil!</h3>
+                    <p class="text-xs text-slate-400 mb-2">Pesanan diproses, detail dikirim ke email.</p>
+                    <div class="bg-white/5 rounded-xl px-3 py-2 inline-block"><span class="text-slate-400 text-xs">Redirect...</span><br><span id="countdown-idx" class="text-2xl font-black text-white">5</span></div>
+                </div>`;
+            let sec = 5;
+            const iv = setInterval(() => { sec--; document.getElementById('countdown-idx').innerText = sec; if (sec<=0) { clearInterval(iv); document.getElementById('orderModal').remove(); window.location.href='/'; } }, 1000);
+        } else {
+            resultDiv.className = 'mt-3';
+            resultDiv.innerHTML = `<div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center"><p class="text-amber-400 text-sm font-bold"><i class="fa-solid fa-clock mr-2"></i>Belum dibayar</p><p class="text-xs text-slate-400 mt-1">Scan QRIS lalu klik Cek Status lagi.</p></div>`;
+        }
+    } catch(e) {
+        resultDiv.innerHTML = `<p class="text-red-400 text-xs">Gagal cek status.</p>`;
+    }
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate mr-2"></i> Cek Status Pembayaran';
+}
 
 window.applyAffiliate = async function() {
     const { value: randomId } = await Swal.fire({

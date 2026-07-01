@@ -487,21 +487,52 @@ async function submitOrder(id, name, unitPrice, source) {
         if (data.status && data.invoice) {
             let extraInfo = '';
             if (promoData && promoData.promoName) extraInfo = `<p class="text-[10px] text-emerald-400 font-bold mt-1">🏷️ ${promoData.promoName}</p>`;
-            modal.querySelector('.glass-strong').innerHTML = `<div class="text-center fade-up">
+            const depositId = data.invoice.orderId;
+            modal.querySelector('.glass-strong').innerHTML = `<div class="text-center fade-up" id="payment-screen">
                 <div class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style="background:var(--accent)"><i class="fa-solid fa-qrcode text-white text-xl"></i></div>
                 <h3 class="text-lg font-black text-white mb-1">Scan QRIS</h3>
                 <p class="text-xs text-slate-400 mb-4">Scan QR di bawah untuk membayar</p>
                 <img src="${data.invoice.qr_url}" class="w-44 h-44 mx-auto rounded-2xl border border-white/10 mb-3">
                 <p class="text-xl font-black text-white">Rp ${data.invoice.amount.toLocaleString('id-ID')}</p>
                 ${extraInfo}
-                <a href="${data.invoice.botLink}" target="_blank" class="block mt-4 py-3 rounded-xl text-sm font-bold text-white transition-all hover:shadow-lg" style="background:var(--accent)"><i class="fa-brands fa-telegram mr-1"></i>Konfirmasi via Bot</a>
-                <button onclick="document.getElementById('orderModal').className='fixed inset-0 z-50 hidden'" class="mt-3 text-xs text-slate-400 hover:text-white transition-colors">Tutup</button>
+                <p class="text-[10px] text-slate-400 mb-3 flex items-center justify-center gap-1"><i class="fa-solid fa-envelope" style="color:var(--accent)"></i> Akun dikirim ke: <span class="text-white font-bold">${email || '(via Telegram)'}</span></p>
+                <button onclick="checkTokoPayment('${depositId}')" class="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:shadow-lg" style="background:var(--accent)"><i class="fa-solid fa-rotate mr-2"></i> Cek Status Pembayaran</button>
+                <button onclick="document.getElementById('orderModal').className='fixed inset-0 z-50 hidden'" class="mt-2 text-xs text-slate-400 hover:text-white transition-colors">Tutup</button>
+                <div id="payment-result-toko" class="mt-3 hidden"></div>
             </div>`;
         } else {
             alert(data.message || 'Gagal membuat pesanan');
             modal.className = 'fixed inset-0 z-50 hidden';
         }
     } catch(e) { alert('Gagal terhubung ke server.'); }
+}
+window.checkTokoPayment = async function(idDeposit) {
+    const btn = document.querySelector('#payment-screen button');
+    const resultDiv = document.getElementById('payment-result-toko');
+    if (!btn || !resultDiv) return;
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengecek...';
+    try {
+        const r = await fetch('/api/check-payment', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idDeposit}) });
+        const d = await r.json();
+        if (d.paid) {
+            resultDiv.className = 'mt-3 fade-up';
+            resultDiv.innerHTML = `
+                <div class="rounded-2xl p-5" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3)">
+                    <div style="font-size:40px;margin-bottom:8px">✅</div>
+                    <h3 class="text-lg font-black text-white mb-1">Pembayaran Berhasil!</h3>
+                    <p class="text-xs text-slate-400 mb-2">Pesanan diproses, detail dikirim ke email.</p>
+                    <div class="rounded-xl px-3 py-2 inline-block" style="background:rgba(255,255,255,0.05)"><span class="text-slate-400 text-xs">Redirect...</span><br><span id="countdown-toko" class="text-2xl font-black text-white">5</span></div>
+                </div>`;
+            let sec = 5;
+            const iv = setInterval(() => { sec--; document.getElementById('countdown-toko').innerText = sec; if (sec<=0) { clearInterval(iv); document.getElementById('orderModal').className='fixed inset-0 z-50 hidden'; window.location.href='/'; } }, 1000);
+        } else {
+            resultDiv.className = 'mt-3';
+            resultDiv.innerHTML = `<div class="rounded-xl p-3 text-center" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3)"><p class="text-sm font-bold" style="color:#f59e0b"><i class="fa-solid fa-clock mr-2"></i>Belum dibayar</p><p class="text-xs text-slate-400 mt-1">Scan QRIS lalu klik Cek Status lagi.</p></div>`;
+        }
+    } catch(e) {
+        resultDiv.innerHTML = `<p class="text-red-400 text-xs">Gagal cek status.</p>`;
+    }
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate mr-2"></i> Cek Status Pembayaran';
 }
 
 init();
