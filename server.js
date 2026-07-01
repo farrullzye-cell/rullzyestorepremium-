@@ -847,11 +847,9 @@ app.get('/api/promos', async (req, res) => {
     } catch(e) { res.json({ success: false, promos: [] }); }
 });
 app.get('/api/admin/promos', async (req, res) => {
-    if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
     res.json({ success: true, promos: await getPromos() });
 });
 app.post('/api/admin/promos', async (req, res) => {
-    if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
     try {
         let promos = await getPromos(); const p = req.body;
         if (p.id) {
@@ -866,7 +864,6 @@ app.post('/api/admin/promos', async (req, res) => {
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 app.delete('/api/admin/promos/:id', async (req, res) => {
-    if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
     try { let promos = await getPromos(); await savePromos(promos.filter(x => x.id !== req.params.id)); res.json({ success: true }); } catch(e) { res.json({ success: false }); }
 });
 app.post('/api/calculate-price', async (req, res) => {

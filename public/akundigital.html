@@ -142,26 +142,24 @@
     let selectedProduct = null;
     let currentFilter = 'all';
     let activePromos = [];
-    let promoProductIds = new Set();
 
     async function fetchPromos() {
-        try { const r = await fetch('/api/promos'); const d = await r.json(); activePromos = d.promos || [];
-            promoProductIds.clear();
-            activePromos.forEach(p => {
-                if (p.targetProductIds && p.targetProductIds.length) p.targetProductIds.forEach(id => promoProductIds.add(id));
-                else { promoProductIds = null; } // null = all products
-            });
-        } catch(e) { activePromos = []; }
+        try { const r = await fetch('/api/promos'); const d = await r.json(); activePromos = d.promos || []; } catch(e) { activePromos = []; }
     }
     function hasPromo(pid) {
         if (!activePromos.length) return false;
-        if (promoProductIds === null) return true;
-        return promoProductIds.has(pid) || promoProductIds.has('PREMKU-' + pid);
+        const pidStr = String(pid), premkuId = 'PREMKU-' + pid;
+        for (const p of activePromos) {
+            if (!p.targetProductIds?.length) return true;
+            if (p.targetProductIds.includes(pidStr) || p.targetProductIds.includes(pid) || p.targetProductIds.includes(premkuId)) return true;
+        }
+        return false;
     }
     function getPromoLabel(pid) {
+        const pidStr = String(pid), premkuId = 'PREMKU-' + pid;
         for (const p of activePromos) {
-            const match = !p.targetProductIds?.length || p.targetProductIds.includes(pid) || p.targetProductIds.includes('PREMKU-' + pid);
-            if (match) return p.type === 'bogo_same' ? 'BOGO!' : p.type === 'bogo_diff' ? 'Gratis+' : (p.tiers?.[0]?.discountRp ? 'Diskon' : 'Promo');
+            if (!p.targetProductIds?.length || p.targetProductIds.includes(pidStr) || p.targetProductIds.includes(pid) || p.targetProductIds.includes(premkuId))
+                return p.type === 'bogo_same' ? 'BOGO!' : p.type === 'bogo_diff' ? 'Gratis+' : (p.tiers?.[0]?.discountRp ? 'Diskon' : 'Promo');
         }
         return 'Promo';
     }

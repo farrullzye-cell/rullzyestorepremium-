@@ -1462,7 +1462,8 @@ window.savePromo = async function(id) {
         if (tiers.length === 0) return showToast('Minimal 1 tier diskon','error');
     }
     // Collect target products
-    const allChecked = document.querySelector('.pf-target') && !document.querySelectorAll('.pf-target').length;
+    const pfTargets = document.querySelectorAll('.pf-target');
+    const allChecked = pfTargets.length > 0 && pfTargets.length === document.querySelectorAll('.pf-target:checked').length;
     const targetProductIds = allChecked ? [] : Array.from(document.querySelectorAll('.pf-target:checked')).map(c => c.value);
     const freeProductId = type === 'bogo_diff' ? document.getElementById('pf-free-prod').value : '';
     if (type === 'bogo_diff' && !freeProductId) return showToast('Pilih produk gratis untuk BOGO Beda','error');
