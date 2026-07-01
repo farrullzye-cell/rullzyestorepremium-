@@ -1403,12 +1403,12 @@ window.showPromoForm = async function(id) {
             <div id="pf-free-prod-container" style="display:${p?.type==='bogo_diff'?'block':'none'}"><label class="text-[10px] font-bold text-slate-400 uppercase">Produk Gratis (BOGO Beda)</label>
                 <select id="pf-free-prod" class="input-dark">
                     <option value="">Pilih produk gratis...</option>
-                    ${prods.map(x => `<option value="${x.id}" ${p?.freeProductId===x.id?'selected':''}>${x.name} — Rp ${(x.price).toLocaleString('id-ID')}</option>`).join('')}
+                    ${prods.map(x => `<option value="${x.id}" ${String(p?.freeProductId)===String(x.id)?'selected':''}>${x.name} — Rp ${(x.price).toLocaleString('id-ID')}</option>`).join('')}
                 </select></div>
             <div><label class="text-[10px] font-bold text-slate-400 uppercase">Target Produk</label>
                 <div class="max-h-32 overflow-y-auto bg-white/5 rounded-xl p-2 space-y-1">
                     <label class="flex items-center gap-2 text-xs"><input type="checkbox" onchange="document.querySelectorAll('.pf-target').forEach(c=>c.checked=this.checked)" ${targetIds.length===0?'checked':''}> <span class="text-slate-300">Semua Produk Premku</span></label>
-                    ${prods.map(x => `<label class="flex items-center gap-2 text-[10px] ml-4"><input type="checkbox" class="pf-target" value="${x.id}" ${!targetIds.length||targetIds.includes(x.id)?'checked':''}> ${x.name}</label>`).join('')}
+                    ${prods.map(x => `<label class="flex items-center gap-2 text-[10px] ml-4"><input type="checkbox" class="pf-target" value="${x.id}" ${!targetIds.length||targetIds.includes(String(x.id))?'checked':''}> ${x.name}</label>`).join('')}
                 </div></div>
             <div class="grid grid-cols-2 gap-3">
                 <div><label class="text-[10px] font-bold text-slate-400 uppercase">Mulai</label>
