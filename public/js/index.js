@@ -345,17 +345,18 @@ function openOrder(id, name, price, source) {
                     </div>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Random ID Telegram <span class="text-rose-500">*</span></label>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Email <span class="text-rose-500">*</span></label>
+                            <input id="modal-email" type="email" placeholder="email@contoh.com" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-violet-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Random ID Telegram (opsional)</label>
                             <input id="modal-randomid" type="text" placeholder="ID-ABC123" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-violet-500">
                         </div>
                         <div id="modal-target-group" class="${requireTarget ? '' : 'hidden'}">
                             <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">${labelTarget} ${requireTarget ? '<span class="text-rose-500">*</span>' : ''}</label>
                             <input id="modal-target" type="text" placeholder="${labelTarget}" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-violet-500">
                         </div>
-                        <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Email (opsional — kirim akun)</label>
-                            <input id="modal-email" type="email" placeholder="email@contoh.com" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-violet-500">
-                        </div>
+                        
                         <div class="text-xs text-slate-500 bg-white/5 border border-white/10 rounded-2xl p-3">
                             <p class="font-bold text-white">Catatan:</p>
                             <p>Checkout akan membuat invoice QRIS di web. Gunakan Random ID yang didaftarkan di Bot Telegram.</p>
@@ -397,11 +398,11 @@ function openOrder(id, name, price, source) {
     document.getElementById('btn-order').onclick = async function() {
         const randomId = document.getElementById('modal-randomid').value.trim().toUpperCase();
         const target = document.getElementById('modal-target')?.value.trim();
-        if (!randomId) return Swal.fire('Oops', 'Random ID wajib diisi.', 'warning');
+        const emailVal = document.getElementById('modal-email')?.value.trim();
+        if (!emailVal) return Swal.fire('Oops', 'Email wajib diisi untuk menerima struk/akun.', 'warning');
         if (requireTarget && !target) return Swal.fire('Oops', `${labelTarget} wajib diisi.`, 'warning');
 
         let endpoint = '/api/order';
-        const emailVal = document.getElementById('modal-email')?.value.trim();
         let body = {
             service: id.replace(/^[A-Z]+-/, ''),
             productName: name,

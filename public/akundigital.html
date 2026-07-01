@@ -120,13 +120,14 @@
         <h3 class="text-lg md:text-xl font-black text-white mb-1 text-center">Konfirmasi Pesanan</h3>
         <p id="modal-product-name" class="text-[11px] md:text-sm font-bold text-violet-400 mb-4 md:mb-5 text-center bg-violet-500/10 inline-block px-3 md:px-4 py-1 rounded-full mx-auto w-fit"></p>
         <div class="mb-4 md:mb-5 text-left">
-          <label class="block text-[10px] md:text-xs font-black text-violet-400 uppercase tracking-widest mb-2">Random ID Telegram <span class="text-red-500">*</span></label>
-          <input type="text" id="target-randomid" placeholder="ID-ABC123" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 font-bold text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500 uppercase" required>
-          <p class="text-[9px] md:text-[10px] text-slate-500 mt-2"><i class="fa-solid fa-circle-info text-violet-400"></i> Belum punya? Ketik <b>/daftar</b> di <a href="https://t.me/RullzyeBot" target="_blank" class="text-violet-400 font-bold underline">Bot Telegram</a></p>
+          <label class="block text-[10px] md:text-xs font-black text-violet-400 uppercase tracking-widest mb-2">Email <span class="text-red-500">*</span></label>
+          <input type="email" id="target-email" placeholder="email@contoh.com" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 font-bold text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500" required>
+          <p class="text-[9px] md:text-[10px] text-slate-500 mt-2"><i class="fa-solid fa-circle-info text-violet-400"></i> Email untuk menerima struk & detail akun.</p>
         </div>
         <div class="mb-4 md:mb-5 text-left">
-          <label class="block text-[10px] md:text-xs font-black text-violet-400 uppercase tracking-widest mb-2">Email (opsional — untuk kirim akun)</label>
-          <input type="email" id="target-email" placeholder="email@contoh.com" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 font-bold text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
+          <label class="block text-[10px] md:text-xs font-black text-violet-400 uppercase tracking-widest mb-2">Random ID Telegram (opsional)</label>
+          <input type="text" id="target-randomid" placeholder="ID-ABC123" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 font-bold text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500 uppercase">
+          <p class="text-[9px] md:text-[10px] text-slate-500 mt-2"><i class="fa-solid fa-circle-info text-violet-400"></i> Kosongkan jika tidak punya.</p>
         </div>
         <div class="mb-4 md:mb-5 text-left">
           <label class="block text-[10px] md:text-xs font-black text-violet-400 uppercase tracking-widest mb-2">Jumlah</label>
@@ -323,12 +324,12 @@
 
     document.getElementById('btn-next').onclick = async function() {
       const randomIdVal = document.getElementById('target-randomid').value.trim().toUpperCase();
-      if (!randomIdVal) return alert('Harap masukkan Random ID!');
+      const emailVal = document.getElementById('target-email').value.trim();
+      if (!emailVal) return alert('Harap masukkan email untuk menerima struk/akun!');
       document.getElementById('modal-step-1').classList.add('hidden');
       document.getElementById('modal-step-2').classList.remove('hidden');
       document.getElementById('modal-loader').classList.remove('hidden');
       document.getElementById('modal-final-content').classList.add('hidden');
-      const emailVal = document.getElementById('target-email').value.trim();
       const qty = parseInt(document.getElementById('m-qty').innerText) || 1;
       let finalPrice = selectedProduct.price * qty;
       let promoBody = {};

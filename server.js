@@ -97,6 +97,10 @@ const savePanelOrders = async (data) => { try { await axios.put(`${FIREBASE_URL}
 
 const getPromos = async () => { try { const r = await axios.get(`${FIREBASE_URL}/promos.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const savePromos = async (data) => { try { await axios.put(`${FIREBASE_URL}/promos.json`, data); } catch(e) {} };
+const getDailyPromo = async () => { try { const r = await axios.get(`${FIREBASE_URL}/dailyPromo.json`); return r.data||null; } catch(e) { return null; } };
+const saveDailyPromo = async (data) => { try { await axios.put(`${FIREBASE_URL}/dailyPromo.json`, data); } catch(e) {} };
+const getBroadcastCount = async () => { try { const r = await axios.get(`${FIREBASE_URL}/broadcastCount.json`); return r.data||0; } catch(e) { return 0; } };
+const saveBroadcastCount = async (n) => { try { await axios.put(`${FIREBASE_URL}/broadcastCount.json`, n); } catch(e) {} };
 const getTestEmailHtml = () => `
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:auto;background:#0b0e1a;border-radius:20px;overflow:hidden;border:1px solid #1e293b;padding:32px;text-align:center">
 <div style="font-size:48px;margin-bottom:12px">✅</div>
@@ -180,6 +184,84 @@ const sendEmail = async (to, subject, html) => {
 
 const getPremkuBasePrice = async (productId) => {
     try { const cfg = getConfig(); const r = await axios.post('https://premku.com/api/products', { api_key: cfg.apiKey }); const p = r.data?.products?.find(x => x.id == productId); return p ? parseInt(p.price) : null; } catch(e) { return null; }
+};
+
+const genDailyPromo = async () => {
+    try {
+        const cfg = getConfig(); if (!cfg.apiKey) return;
+        const r = await axios.post('https://premku.com/api/products', { api_key: cfg.apiKey });
+        const products = r.data?.products || []; if (!products.length) return;
+        const profitDefault = cfg.profit || 2000;
+        const shuffled = products.sort(() => Math.random() - 0.5);
+        for (const prod of shuffled) {
+            const baseCost = parseInt(prod.price);
+            const sellingPrice = baseCost + (cfg.productSettings?.[prod.id]?.profit ?? profitDefault);
+            const prodId = String(prod.id);
+            if (sellingPrice > 30000) {
+                const margin = 10000; const discount = 5000;
+                const userPays = baseCost + margin - discount; // yang dibayar user untuk 1 item
+                const profit = userPays - baseCost * 2; // BOGO: dapet 2, bayar 1 item
+                if (profit >= 0) {
+                    const promo = {
+                        id: 'DAILY-' + Date.now().toString(36).toUpperCase(),
+                        name: '🔥 Promo Harian — ' + prod.name,
+                        type: 'bogo_same', active: true,
+                        targetProductIds: ['PREMKU-' + prodId, prodId],
+                        tiers: [{ qty: 2, discountRp: discount }],
+                        profitPerItem: profit,
+                        productName: prod.name, baseCost, sellingPrice, margin, discount,
+                        startDate: new Date().toISOString(),
+                        endDate: new Date(Date.now() + 86400000).toISOString(),
+                        maxUses: 999, usedCount: 0,
+                        createdAt: new Date().toISOString()
+                    };
+                    await saveDailyPromo(promo);
+                    console.log('[DAILY] Promo BOGO untuk:', prod.name, '| Profit:', profit);
+                    return;
+                }
+            } else if (sellingPrice < 20000) {
+                const profit = sellingPrice - baseCost * 2;
+                if (profit >= 0) {
+                    const promo = {
+                        id: 'DAILY-' + Date.now().toString(36).toUpperCase(),
+                        name: '🎉 BOGO Spesial — ' + prod.name,
+                        type: 'bogo_same', active: true,
+                        targetProductIds: ['PREMKU-' + prodId, prodId],
+                        tiers: [{ qty: 2, discountRp: profitDefault }],
+                        profitPerItem: profit,
+                        productName: prod.name, baseCost, sellingPrice,
+                        startDate: new Date().toISOString(),
+                        endDate: new Date(Date.now() + 86400000).toISOString(),
+                        maxUses: 999, usedCount: 0,
+                        createdAt: new Date().toISOString()
+                    };
+                    await saveDailyPromo(promo);
+                    console.log('[DAILY] BOGO receh untuk:', prod.name, '| Profit:', profit);
+                    return;
+                }
+            }
+        }
+        console.log('[DAILY] Tidak ada produk yang cocok untuk promo hari ini');
+    } catch(e) { console.error('[DAILY] Gagal generate:', e.message); }
+};
+const runBroadcast = async () => {
+    try {
+        const cfg = getConfig(); if (!bot || !cfg.ownerChatId) return;
+        const dp = await getDailyPromo(); if (!dp) return;
+        const msgs = [
+            `🎯 *PROMO HARI INI*\n\n${dp.productName}\n🔥 BOGO — Bayar 1 Dapat 2!\nHemat besar-besaran hanya hari ini!\n\nKlik: https://rullzyestorepremium.my.id`,
+            `⚡ *FLASH SALE — ${dp.productName}*\n${dp.type==='bogo_same'?'🎁 Beli 1 Gratis 1 🎁':'Diskon spesial!'}\nBuruan sebelum habis! ⏰\n\nhttps://rullzyestorepremium.my.id`,
+            `🚀 *HARI INI SAJA!*\n${dp.productName}\n${dp.type==='bogo_same'?'💥 BOGO — Bayar 1 Dapat 2!':'Diskon gila-gilaan!'}\nJangan sampai kelewatan! 🔥\n\nhttps://rullzyestorepremium.my.id`
+        ];
+        const msg = msgs[Math.floor(Math.random() * msgs.length)];
+        await bot.sendMessage(cfg.ownerChatId, msg, { parse_mode: 'Markdown' });
+        console.log('[BROADCAST] Terkirim ke grup');
+    } catch(e) { console.error('[BROADCAST] Gagal:', e.message); }
+};
+const scheduleDailyPromo = () => {
+    genDailyPromo();
+    const now = new Date(); const night = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 5, 0);
+    setTimeout(() => { genDailyPromo(); setInterval(genDailyPromo, 86400000); }, night - now);
 };
 
 const config = getConfig();
@@ -960,6 +1042,11 @@ app.get('/api/promos', async (req, res) => {
         res.json({ success: true, promos: active });
     } catch(e) { res.json({ success: false, promos: [] }); }
 });
+app.get('/api/daily-promo', async (req, res) => {
+    const dp = await getDailyPromo();
+    if (!dp) return res.json({ success: false, message: 'Tidak ada promo hari ini' });
+    res.json({ success: true, promo: dp });
+});
 app.get('/api/admin/promos', async (req, res) => {
     res.json({ success: true, promos: await getPromos() });
 });
@@ -1037,8 +1124,9 @@ app.post('/api/calculate-price', async (req, res) => {
 // ================= 12. ROUTE ORDER HYBRID LAMA =================
 app.post('/api/order', async (req, res) => {
     const { service, target, productName, displayPrice, randomId, quantity, promoId, promoApplied, originalTotal, email } = req.body;
-    const cfg = getConfig(); const user = await checkRandomId(randomId);
-    if (!user) return res.json({ status: false, message: '❌ Random ID Tidak Valid! Daftar di Bot.' });
+    const cfg = getConfig();
+    if (!email) return res.json({ status: false, message: '❌ Email wajib diisi untuk menerima struk/akun.' });
+    const user = randomId ? await checkRandomId(randomId) : null;
     try {
         let finalTagihan = parseInt(displayPrice);
         let promoData = null;
@@ -1055,7 +1143,7 @@ app.post('/api/order', async (req, res) => {
         const resPay = await axios.post('https://premku.com/api/pay', { api_key: cfg.apiKey, amount: finalTagihan });
         if (resPay.data && resPay.data.success) {
             let orders = await getOrders();
-            orders.push({ idDeposit: resPay.data.data.invoice, idOrder: null, productId: service, productName, targetPhone: target, status: 'MENUNGGU_BAYAR', accountDetails: '-', telegramChatId: user.chatId, type: 'PREMKU', resellerProfit: parseInt(cfg.profit||2000) * qty, quantity: qty, displayPrice: finalTagihan, promoApplied: promoData, deliveryEmail: email||null });
+            orders.push({ idDeposit: resPay.data.data.invoice, idOrder: null, productId: service, productName, targetPhone: target||'', status: 'MENUNGGU_BAYAR', accountDetails: '-', telegramChatId: user?.chatId||null, type: 'PREMKU', resellerProfit: parseInt(cfg.profit||2000) * qty, quantity: qty, displayPrice: finalTagihan, promoApplied: promoData, deliveryEmail: email, buyerEmail: email });
             await saveOrders(orders);
             res.json({ status: true, invoice: { orderId: resPay.data.data.invoice, amount: resPay.data.data.total_bayar, qr_url: resPay.data.data.qr_image, botLink: `https://t.me/${cfg.botUsername}?start=${resPay.data.data.invoice}` } });
         } else res.json({ status: false, message: 'Gagal membuat QRIS Premku' });
@@ -1140,6 +1228,7 @@ async function autoProc() {
                             }
                             orders[i].status = 'SUKSES'; orders[i].accountDetails = acc; orders[i].completedAt = new Date().toISOString(); orders[i].buyerName = orders[i].buyerName || 'Pelanggan'; changed = true;
                             if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
+                            try { const bc = await getBroadcastCount(); await saveBroadcastCount(bc + 1); if ((bc + 1) % 20 === 0) runBroadcast(); } catch(e) {}
                             let msg = `🎉 *PESANAN SELESAI!*\n📦 *${o.productName}*${o.quantity > 1 ? ' ×' + o.quantity : ''}\n\n${acc}`;
                             if (promo) msg += `\n🏷️ *Promo:* ${promo.promoName}`;
                             if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, msg, { parse_mode: "Markdown" }).catch(()=>{});
@@ -1785,5 +1874,6 @@ async function initConfigFromFirebase() {
     // Load affiliate API routes — pass bot notifications for group alerts
     require('./affiliate_api.js')(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL, { notifyGroupWithdrawNew, notifyGroupCommission, notifyGroupAffiliateNew });
 
+    scheduleDailyPromo();
     app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server berjalan di port ${PORT}`));
 })();
