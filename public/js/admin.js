@@ -579,6 +579,13 @@ async function loadTab(tab){
                     <input type="text" id="cfg-flow-key" class="input-dark" placeholder="API Key" value="${cfg.flowixApiKey||''}">
                 </div>
 
+                <div class="card p-5"><h3 class="font-bold text-sky-400 mb-3 text-sm"><i class="fa-solid fa-envelope mr-2"></i>SMTP Email (Kirim Akun)</h3>
+                    <input type="text" id="cfg-smtp-host" class="input-dark mb-2" placeholder="SMTP Host (ex: smtp.gmail.com)" value="${cfg.smtpHost||''}">
+                    <div class="grid grid-cols-2 gap-2 mb-2"><input type="text" id="cfg-smtp-port" class="input-dark" placeholder="Port (587)" value="${cfg.smtpPort||'587'}">
+                    <input type="text" id="cfg-smtp-user" class="input-dark" placeholder="Email / Username" value="${cfg.smtpUser||''}"></div>
+                    <input type="password" id="cfg-smtp-pass" class="input-dark mb-2" placeholder="Password / App Password" value="${cfg.smtpPass||''}">
+                    <input type="text" id="cfg-smtp-from" class="input-dark" placeholder="Nama Pengirim (optional)" value="${cfg.smtpFrom||''}">
+                </div>
                 <div class="card p-5 md:col-span-2"><h3 class="font-bold text-rose-400 mb-3 text-sm"><i class="fa-solid fa-credit-card mr-2"></i>API Games (Cek Nickname)</h3>
                     <div class="grid grid-cols-2 gap-2"><input type="text" id="cfg-api-merchant" class="input-dark" placeholder="Merchant ID" value="${cfg.apigamesMerchantId||''}">
                     <input type="text" id="cfg-api-secret" class="input-dark" placeholder="Secret Key" value="${cfg.apigamesSecretKey||''}"></div>
@@ -928,6 +935,11 @@ async function saveConfig() {
             flowixApiKey: document.getElementById('cfg-flow-key').value,
             apigamesMerchantId: document.getElementById('cfg-api-merchant')?.value||'',
             apigamesSecretKey: document.getElementById('cfg-api-secret')?.value||'',
+            smtpHost: document.getElementById('cfg-smtp-host')?.value||'',
+            smtpPort: document.getElementById('cfg-smtp-port')?.value||'587',
+            smtpUser: document.getElementById('cfg-smtp-user')?.value||'',
+            smtpPass: document.getElementById('cfg-smtp-pass')?.value||'',
+            smtpFrom: document.getElementById('cfg-smtp-from')?.value||'',
             firebaseConfig: {
                 apiKey: document.getElementById('cfg-fb-api')?.value||'',
                 authDomain: document.getElementById('cfg-fb-domain')?.value||'',

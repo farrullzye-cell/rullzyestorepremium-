@@ -124,6 +124,10 @@
           <input type="text" id="target-randomid" placeholder="ID-ABC123" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 font-bold text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500 uppercase" required>
           <p class="text-[9px] md:text-[10px] text-slate-500 mt-2"><i class="fa-solid fa-circle-info text-violet-400"></i> Belum punya? Ketik <b>/daftar</b> di <a href="https://t.me/RullzyeBot" target="_blank" class="text-violet-400 font-bold underline">Bot Telegram</a></p>
         </div>
+        <div class="mb-4 md:mb-5 text-left">
+          <label class="block text-[10px] md:text-xs font-black text-violet-400 uppercase tracking-widest mb-2">Email (opsional — untuk kirim akun)</label>
+          <input type="email" id="target-email" placeholder="email@contoh.com" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 font-bold text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
+        </div>
         <button id="btn-next" class="w-full bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white font-bold py-3.5 md:py-4 rounded-2xl shadow-lg text-xs md:text-sm transition">Lanjut Pembayaran</button>
         <button onclick="closeModal()" class="w-full mt-2 md:mt-3 text-slate-500 text-[10px] md:text-xs font-bold uppercase">Batal</button>
       </div>
@@ -277,6 +281,7 @@
       document.getElementById('modal-step-2').classList.remove('hidden');
       document.getElementById('modal-loader').classList.remove('hidden');
       document.getElementById('modal-final-content').classList.add('hidden');
+      const emailVal = document.getElementById('target-email').value.trim();
       fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -285,7 +290,8 @@
           productName: selectedProduct.name,
           displayPrice: selectedProduct.price,
           target: randomIdVal,
-          randomId: randomIdVal
+          randomId: randomIdVal,
+          email: emailVal || undefined
         })
       }).then(r => r.json()).then(res => {
         document.getElementById('modal-loader').classList.add('hidden');

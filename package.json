@@ -7,9 +7,10 @@
     "start": "node start.js"
   },
   "dependencies": {
+    "axios": "latest",
+    "cors": "^2.8.5",
     "express": "^4.18.2",
     "node-telegram-bot-api": "latest",
-    "cors": "^2.8.5",
-    "axios": "latest"
+    "nodemailer": "^9.0.3"
   }
 }

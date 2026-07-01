@@ -352,6 +352,10 @@ function openOrder(id, name, price, source) {
                             <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">${labelTarget} ${requireTarget ? '<span class="text-rose-500">*</span>' : ''}</label>
                             <input id="modal-target" type="text" placeholder="${labelTarget}" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-violet-500">
                         </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Email (opsional — kirim akun)</label>
+                            <input id="modal-email" type="email" placeholder="email@contoh.com" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-violet-500">
+                        </div>
                         <div class="text-xs text-slate-500 bg-white/5 border border-white/10 rounded-2xl p-3">
                             <p class="font-bold text-white">Catatan:</p>
                             <p>Checkout akan membuat invoice QRIS di web. Gunakan Random ID yang didaftarkan di Bot Telegram.</p>
@@ -397,12 +401,14 @@ function openOrder(id, name, price, source) {
         if (requireTarget && !target) return Swal.fire('Oops', `${labelTarget} wajib diisi.`, 'warning');
 
         let endpoint = '/api/order';
+        const emailVal = document.getElementById('modal-email')?.value.trim();
         let body = {
             service: id.replace(/^[A-Z]+-/, ''),
             productName: name,
             displayPrice: price,
             randomId,
-            target: target || randomId
+            target: target || randomId,
+            email: emailVal || undefined
         };
 
         if (source === 'ppob') endpoint = '/api/ppob-order';

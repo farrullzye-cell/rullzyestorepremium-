@@ -3,6 +3,7 @@ const axios = require('axios');
 const fs = require('fs');
 const cors = require("cors");
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const security = require('./anti_fraud.js');
 const app = express();
@@ -96,6 +97,15 @@ const savePanelOrders = async (data) => { try { await axios.put(`${FIREBASE_URL}
 
 const getPromos = async () => { try { const r = await axios.get(`${FIREBASE_URL}/promos.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const savePromos = async (data) => { try { await axios.put(`${FIREBASE_URL}/promos.json`, data); } catch(e) {} };
+const createMailTransport = () => {
+    const c = getConfig();
+    if (!c.smtpHost || !c.smtpUser || !c.smtpPass) return null;
+    return nodemailer.createTransport({ host: c.smtpHost, port: parseInt(c.smtpPort)||587, secure: parseInt(c.smtpPort)===465, auth: { user: c.smtpUser, pass: c.smtpPass } });
+};
+const sendEmail = async (to, subject, html) => {
+    try { const c = getConfig(); const t = createMailTransport(); if (!t) return false; await t.sendMail({ from: c.smtpFrom||c.smtpUser, to, subject, html }); return true; } catch(e) { console.error('Email error:', e.message); return false; }
+};
+
 const getPremkuBasePrice = async (productId) => {
     try { const cfg = getConfig(); const r = await axios.post('https://premku.com/api/products', { api_key: cfg.apiKey }); const p = r.data?.products?.find(x => x.id == productId); return p ? parseInt(p.price) : null; } catch(e) { return null; }
 };
@@ -922,7 +932,7 @@ app.post('/api/calculate-price', async (req, res) => {
 
 // ================= 12. ROUTE ORDER HYBRID LAMA =================
 app.post('/api/order', async (req, res) => {
-    const { service, target, productName, displayPrice, randomId, quantity, promoId, promoApplied, originalTotal } = req.body;
+    const { service, target, productName, displayPrice, randomId, quantity, promoId, promoApplied, originalTotal, email } = req.body;
     const cfg = getConfig(); const user = await checkRandomId(randomId);
     if (!user) return res.json({ status: false, message: '❌ Random ID Tidak Valid! Daftar di Bot.' });
     try {
@@ -941,7 +951,7 @@ app.post('/api/order', async (req, res) => {
         const resPay = await axios.post('https://premku.com/api/pay', { api_key: cfg.apiKey, amount: finalTagihan });
         if (resPay.data && resPay.data.success) {
             let orders = await getOrders();
-            orders.push({ idDeposit: resPay.data.data.invoice, idOrder: null, productId: service, productName, targetPhone: target, status: 'MENUNGGU_BAYAR', accountDetails: '-', telegramChatId: user.chatId, type: 'PREMKU', resellerProfit: parseInt(cfg.profit||2000) * qty, quantity: qty, displayPrice: finalTagihan, promoApplied: promoData });
+            orders.push({ idDeposit: resPay.data.data.invoice, idOrder: null, productId: service, productName, targetPhone: target, status: 'MENUNGGU_BAYAR', accountDetails: '-', telegramChatId: user.chatId, type: 'PREMKU', resellerProfit: parseInt(cfg.profit||2000) * qty, quantity: qty, displayPrice: finalTagihan, promoApplied: promoData, deliveryEmail: email||null });
             await saveOrders(orders);
             res.json({ status: true, invoice: { orderId: resPay.data.data.invoice, amount: resPay.data.data.total_bayar, qr_url: resPay.data.data.qr_image, botLink: `https://t.me/${cfg.botUsername}?start=${resPay.data.data.invoice}` } });
         } else res.json({ status: false, message: 'Gagal membuat QRIS Premku' });
@@ -1003,6 +1013,17 @@ async function autoProc() {
                             let msg = `🎉 *PESANAN SELESAI!*\n📦 *${o.productName}*${o.quantity > 1 ? ' ×' + o.quantity : ''}\n\n${acc}`;
                             if (promo) msg += `\n🏷️ *Promo:* ${promo.promoName}`;
                             if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, msg, { parse_mode: "Markdown" }).catch(()=>{});
+                            if (o.deliveryEmail) {
+                                const cleanAcc = (acc||'').replace(/\*|`|_|~/g, '').replace(/\n/g, '<br>');
+                                const storeName = cfg.storeName || 'Rullzye Store';
+                                sendEmail(o.deliveryEmail, `Pesanan Selesai — ${o.productName}`, `
+                                    <div style="font-family:sans-serif;max-width:560px;margin:auto;padding:20px;background:#0b0e1a;border-radius:16px;color:#e2e8f0">
+                                    <h2 style="color:#a78bfa;margin-top:0">${storeName}</h2>
+                                    <p style="font-size:18px;font-weight:bold;color:#fff">${o.productName}${o.quantity>1?' ×'+o.quantity:''}</p>
+                                    <div style="background:#1e293b;border-radius:12px;padding:16px;margin:12px 0;font-family:monospace;font-size:13px;line-height:1.8">${cleanAcc}</div>
+                                    <p style="font-size:12px;color:#94a3b8">Terima kasih telah berbelanja di ${storeName}.</p></div>
+                                `).catch(()=>{});
+                            }
                         }
                     } catch (e) {}
                 }
