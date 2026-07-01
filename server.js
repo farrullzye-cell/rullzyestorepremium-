@@ -97,6 +97,54 @@ const savePanelOrders = async (data) => { try { await axios.put(`${FIREBASE_URL}
 
 const getPromos = async () => { try { const r = await axios.get(`${FIREBASE_URL}/promos.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const savePromos = async (data) => { try { await axios.put(`${FIREBASE_URL}/promos.json`, data); } catch(e) {} };
+const getTestEmailHtml = () => `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:auto;background:#0b0e1a;border-radius:20px;overflow:hidden;border:1px solid #1e293b;padding:32px;text-align:center">
+<div style="font-size:48px;margin-bottom:12px">✅</div>
+<h1 style="color:#fff;font-size:20px;font-weight:900;margin:0">Test Berhasil!</h1>
+<p style="color:#94a3b8;font-size:14px;margin:12px 0 16px">Konfigurasi email kamu berfungsi dengan baik.</p>
+<div style="background:#1e293b;border-radius:10px;padding:12px;margin-bottom:12px">
+<p style="color:#34d399;font-size:13px;font-weight:bold;margin:0">✨ Template siap digunakan</p>
+</div>
+<div style="background:#7c3aed20;border:1px solid #7c3aed40;border-radius:10px;padding:10px">
+<p style="color:#a78bfa;font-size:11px;margin:0">Pembeli akan menerima email seperti ini setelah pesanan selesai.</p>
+</div>
+</div>`;
+const buildOrderEmail = (storeName, productName, qty, accountsHtml, totalPrice, promo) => {
+    const items = accountsHtml ? accountsHtml.split('<br>').filter(Boolean).map((line, i) =>
+        `<tr><td style="padding:6px 12px;border-bottom:1px solid #1e293b;font-size:13px;color:#e2e8f0">${i+1}</td><td style="padding:6px 12px;border-bottom:1px solid #1e293b;font-family:monospace;font-size:13px;color:#a78bfa">${line}</td></tr>`
+    ).join('') : '';
+    const promoHtml = promo ? `<tr><td style="padding:8px 0;color:#94a3b8;font-size:12px">Promo</td><td style="padding:8px 0;text-align:right;color:#34d399;font-size:12px;font-weight:bold">🏷️ ${promo.promoName}</td></tr>` : '';
+    return `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:auto;background:#0b0e1a;border-radius:20px;overflow:hidden;border:1px solid #1e293b">
+<div style="background:linear-gradient(135deg,#7c3aed,#a78bfa);padding:24px 32px;text-align:center">
+<div style="font-size:36px;margin-bottom:8px">🎉</div>
+<h1 style="color:#fff;margin:0;font-size:20px;font-weight:900;letter-spacing:-0.5px">Pesanan Selesai!</h1>
+<p style="color:#c4b5fd;margin:4px 0 0;font-size:13px">${storeName}</p>
+</div>
+<div style="padding:24px 32px">
+<div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:16px">
+<table style="width:100%;border-collapse:collapse">
+<tr><td style="padding:4px 0;color:#94a3b8;font-size:12px">Produk</td><td style="padding:4px 0;text-align:right;color:#fff;font-size:14px;font-weight:bold">${productName}${qty>1 ? ' ×'+qty : ''}</td></tr>
+<tr><td style="padding:4px 0;color:#94a3b8;font-size:12px">Total</td><td style="padding:4px 0;text-align:right;color:#fbbf24;font-size:16px;font-weight:900">Rp ${(totalPrice||0).toLocaleString('id-ID')}</td></tr>
+${promoHtml}
+</table></div>
+${accountsHtml ? `
+<div style="background:#131826;border-radius:12px;padding:16px;margin-bottom:16px">
+<h3 style="color:#a78bfa;font-size:13px;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px">📋 Detail Akun</h3>
+<table style="width:100%;border-collapse:collapse">
+<tr style="background:#1e293b;font-size:11px;color:#94a3b8;text-transform:uppercase">
+<th style="padding:8px 12px;text-align:left">#</th><th style="padding:8px 12px;text-align:left">Akun & Password</th>
+</tr>
+${items}
+</table>
+<p style="color:#64748b;font-size:11px;margin:12px 0 0;text-align:center">Gunakan detail di atas untuk login. Jangan bagikan ke siapa pun.</p>
+</div>` : ''}
+<div style="background:linear-gradient(135deg,#1e293b,#131826);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px">
+<p style="color:#94a3b8;font-size:12px;margin:0">Butuh bantuan? Hubungi kami di Telegram</p>
+<p style="margin:6px 0 0"><a href="https://t.me/RullzyeBot" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:8px 24px;border-radius:8px;font-size:13px;font-weight:bold">📲 Hubungi CS</a></p>
+</div>
+<p style="color:#475569;font-size:11px;text-align:center;margin:0">© ${new Date().getFullYear()} ${storeName} — All rights reserved</p>
+</div></div>`; };
 const sendEmail = async (to, subject, html) => {
     try {
         const c = getConfig();
@@ -392,7 +440,7 @@ app.post('/api/admin/test-email', async (req, res) => {
             const se = senderEmail || 'onboarding@resend.dev';
             await axios.post('https://api.resend.com/emails', {
                 from: `${smtpFrom||'Rullzye Store'} <${se}>`,
-                to: [to], subject: 'Test Email — Rullzye Store', html: '<h2 style="color:#a78bfa">✓ Test Berhasil!</h2><p style="color:#e2e8f0">Resend berfungsi dengan baik.</p>'
+                to: [to], subject: 'Test Email — Rullzye Store', html: getTestEmailHtml()
             }, { headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' }, timeout: 15000 });
             return res.json({ success: true, message: 'Email test terkirim via Resend!' });
         }
@@ -400,14 +448,14 @@ app.post('/api/admin/test-email', async (req, res) => {
             const se = senderEmail || smtpUser || 'noreply@rullzyestore.com';
             const resp = await axios.post('https://api.brevo.com/v3/smtp/email', {
                 sender: { name: smtpFrom||'Rullzye Store', email: se },
-                to: [{ email: to }], subject: 'Test Email — Rullzye Store', htmlContent: '<h2 style="color:#a78bfa">✓ Test Berhasil!</h2><p style="color:#e2e8f0">Konfigurasi Email via Brevo berfungsi dengan baik.</p>'
+                to: [{ email: to }], subject: 'Test Email — Rullzye Store', htmlContent: getTestEmailHtml()
             }, { headers: { 'api-key': brevoKey, 'Content-Type': 'application/json' }, timeout: 15000 });
             return res.json({ success: true, message: 'Email test terkirim via Brevo!' });
         }
         if (!smtpHost || !smtpUser || !smtpPass) return res.json({ success: false, message: 'Isi SMTP Host, Email, Password atau pake Brevo.' });
         const t = nodemailer.createTransport({ host: smtpHost, port: parseInt(smtpPort)||587, secure: parseInt(smtpPort)===465, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false }, connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 20000 });
         const from = smtpFrom ? `"${smtpFrom}" <${smtpUser}>` : smtpUser;
-        await t.sendMail({ from, to, subject: 'Test Email — Rullzye Store', html: '<h2 style="color:#a78bfa">✓ Test Berhasil!</h2><p style="color:#e2e8f0">Konfigurasi SMTP berfungsi dengan baik.</p>' });
+        await t.sendMail({ from, to, subject: 'Test Email — Rullzye Store', html: getTestEmailHtml() });
         res.json({ success: true, message: 'Email test terkirim! Cek inbox/spam.' });
     } catch(e) {
         const detail = e.response?.data ? JSON.stringify(e.response.data) : e.message;
@@ -1038,6 +1086,21 @@ async function autoProc() {
                             if (resBuy.data && resBuy.data.success) {
                                 orders[i].status = 'PROSES_PUSAT'; orders[i].idOrder = resBuy.data.invoice; changed = true;
                                 if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `✅ *PEMBAYARAN DITERIMA*\nMemproses ${qty}x ${o.productName}...`, { parse_mode: "Markdown" }).catch(()=>{});
+                                if (o.deliveryEmail) {
+                                    const storeName = cfg.storeName || 'Rullzye Store';
+                                    sendEmail(o.deliveryEmail, `⏳ Diproses — ${o.productName}`, `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:auto;background:#0b0e1a;border-radius:20px;overflow:hidden;border:1px solid #1e293b;padding:32px;text-align:center">
+<div style="font-size:48px;margin-bottom:12px">⏳</div>
+<h1 style="color:#fff;font-size:20px;font-weight:900;margin:0">Pembayaran Diterima!</h1>
+<p style="color:#94a3b8;font-size:14px;margin:8px 0 16px">Pesanan <strong style="color:#fff">${o.productName}${qty>1?' ×'+qty:''}</strong> sedang diproses.</p>
+<div style="background:#1e293b;border-radius:10px;padding:12px;margin-bottom:16px">
+<p style="color:#fbbf24;font-size:13px;font-weight:bold;margin:0">💰 Rp ${(o.displayPrice||0).toLocaleString('id-ID')}</p>
+</div>
+<div style="background:#7c3aed20;border:1px solid #7c3aed40;border-radius:10px;padding:12px">
+<p style="color:#a78bfa;font-size:12px;margin:0">Detail akun akan dikirim ke email ini begitu selesai.</p>
+</div>
+</div>`).catch(()=>{});
+                                }
                             }
                         }
                     } catch (e) {}
@@ -1072,13 +1135,8 @@ async function autoProc() {
                             if (o.deliveryEmail) {
                                 const cleanAcc = (acc||'').replace(/\*|`|_|~/g, '').replace(/\n/g, '<br>');
                                 const storeName = cfg.storeName || 'Rullzye Store';
-                                sendEmail(o.deliveryEmail, `Pesanan Selesai — ${o.productName}`, `
-                                    <div style="font-family:sans-serif;max-width:560px;margin:auto;padding:20px;background:#0b0e1a;border-radius:16px;color:#e2e8f0">
-                                    <h2 style="color:#a78bfa;margin-top:0">${storeName}</h2>
-                                    <p style="font-size:18px;font-weight:bold;color:#fff">${o.productName}${o.quantity>1?' ×'+o.quantity:''}</p>
-                                    <div style="background:#1e293b;border-radius:12px;padding:16px;margin:12px 0;font-family:monospace;font-size:13px;line-height:1.8">${cleanAcc}</div>
-                                    <p style="font-size:12px;color:#94a3b8">Terima kasih telah berbelanja di ${storeName}.</p></div>
-                                `).catch(()=>{});
+                                const orderEmailHtml = buildOrderEmail(storeName, o.productName, o.quantity, cleanAcc, o.displayPrice, promo);
+                                sendEmail(o.deliveryEmail, `Pesanan Selesai — ${o.productName}`, orderEmailHtml).catch(()=>{});
                             }
                         }
                     } catch (e) {}
