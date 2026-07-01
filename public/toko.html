@@ -355,6 +355,11 @@ function getPromoForProduct(productId, qty) {
         return targetMatch && qtyMatch;
     }) || null;
 }
+function getBogoHint(productId, qty) {
+    if (qty>1) return false;
+    const pid = productId.startsWith('PREMKU-') ? productId.replace('PREMKU-','') : productId;
+    return promoCache.some(p => p.type==='bogo_same' && (!p.targetProductIds?.length || p.targetProductIds.includes(productId) || p.targetProductIds.includes('PREMKU-'+pid)));
+}
 
 function openOrder(id, name, price, source) {
     loadPromos();
@@ -446,11 +451,16 @@ async function recalcPrice(id, unitPrice) {
                 return;
             }
         } catch(e) {}
+    } else if (getBogoHint(id, qty)) {
+        banner.className = 'mb-3 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] font-bold text-amber-400 flex items-center gap-2';
+        promoText.innerText = '⚠️ BOGO tersedia — Tambah jumlah ke minimal 2';
+        promoData = null;
+        return;
     }
     promoData = null;
     totalEl.innerText = 'Rp ' + originalTotal.toLocaleString('id-ID');
     origEl.classList.add('hidden');
-    banner.classList.add('hidden');
+    banner.className = 'hidden';
 }
 
 async function submitOrder(id, name, unitPrice, source) {
