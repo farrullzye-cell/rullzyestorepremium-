@@ -81,8 +81,7 @@ const getOrders = async () => { try { const res = await axios.get(`${FIREBASE_UR
 const saveOrders = async (orders) => { try { await axios.put(`${FIREBASE_URL}/orders.json`, orders); } catch (e) { } };
 const getUsers = async () => { try { const res = await axios.get(`${FIREBASE_URL}/users.json`); return res.data ? (Array.isArray(res.data) ? res.data : Object.values(res.data)) : []; } catch (e) { return []; } };
 const saveUsers = async (users) => { try { await axios.put(`${FIREBASE_URL}/users.json`, users); } catch (e) { } };
-const getWithdraws = async () => { try { const res = await axios.get(`${FIREBASE_URL}/withdraws.json`); return res.data ? (Array.isArray(res.data) ? res.data : Object.values(res.data)) : []; } catch (e) { return []; } };
-const saveWithdraws = async (wds) => { try { await axios.put(`${FIREBASE_URL}/withdraws.json`, wds); } catch (e) { } };
+
 
 const getWebUsers = async () => { try { const res = await axios.get(`${FIREBASE_URL}/webUsers.json`); return res.data ? (Array.isArray(res.data) ? res.data : Object.values(res.data)) : []; } catch (e) { return []; } };
 const saveWebUsers = async (users) => { try { await axios.put(`${FIREBASE_URL}/webUsers.json`, users); } catch (e) { } };
@@ -272,7 +271,7 @@ let isProcessing = false;
 const ppob = require('./ppob.js');
 
 // ================= 3. BOT SYSTEM VARS (dideklarasikan dulu, di-load setelah config) =================
-let bot, sendBroadcast, notifyAffiliateApproved, notifyAffiliateRejected, notifyWithdrawSuccess, notifyWithdrawRejected, notifyGroupAffiliateNew, notifyGroupOrderNew, notifyGroupOrderSuccess, notifyGroupWithdrawNew, notifyGroupWithdrawProcessed, notifyGroupError, notifyGroupCommission, notifyGroupStockUpdate, notifyGroupAdmin;
+let bot, sendBroadcast, notifyGroupOrderNew, notifyGroupOrderSuccess, notifyGroupError, notifyGroupStockUpdate, notifyGroupAdmin;
 
 // ================= ADMIN: AUTH ENDPOINT =================
 app.post('/api/admin/auth', (req, res) => {
@@ -298,7 +297,6 @@ app.post('/api/admin/users/toggle', async (req, res) => {
     if(index !== -1) { users[index].isReseller = isReseller; await saveUsers(users); }
     res.json({success: true});
 });
-app.get('/api/admin/withdraws', async (req, res) => { res.json(await getWithdraws()); });
 // Broadcast handler di baris 329
 
 app.post('/api/web-user/register', async (req, res) => {
@@ -357,101 +355,6 @@ app.post('/api/admin/config', async (req, res) => {
     }
 });
 
-app.post('/api/admin/affiliate/approve', async (req, res) => {
-    if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
-    let users = await getUsers();
-    const idx = users.findIndex(u => u.randomId === req.body.randomId);
-    if (idx !== -1) {
-        users[idx].isAffiliate = true;
-        users[idx].affiliatePending = false;
-        users[idx].affiliateApprovedAt = new Date().toISOString();
-        await saveUsers(users);
-        if (bot && notifyAffiliateApproved) {
-            notifyAffiliateApproved(users[idx].chatId, users[idx].randomId).catch(() => {});
-        }
-        notifyGroupAffiliateNew(users[idx]).catch(() => {});
-    }
-    res.json({ success: true });
-});
-
-app.post('/api/admin/affiliate/reject', async (req, res) => {
-    if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
-    const { randomId, reason } = req.body;
-    let users = await getUsers();
-    const idx = users.findIndex(u => u.randomId === randomId);
-    if (idx !== -1) {
-        users[idx].affiliatePending = false;
-        users[idx].affiliateRejectedAt = new Date().toISOString();
-        await saveUsers(users);
-        if (bot && notifyAffiliateRejected) {
-            notifyAffiliateRejected(users[idx].chatId, reason || '').catch(() => {});
-        }
-        notifyGroupAffiliateNew(users[idx]).catch(() => {});
-    }
-    res.json({ success: true });
-});
-
-app.post('/api/admin/affiliate/toggle-ppob', async (req, res) => {
-    if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
-    let users = await getUsers();
-    const idx = users.findIndex(u => u.randomId === req.body.randomId);
-    if (idx !== -1) {
-        users[idx].upgradePPOB = !users[idx].upgradePPOB;
-        await saveUsers(users);
-        if (bot && users[idx].chatId) {
-            const status = users[idx].upgradePPOB ? '✅ diaktifkan' : '❌ dinonaktifkan';
-            bot.sendMessage(users[idx].chatId, `🔄 *Upgrade PPOB ${status} oleh Admin.*`, { parse_mode: 'Markdown' }).catch(() => {});
-        }
-    }
-    res.json({ success: true });
-});
-
-// ================= ADMIN: AFFILIATE DETAIL UPDATE =================
-app.post('/api/admin/affiliate/update', async (req, res) => {
-    if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
-    const { randomId, commissionPercent, maxMarkup, isBanned, bannedReason } = req.body;
-    let users = await getUsers();
-    const idx = users.findIndex(u => u.randomId === randomId);
-    if (idx === -1) return res.json({ success: false, message: 'User tidak ditemukan.' });
-    const wasBanned = users[idx].isBanned;
-    if (commissionPercent !== undefined) users[idx].customCommission = parseInt(commissionPercent);
-    if (maxMarkup !== undefined) users[idx].maxMarkup = parseInt(maxMarkup);
-    if (isBanned !== undefined) { users[idx].isBanned = isBanned; users[idx].bannedReason = bannedReason || ''; }
-    await saveUsers(users);
-    // Notify affiliate if banned/unbanned
-    if (isBanned !== undefined && wasBanned !== isBanned && bot && users[idx].chatId) {
-        if (isBanned) {
-            bot.sendMessage(users[idx].chatId, `🚫 *Akun Affiliate Dibanned*\n\n${bannedReason ? `📝 *Alasan:* ${bannedReason}\n\n` : ''}Silakan hubungi admin untuk informasi lebih lanjut.`, { parse_mode: 'Markdown' }).catch(() => {});
-        } else {
-            bot.sendMessage(users[idx].chatId, `✅ *Akun Affiliate Unbanned*\n\nAkun kamu sudah diaktifkan kembali oleh admin.`, { parse_mode: 'Markdown' }).catch(() => {});
-        }
-    }
-    res.json({ success: true });
-});
-
-// ================= ADMIN: GLOBAL AFFILIATE CONFIG =================
-app.get('/api/admin/affiliate-config', (req, res) => {
-    const cfg = getConfig();
-    res.json({
-        affiliateCommissionPercent: cfg.affiliateCommissionPercent || 20,
-        affiliateMinWithdraw: cfg.affiliateMinWithdraw || 10000,
-        affiliateAutoApprove: cfg.affiliateAutoApprove || false,
-        affiliateMaxMarkup: cfg.affiliateMaxMarkup || 100,
-        affiliateEnabled: cfg.affiliateEnabled !== false,
-        affiliateWelcomeMsg: cfg.affiliateWelcomeMsg || '',
-    });
-});
-app.post('/api/admin/affiliate-config', async (req, res) => {
-    try {
-        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
-        const cfg = getConfig();
-        const fields = ['affiliateCommissionPercent','affiliateMinWithdraw','affiliateAutoApprove','affiliateMaxMarkup','affiliateEnabled','affiliateWelcomeMsg'];
-        fields.forEach(f => { if (req.body[f] !== undefined) cfg[f] = req.body[f]; });
-        await saveConfig(cfg);
-        res.json({ success: true });
-    } catch(e) { res.json({ success: false, message: e.message }); }
-});
-
 // ================= ADMIN: AUDIT LOGS =================
 app.get('/api/admin/audit-logs', async (req, res) => {
     try {
@@ -467,7 +370,7 @@ setInterval(() => security.cleanupRateLimitStore(), 600000);
 // ================= ADMIN: DATABASE STATS =================
 app.get('/api/admin/database/stats', async (req, res) => {
     try {
-        const [users, orders, wds] = await Promise.all([getUsers(), getOrders(), getWithdraws()]);
+        const [users, orders] = await Promise.all([getUsers(), getOrders()]);
         const now = new Date();
         const today = now.toISOString().slice(0,10);
         const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -479,17 +382,11 @@ app.get('/api/admin/database/stats', async (req, res) => {
         const pending = orders.filter(o => o.status === 'MENUNGGU_BAYAR' || o.status === 'PROSES_PUSAT');
         const totalRevenue = sukses.reduce((s,o) => s + (o.displayPrice || 0), 0);
         const monthRevenue = sukses.filter(o => (o.completedAt||o.createdAt||'').startsWith(thisMonth)).reduce((s,o) => s + (o.displayPrice || 0), 0);
-        const affiliates = users.filter(u => u.isAffiliate);
-        const pendingAff = users.filter(u => u.affiliatePending && !u.isAffiliate);
-        const totalCommission = sukses.reduce((s,o) => s + (o.affiliateCommission || 0), 0);
-        const pendingWd = wds.filter(w => w.status === 'PENDING');
 
         res.json({ success: true,
-            users: { total: users.length, reseller: users.filter(u=>u.isReseller).length, affiliate: affiliates.length, pendingAffiliate: pendingAff.length },
+            users: { total: users.length },
             orders: { total: orders.length, today: todayOrders.length, thisMonth: monthOrders.length, sukses: sukses.length, gagal: gagal.length, pending: pending.length },
             revenue: { total: totalRevenue, thisMonth: monthRevenue },
-            affiliate: { totalCommission, pendingWithdraw: pendingWd.length, pendingWdAmount: pendingWd.reduce((s,w) => s + (w.amount||0), 0) },
-            withdraws: { total: wds.length, sukses: wds.filter(w=>w.status==='SUKSES').length, pending: pendingWd.length },
             database: { firebase: FIREBASE_URL.replace(/\/[^/]+$/, '/***'), usersSize: JSON.stringify(users).length, ordersSize: JSON.stringify(orders).length }
         });
     } catch(e) { res.json({ success: false, message: e.message }); }
@@ -554,9 +451,8 @@ app.get('/api/admin/database/export/:type', async (req, res) => {
         let data;
         if (type === 'users') data = await getUsers();
         else if (type === 'orders') data = await getOrders();
-        else if (type === 'withdraws') data = await getWithdraws();
         else if (type === 'config') data = getConfig();
-        else if (type === 'all') data = { users: await getUsers(), orders: await getOrders(), withdraws: await getWithdraws(), config: getConfig() };
+        else if (type === 'all') data = { users: await getUsers(), orders: await getOrders(), config: getConfig() };
         else return res.json({ success: false, message: 'Tipe tidak valid.' });
         res.setHeader('Content-Type','application/json');
         res.setHeader('Content-Disposition',`attachment; filename=rullzye_${type}_${new Date().toISOString().slice(0,10)}.json`);
@@ -602,47 +498,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
-// ================= ADMIN: WITHDRAW =================
-app.get('/api/admin/withdraws', async (req, res) => {
-    try {
-        const wds = await getWithdraws();
-        res.json(wds.sort((a,b)=>new Date(b.date)-new Date(a.date)));
-    } catch(e) { res.json([]); }
-});
-app.post('/api/admin/withdraw/process', async (req, res) => {
-    try {
-        if (!hasPermission(req.admin, 'withdraws')) return res.json({ success: false, message: 'Akses ditolak.' });
-        const { id, status } = req.body;
-        let wds = await getWithdraws();
-        const idx = wds.findIndex(w => w.id === id);
-        if (idx === -1) return res.json({ success: false, message: 'Withdraw tidak ditemukan.' });
-        if (wds[idx].status !== 'PENDING') return res.json({ success: false, message: 'Withdraw sudah diproses.' });
-        
-        wds[idx].status = status;
-        
-        if (status === 'DITOLAK') {
-            const reason = req.body.reason || '';
-            wds[idx].rejectionReason = reason;
-            let users = await getUsers();
-            const uIdx = users.findIndex(u => u.randomId === wds[idx].randomId);
-            if (uIdx !== -1) {
-                users[uIdx].affiliateBalance = (users[uIdx].affiliateBalance || 0) + wds[idx].amount;
-                await saveUsers(users);
-                if (bot && users[uIdx].chatId) notifyWithdrawRejected(users[uIdx].chatId, wds[idx], reason);
-            }
-            notifyGroupWithdrawProcessed(wds[idx], 'DITOLAK').catch(() => {});
-        } else if (status === 'SUKSES') {
-            let users = await getUsers();
-            const uIdx = users.findIndex(u => u.randomId === wds[idx].randomId);
-            if (uIdx !== -1 && bot && users[uIdx].chatId) {
-                notifyWithdrawSuccess(users[uIdx].chatId, wds[idx]);
-            }
-            notifyGroupWithdrawProcessed(wds[idx], 'SUKSES').catch(() => {});
-        }
-        await saveWithdraws(wds);
-        res.json({ success: true });
-    } catch(e) { res.json({ success: false, message: e.message }); }
-});
+
 
 // ================= MIXED PRODUCTS =================
 app.get('/api/mixed-products', async (req, res) => {
@@ -809,57 +665,7 @@ app.get('/api/products', async (req, res) => {
 
 
 
-// Landing page toko affiliate (serve static HTML)
-app.get('/toko/:refCode', (req, res) => {
-    res.sendFile(require('path').join(__dirname, 'public', 'toko.html'));
-});
 
-// API: Data toko affiliate
-app.get('/api/toko/:refCode', async (req, res) => {
-    try {
-        const { refCode } = req.params;
-        const users = await getUsers();
-        const affiliate = users.find(u => u.randomId === refCode.toUpperCase());
-        const cfg = getConfig();
-        if (!affiliate || !affiliate.isAffiliate) return res.json({ success: false, message: 'Toko tidak ditemukan.' });
-
-        // Ambil produk
-        let products = [];
-        try {
-            const mixedRes = await axios.get(`http://localhost:${PORT}/api/mixed-products`);
-            if (mixedRes.data?.success) products = mixedRes.data.products;
-        } catch(e) {}
-
-        // Filter produk jika affiliate punya selectedProducts
-        if (affiliate.selectedProducts && affiliate.selectedProducts.length > 0) {
-            products = products.filter(p => affiliate.selectedProducts.includes(p.id));
-        }
-
-        // Apply markup
-        const markup = affiliate.markupPercent || 0;
-        if (markup > 0) {
-            products = products.map(p => ({ ...p, price: Math.round(p.price * (1 + markup / 100)) }));
-        }
-
-        const downlines = users.filter(u => u.referredBy === affiliate.randomId).length;
-
-        res.json({
-            success: true,
-            profile: {
-                name: affiliate.affiliateName || affiliate.firstName || 'Toko',
-                bio: affiliate.affiliateBio || '',
-                avatar: affiliate.avatarUrl || '',
-                themeColor: affiliate.themeColor || '#7c3aed',
-                socialLinks: affiliate.socialLinks || {},
-                refCode: affiliate.randomId,
-                botUsername: cfg.botUsername || 'RullzyeBot',
-                downlines,
-                storeName: cfg.storeName || 'RullzyeStore'
-            },
-            products
-        });
-    } catch (e) { res.json({ success: false, message: e.message }); }
-});
 
 // ================= 8. PELANGGAN: PRODUK FLOWIX (DENGAN CACHE) =================
 let cachedPPOB = { data: null, time: 0, ttl: 2 * 60 * 1000 };
@@ -1227,7 +1033,6 @@ async function autoProc() {
                                 acc += `\n\n🎁 *PRODUK GRATIS (BOGO):*\n${freeAcc}`;
                             }
                             orders[i].status = 'SUKSES'; orders[i].accountDetails = acc; orders[i].completedAt = new Date().toISOString(); orders[i].buyerName = orders[i].buyerName || 'Pelanggan'; changed = true;
-                            if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
                             try { const bc = await getBroadcastCount(); await saveBroadcastCount(bc + 1); if ((bc + 1) % 20 === 0) runBroadcast(); } catch(e) {}
                             let msg = `🎉 *PESANAN SELESAI!*\n📦 *${o.productName}*${o.quantity > 1 ? ' ×' + o.quantity : ''}\n\n${acc}`;
                             if (promo) msg += `\n🏷️ *Promo:* ${promo.promoName}`;
@@ -1298,7 +1103,6 @@ async function autoProc() {
                                 orders[i].completedAt = new Date().toISOString();
                                 orders[i].buyerName = orders[i].buyerName || 'Pelanggan';
                                 changed = true;
-                                if (app.processAffiliateCommission) app.processAffiliateCommission(orders[i]).catch(()=>{});
                                 if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `🎉 *TRANSAKSI BERHASIL*\n📦 ${o.productName}\n🎯 \`${o.targetPhone || '-'}\`\n🔖 SN: \`${ts.data.sn || '-'}\`\n\nTerima kasih telah berbelanja! 🙏`, { parse_mode: 'Markdown' }).catch(()=>{});
                             } else if (trx === 'failed' || trx === 'error') {
                                 orders[i].status = 'GAGAL'; orders[i].accountDetails = ts.data.note || ts.data.message || 'Transaksi gagal'; changed = true;
@@ -1321,55 +1125,7 @@ async function autoProc() {
 }
 setInterval(autoProc, 10000);
 
-// ================= RESELLER API ENDPOINTS =================
-app.post('/api/reseller/dashboard', async (req, res) => {
-    try {
-        const { randomId } = req.body;
-        if (!randomId) return res.json({ success: false, message: 'Random ID diperlukan.' });
-        const users = await getUsers();
-        const user = users.find(u => u.randomId === randomId && u.isReseller);
-        if (!user) return res.json({ success: false, message: 'Reseller tidak ditemukan.' });
-        const orders = (await getOrders()).filter(o => o.buyerRandomId === randomId);
-        const totalSales = orders.filter(o => o.status === 'SUKSES').length;
-        const totalRevenue = orders.filter(o => o.status === 'SUKSES').reduce((s, o) => s + (o.displayPrice || 0), 0);
-        res.json({
-            success: true,
-            profile: { name: user.firstName || 'Reseller', balance: user.balance || 0, randomId: user.randomId },
-            stats: { totalOrders: orders.length, totalSales, totalRevenue, markup: user.markup || 0 },
-            recentOrders: orders.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 20)
-        });
-    } catch (e) { res.json({ success: false, message: e.message }); }
-});
 
-app.post('/api/reseller/withdraw', async (req, res) => {
-    try {
-        const { randomId, amount, bankDetails } = req.body;
-        if (!randomId || !amount || !bankDetails) return res.json({ success: false, message: 'Data tidak lengkap.' });
-        let users = await getUsers();
-        const idx = users.findIndex(u => u.randomId === randomId && u.isReseller);
-        if (idx === -1) return res.json({ success: false, message: 'Reseller tidak ditemukan.' });
-        if ((users[idx].balance || 0) < amount) return res.json({ success: false, message: 'Saldo tidak mencukupi.' });
-        users[idx].balance -= amount;
-        await saveUsers(users);
-        let wds = await getWithdraws();
-        wds.push({ id: 'WD-R-' + Date.now(), randomId, amount: parseInt(amount), bankDetails, status: 'PENDING', date: new Date().toISOString(), type: 'RESELLER' });
-        await saveWithdraws(wds);
-        res.json({ success: true, message: 'Permintaan withdraw diajukan. Tunggu konfirmasi admin.' });
-    } catch (e) { res.json({ success: false, message: e.message }); }
-});
-
-app.post('/api/reseller/set-markup', async (req, res) => {
-    try {
-        const { randomId, markup } = req.body;
-        if (!randomId || markup === undefined) return res.json({ success: false, message: 'Data tidak lengkap.' });
-        let users = await getUsers();
-        const idx = users.findIndex(u => u.randomId === randomId && u.isReseller);
-        if (idx === -1) return res.json({ success: false, message: 'Reseller tidak ditemukan.' });
-        users[idx].markup = parseInt(markup) || 0;
-        await saveUsers(users);
-        res.json({ success: true, message: 'Markup berhasil diperbarui.' });
-    } catch (e) { res.json({ success: false, message: e.message }); }
-});
 
 // ================= STOCK UPDATE NOTIFICATION =================
 app.post('/api/admin/notify-stock', async (req, res) => {
@@ -1392,39 +1148,25 @@ app.post('/api/admin/notify-stock', async (req, res) => {
 app.post('/api/admin/users/create', async (req, res) => {
     try {
         if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
-        const { name, balance, isReseller, isAffiliate } = req.body;
+        const { name, balance } = req.body;
         let users = await getUsers();
         let randomId;
         do { randomId = `U-${Math.random().toString(36).slice(2, 8).toUpperCase()}`; } while (users.some(u => u.randomId === randomId));
-        users.push({ randomId, firstName: name || '', balance: parseInt(balance)||0, isReseller: !!isReseller, isAffiliate: !!isAffiliate, affiliateBalance: 0, createdAt: new Date().toISOString() });
+        users.push({ randomId, firstName: name || '', balance: parseInt(balance)||0, createdAt: new Date().toISOString() });
         await saveUsers(users);
         res.json({ success: true, randomId, message: `User ${randomId} berhasil dibuat.` });
-    } catch(e) { res.json({ success: false, message: e.message }); }
-});
-
-app.post('/api/admin/affiliate/create', async (req, res) => {
-    try {
-        if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
-        const { name, balance, commissionPercent } = req.body;
-        let users = await getUsers();
-        let randomId;
-        do { randomId = `AFF-${Math.random().toString(36).slice(2, 8).toUpperCase()}`; } while (users.some(u => u.randomId === randomId));
-        users.push({ randomId, firstName: name || '', affiliateName: name || '', balance: 0, affiliateBalance: parseInt(balance)||0, isAffiliate: true, affiliatePending: false, customCommission: parseInt(commissionPercent)||0, affiliateApprovedAt: new Date().toISOString(), createdAt: new Date().toISOString() });
-        await saveUsers(users);
-        res.json({ success: true, randomId, message: `Affiliate ${randomId} berhasil dibuat.` });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
 app.post('/api/admin/users/edit', async (req, res) => {
     try {
         if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
-        const { randomId, name, balance, affiliateBalance } = req.body;
+        const { randomId, name, balance } = req.body;
         let users = await getUsers();
         const idx = users.findIndex(u => u.randomId === randomId);
         if (idx === -1) return res.json({ success: false, message: 'User tidak ditemukan.' });
         if (name !== undefined) users[idx].firstName = name;
         if (balance !== undefined) users[idx].balance = parseInt(balance);
-        if (affiliateBalance !== undefined) users[idx].affiliateBalance = parseInt(affiliateBalance);
         await saveUsers(users);
         res.json({ success: true });
     } catch(e) { res.json({ success: false, message: e.message }); }
@@ -1441,28 +1183,7 @@ app.post('/api/admin/order/force-status', async (req, res) => {
         orders[idx].accountDetails = orders[idx].accountDetails || `Manual: ${status}`;
         if (status === 'SUKSES') orders[idx].completedAt = new Date().toISOString();
         await saveOrders(orders);
-        if (status === 'SUKSES' && app.processAffiliateCommission) {
-            app.processAffiliateCommission(orders[idx]).catch(()=>{});
-        }
         res.json({ success: true });
-    } catch(e) { res.json({ success: false, message: e.message }); }
-});
-
-app.post('/api/admin/affiliate/add-balance', async (req, res) => {
-    try {
-        if (!hasPermission(req.admin, 'users')) return res.json({ success: false, message: 'Akses ditolak.' });
-        const { randomId, amount } = req.body;
-        let users = await getUsers();
-        const idx = users.findIndex(u => u.randomId === randomId && u.isAffiliate);
-        if (idx === -1) return res.json({ success: false, message: 'Affiliate tidak ditemukan.' });
-        users[idx].affiliateBalance = (users[idx].affiliateBalance || 0) + parseInt(amount);
-        await saveUsers(users);
-        // Notify affiliate about balance change
-        if (bot && users[idx].chatId) {
-            const sign = parseInt(amount) >= 0 ? '+' : '';
-            bot.sendMessage(users[idx].chatId, `💰 *Saldo Komisi Diubah Admin*\n\n${sign}Rp ${parseInt(amount).toLocaleString('id-ID')}\n💰 *Saldo Saat Ini:* Rp ${users[idx].affiliateBalance.toLocaleString('id-ID')}`, { parse_mode: 'Markdown' }).catch(() => {});
-        }
-        res.json({ success: true, message: `Saldo komisi ditambahkan Rp ${parseInt(amount).toLocaleString('id-ID')}` });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
@@ -1559,10 +1280,7 @@ app.post('/api/admin/database/reset', async (req, res) => {
         if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
         await saveUsers([]);
         await saveOrders([]);
-        const wds = await getWithdraws();
-        const processed = wds.filter(w => w.status !== 'PENDING');
-        await saveWithdraws(processed);
-        res.json({ success: true, message: 'Database direset. Data pending withdrawal dipertahankan.' });
+        res.json({ success: true, message: 'Database direset.' });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 
@@ -1803,18 +1521,7 @@ async function autoProcPanel() {
     if (changed) await savePanelOrders(orders);
 }
 
-// ================= 13. DOWNLOAD SKU =================
-app.get('/api/reseller/download-sku', async (req, res) => {
-    const cfg = getConfig();
-    if (!cfg.apiKey) return res.status(500).send("API Key Kosong.");
-    try {
-        const resP = await axios.post('https://premku.com/api/products', { api_key: cfg.apiKey });
-        let csvContent = "SKU,Nama Layanan,Harga Modal\n";
-        resP.data.products.forEach(p => { csvContent += `${p.id},${p.name.replace(/,/g, '.')},${p.price}\n`; });
-        res.setHeader('Content-Type', 'text/csv'); res.setHeader('Content-Disposition', 'attachment; filename=Daftar_SKU.csv');
-        res.status(200).send(csvContent);
-    } catch (e) { res.status(500).send("Gagal mengambil data dari pusat."); }
-});
+
 
 process.on('uncaughtException', (err) => {
     console.error('Error:', err);
@@ -1853,26 +1560,54 @@ async function initConfigFromFirebase() {
         console.log('✅ Config migrated: legacy pin fields → superAdmin object');
     }
 
-    // Load bot (membaca config.json yang sudah diperbarui dari Firebase)
+    // Load bot
     const botModule = require('./bot.js');
     bot = botModule.bot;
     sendBroadcast = botModule.sendBroadcast;
-    notifyAffiliateApproved = botModule.notifyAffiliateApproved;
-    notifyAffiliateRejected = botModule.notifyAffiliateRejected;
-    notifyWithdrawSuccess = botModule.notifyWithdrawSuccess;
-    notifyWithdrawRejected = botModule.notifyWithdrawRejected;
-    notifyGroupAffiliateNew = botModule.notifyGroupAffiliateNew;
     notifyGroupOrderNew = botModule.notifyGroupOrderNew;
     notifyGroupOrderSuccess = botModule.notifyGroupOrderSuccess;
-    notifyGroupWithdrawNew = botModule.notifyGroupWithdrawNew;
-    notifyGroupWithdrawProcessed = botModule.notifyGroupWithdrawProcessed;
     notifyGroupError = botModule.notifyGroupError;
-    notifyGroupCommission = botModule.notifyGroupCommission;
     notifyGroupStockUpdate = botModule.notifyGroupStockUpdate;
     notifyGroupAdmin = botModule.notifyGroupAdmin;
 
-    // Load affiliate API routes — pass bot notifications for group alerts
-    require('./affiliate_api.js')(app, getUsers, saveUsers, getOrders, saveOrders, FIREBASE_URL, { notifyGroupWithdrawNew, notifyGroupCommission, notifyGroupAffiliateNew });
+    // ===== Google OAuth Login (independen dari affiliate) =====
+    app.post('/api/auth/google-login', async (req, res) => {
+        try {
+            const { idToken } = req.body;
+            if (!idToken) return res.json({ success: false, message: 'Token diperlukan.' });
+            const cfg = getConfig();
+            const apiKey = cfg.firebaseConfig?.apiKey;
+            if (!apiKey) return res.json({ success: false, message: 'Firebase belum dikonfigurasi.' });
+            const fb = await axios.post(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, { idToken }, { timeout: 8000 });
+            if (!fb.data?.users?.length) return res.json({ success: false, message: 'Token tidak valid.' });
+            const u = fb.data.users[0];
+            const email = (u.email || u.providerUserInfo?.[0]?.email || '').toLowerCase();
+            const name = u.displayName || u.providerUserInfo?.[0]?.displayName || email.split('@')[0];
+            if (!email) return res.json({ success: false, message: 'Email tidak ditemukan.' });
+            let users = await getUsers();
+            const existing = users.find(x => x.googleEmail === email);
+            if (existing) {
+                return res.json({ success: true, message: 'Selamat datang kembali!', user: { name: existing.firstName, email } });
+            }
+            let randomId;
+            do { randomId = 'G-' + crypto.randomBytes(3).toString('hex').toUpperCase(); } while (users.some(x => x.randomId === randomId));
+            users.push({ randomId, firstName: name, googleEmail: email, registeredAt: new Date().toISOString(), balance: 0 });
+            await saveUsers(users);
+            res.json({ success: true, message: 'Akun berhasil dibuat!', user: { name, email }, randomId });
+        } catch(e) {
+            res.json({ success: false, message: 'Gagal verifikasi Google: ' + e.message });
+        }
+    });
+
+    // ===== Firebase test endpoint =====
+    app.get('/api/auth/firebase-test', async (req, res) => {
+        try {
+            const cfg = getConfig();
+            const fc = cfg.firebaseConfig || {};
+            const hasAll = fc.apiKey && fc.authDomain && fc.projectId && fc.appId;
+            res.json({ success: true, configured: !!hasAll, message: hasAll ? 'Firebase siap' : 'Firebase Config belum lengkap.' });
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
 
     scheduleDailyPromo();
     app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server berjalan di port ${PORT}`));

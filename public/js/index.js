@@ -151,14 +151,8 @@ function openReceiptHistory() {
 // ==================== BANNER ====================
 async function loadBanners() {
     try {
-        const [res, cfgRes] = await Promise.all([fetch('/api/banners'), fetch('/api/admin/affiliate-config')]);
+        const res = await fetch('/api/banners');
         const data = await res.json();
-        const cfg = await cfgRes.json();
-        
-        if (cfg.affiliateWelcomeMsg) {
-            const mq = document.getElementById('store-marquee');
-            if(mq) mq.innerText = cfg.affiliateWelcomeMsg;
-        }
 
         if (data.success && data.banners && data.banners.length > 0) {
             banners = data.banners;
@@ -478,41 +472,6 @@ window.checkIndexPayment = async function(idDeposit) {
     }
     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate mr-2"></i> Cek Status Pembayaran';
 }
-
-window.applyAffiliate = async function() {
-    const { value: randomId } = await Swal.fire({
-        title: '🚀 Daftar Affiliate',
-        input: 'text',
-        inputLabel: 'Masukkan Random ID Telegram Anda',
-        inputPlaceholder: 'ID-ABC123',
-        showCancelButton: true,
-        confirmButtonText: 'Kirim Pendaftaran',
-        cancelButtonText: 'Batal',
-        confirmButtonColor: '#f59e0b',
-        background: '#0f172a',
-        color: '#e2e8f0',
-        inputValidator: (value) => {
-            if (!value) return 'Random ID wajib diisi!';
-        }
-    });
-    if (randomId) {
-        try {
-            const res = await fetch('/api/affiliate/apply', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ randomId: randomId.toUpperCase() })
-            });
-            const d = await res.json();
-            if (d.success) {
-                Swal.fire({ icon:'success', title:'Berhasil!', text:d.message, background:'#0f172a', color:'#e2e8f0', confirmButtonColor:'#7c3aed' });
-            } else {
-                Swal.fire({ icon:'error', title:'Gagal', text:d.message, background:'#0f172a', color:'#e2e8f0' });
-            }
-        } catch(e) {
-            Swal.fire({ icon:'error', title:'Error', text:'Gagal terhubung ke server.', background:'#0f172a', color:'#e2e8f0' });
-        }
-    }
-};
 
 // ==================== FOMO ====================
 const fomoData = [

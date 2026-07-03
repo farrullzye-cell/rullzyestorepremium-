@@ -131,7 +131,7 @@ async function loadTab(tab){
     const c=document.getElementById('tab-content');
     c.innerHTML='<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-3xl text-violet-500"></i><p class="mt-2 text-slate-400 text-sm">Memuat data...</p></div>';
     // Permission map: tab name → required permission
-    const permMap={orders:'orders',withdraw:'withdraws',withdraws:'withdraws',users:'users',affiliate:'users',affconfig:'config',products:'products',config:'config',broadcast:'broadcast',security:'settings',groups:'settings',botstatus:'settings',admins:'admins',database:'settings',system:'settings',checkip:'settings',resellers:'users'};
+    const permMap={orders:'orders',users:'users',products:'products',config:'config',broadcast:'broadcast',security:'settings',groups:'settings',botstatus:'settings',admins:'admins',database:'settings',system:'settings',checkip:'settings'};
     const reqPerm=permMap[tab];
     if(reqPerm && adminRole!=='super_admin' && !adminPermissions.includes(reqPerm)){
         c.innerHTML=`<div class="text-center py-20"><i class="fa-solid fa-lock text-4xl text-slate-600 mb-4"></i><p class="text-slate-500 text-sm">Akses ditolak. Tidak ada izin untuk menu ini.</p></div>`;
@@ -142,19 +142,15 @@ async function loadTab(tab){
     try{
         // =============== 1. DASHBOARD (with chart) ===============
         if(tab==='dashboard'){
-            const [users,orders,statsRes,wdRes]=await Promise.all([
+            const [users,orders,statsRes]=await Promise.all([
                 api('/api/admin/users').then(r=>r.json()),
                 api('/api/admin/orders').then(r=>r.json()),
-                api('/api/admin/database/stats').then(r=>r.json()).catch(()=>({})),
-                api('/api/admin/withdraws').then(r=>r.json())
+                api('/api/admin/database/stats').then(r=>r.json()).catch(()=>({}))
             ]);
             const sukses=orders.filter(x=>x.status==='SUKSES');
             const rev=sukses.reduce((s,x)=>s+(x.displayPrice||0),0);
-            const pendingWd=wdRes.filter(w=>w.status==='PENDING');
             const today=orders.filter(o=>(o.createdAt||'').startsWith(new Date().toISOString().slice(0,10)));
-            const aff=users.filter(u=>u.isAffiliate);
             const revMonth=statsRes.revenue?.thisMonth||0;
-            const commTotal=statsRes.affiliate?.totalCommission||0;
             // Revenue by month for chart
             const byMonth={};
             const monthNames=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -183,22 +179,10 @@ async function loadTab(tab){
                 <div class="card stat-card"><p class="text-[10px] text-slate-400 uppercase font-bold">Order Sukses</p><h3 class="text-2xl font-black mt-1 text-emerald-400">${sukses.length}</h3></div>
                 <div class="card stat-card"><p class="text-[10px] text-slate-400 uppercase font-bold">Pendapatan Kotor</p><h3 class="text-xl font-black mt-1 text-violet-400">${formatRp(rev)}</h3></div>
                 <div class="card stat-card"><p class="text-[10px] text-slate-400 uppercase font-bold">Omzet Bulan Ini</p><h3 class="text-xl font-black mt-1 text-amber-400">${formatRp(revMonth)}</h3></div>
-                <div class="card stat-card"><p class="text-[10px] text-slate-400 uppercase font-bold">Affiliate Aktif</p><h3 class="text-2xl font-black mt-1 text-indigo-400">${aff.length}</h3></div>
-                <div class="card stat-card"><p class="text-[10px] text-slate-400 uppercase font-bold">Komisi Teralokasi</p><h3 class="text-xl font-black mt-1 text-rose-400">${formatRp(commTotal)}</h3></div>
             </div>
             ${sortedMonths.length>1?`<div class="card p-4 mb-6"><h3 class="font-bold text-sm text-white mb-4"><i class="fa-solid fa-chart-bar text-violet-400 mr-2"></i>Revenue Per Bulan</h3>
                 <div class="flex items-end gap-1 px-2 pt-4 pb-2">${chartBars}</div>
-            </div>`:''}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div class="card p-4"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-clock text-amber-400 mr-2"></i>Withdraw Pending</h3>
-                    ${pendingWd.length?pendingWd.slice(0,5).map(w=>`<div class="flex justify-between items-center py-1.5 border-b border-white/5 text-xs"><span class="text-slate-400">${w.bankDetails}</span><span class="font-bold text-amber-400">${formatRp(w.amount)}</span></div>`).join(''):'<p class="text-xs text-slate-500">Tidak ada withdraw pending.</p>'}
-                    ${pendingWd.length>5?`<a href="#" onclick="loadTab('withdraw');return false" class="text-[10px] text-violet-400 mt-2 block">+${pendingWd.length-5} lagi</a>`:''}
-                </div>
-                <div class="card p-4"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-trophy text-emerald-400 mr-2"></i>Top Affiliate</h3>
-                    ${aff.sort((a,b)=>(b.totalEarned||0)-(a.totalEarned||0)).slice(0,5).map(a=>`<div class="flex justify-between items-center py-1.5 border-b border-white/5 text-xs"><span class="text-white">${a.affiliateName||a.firstName}</span><span class="font-bold text-emerald-400">${formatRp(a.totalEarned||0)}</span></div>`).join('')}
-                    ${aff.length===0?'<p class="text-xs text-slate-500">Belum ada affiliate.</p>':''}
-                </div>
-            </div>`;
+            </div>`:''}`;
         }
         // =============== 2. USERS (with pagination) ===============
         else if(tab==='users'){
@@ -216,14 +200,12 @@ async function loadTab(tab){
                 </div>
             </div>
             <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
-                <tr><th class="p-2.5 text-[10px]">Nama</th><th class="p-2.5 text-[10px]">ID</th><th class="p-2.5 text-[10px]">ChatID</th><th class="p-2.5 text-[10px] text-center">Role</th><th class="p-2.5 text-[10px] text-right">Saldo</th><th class="p-2.5 text-[10px] text-right">Komisi</th><th class="p-2.5 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
+                <tr><th class="p-2.5 text-[10px]">Nama</th><th class="p-2.5 text-[10px]">ID</th><th class="p-2.5 text-[10px]">ChatID</th><th class="p-2.5 text-[10px] text-right">Saldo</th><th class="p-2.5 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
             pageUsers.forEach(x=>{
                 h+=`<tr class="border-b border-white/5"><td class="p-2.5 font-bold text-xs">${x.firstName||'-'}</td>
                 <td class="p-2.5"><code class="text-[10px] text-violet-300">${x.randomId||'-'}</code></td>
                 <td class="p-2.5 font-mono text-[10px] text-slate-400">${x.chatId||'-'}</td>
-                <td class="p-2.5 text-center">${x.isAffiliate?'<span class="badge-ok">AFF</span>':x.isReseller?'<span class="badge-ok">RSL</span>':'<span class="badge-warn">MBR</span>'}</td>
                 <td class="p-2.5 text-right font-bold text-emerald-400 text-xs">${formatRp(x.balance)}</td>
-                <td class="p-2.5 text-right font-bold text-violet-400 text-xs">${formatRp(x.affiliateBalance)}</td>
                 <td class="p-2.5 text-center">
                     <button onclick="showEditUserModal('${x.randomId}')" class="text-[10px] bg-sky-600/20 text-sky-400 px-2 py-1 rounded hover:bg-sky-600 hover:text-white mr-1"><i class="fa-solid fa-pen"></i></button>
                     <button onclick="deleteUser('${x.randomId}')" class="text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded hover:bg-red-500 hover:text-white"><i class="fa-solid fa-trash"></i></button>
@@ -283,12 +265,9 @@ async function loadTab(tab){
         }
         // =============== 4. FINANCIAL REPORTS (with chart) ===============
         else if(tab==='reports'){
-            const [orders,wdRes]=await Promise.all([api('/api/admin/orders').then(r=>r.json()),api('/api/admin/withdraws').then(r=>r.json())]);
+            const orders=await api('/api/admin/orders').then(r=>r.json());
             const sukses=orders.filter(x=>x.status==='SUKSES');
             const totalRev=sukses.reduce((s,x)=>s+(x.displayPrice||0),0);
-            const totalComm=sukses.reduce((s,x)=>s+(x.affiliateCommission||0),0);
-            const totalWdPaid=wdRes.filter(w=>w.status==='SUKSES').reduce((s,w)=>s+(w.amount||0),0);
-            const netProfit=totalRev-totalComm-totalWdPaid;
             const byMonth={};
             const monthNames=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
             sukses.forEach(o=>{
@@ -311,9 +290,6 @@ async function loadTab(tab){
             c.innerHTML=`<h2 class="text-xl font-black mb-4">Laporan Keuangan</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div class="card p-4 text-center"><p class="text-[10px] text-slate-400 uppercase font-bold">Total Revenue</p><h3 class="text-lg font-black mt-1 text-emerald-400">${formatRp(totalRev)}</h3></div>
-                <div class="card p-4 text-center"><p class="text-[10px] text-slate-400 uppercase font-bold">Total Komisi</p><h3 class="text-lg font-black mt-1 text-amber-400">${formatRp(totalComm)}</h3></div>
-                <div class="card p-4 text-center"><p class="text-[10px] text-slate-400 uppercase font-bold">Total WD Terbayar</p><h3 class="text-lg font-black mt-1 text-red-400">${formatRp(totalWdPaid)}</h3></div>
-                <div class="card p-4 text-center"><p class="text-[10px] text-slate-400 uppercase font-bold">Estimasi Laba</p><h3 class="text-lg font-black mt-1 text-violet-400">${formatRp(netProfit)}</h3></div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div class="card p-4"><h3 class="font-bold text-sm text-white mb-4"><i class="fa-solid fa-chart-bar text-violet-400 mr-2"></i>Revenue Per Bulan</h3>
@@ -482,85 +458,7 @@ async function loadTab(tab){
             </div></div>`;
             c.innerHTML = phtml;
         }
-        // =============== 10. AFFILIATE ===============
-        else if(tab==='affiliate'){
-            const [users,stats]=await Promise.all([api('/api/admin/users').then(r=>r.json()),api('/api/affiliate/stats').then(r=>r.json())]);
-            const aff=users.filter(u=>u.isAffiliate||u.affiliatePending);
-            let ah=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Affiliate (${stats.totalAffiliate||0})</h2>
-                <button onclick="showCreateAffiliateModal()" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg"><i class="fa-solid fa-plus mr-1"></i>Buat Affiliate</button></div>`;
-            if(stats.success){
-                ah+=`<div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
-                    <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Aktif</p><h3 class="text-xl font-black mt-1 text-indigo-400">${stats.totalAffiliate}</h3></div>
-                    <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Pending</p><h3 class="text-xl font-black mt-1 text-amber-400">${stats.pendingAffiliate}</h3></div>
-                    <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Komisi Terbayar</p><h3 class="text-sm font-black mt-1 text-emerald-400">${formatRp(stats.totalCommissionPaid)}</h3></div>
-                    <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Generated</p><h3 class="text-sm font-black mt-1 text-violet-400">${formatRp(stats.totalCommissionGenerated)}</h3></div>
-                    <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Menunggu Cair</p><h3 class="text-sm font-black mt-1 text-rose-400">${formatRp(stats.totalCommissionGenerated-stats.totalCommissionPaid)}</h3></div>
-                </div>`;
-            }
-            ah+=`<div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
-                <tr><th class="p-2 text-[10px]">Nama</th><th class="p-2 text-[10px] text-center">Status</th><th class="p-2 text-[10px] text-right">Saldo</th><th class="p-2 text-[10px] text-right">Earned</th><th class="p-2 text-[10px] text-center">PPOB</th><th class="p-2 text-[10px]">Tgl Daftar</th><th class="p-2 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
-            aff.forEach(a=>{
-                ah+=`<tr class="border-b border-white/5"><td class="p-2 font-bold text-xs">${a.affiliateName||a.firstName||'-'}<br><code class="text-[10px] text-slate-400 font-normal">${a.randomId}</code><br><span class="text-[9px] text-sky-400">${a.chatId?'📱 '+a.chatId:'—'}</span></td>
-                <td class="p-2 text-center">${a.isAffiliate?'<span class="badge-ok">Aktif</span>':a.affiliatePending?'<span class="badge-warn">Pending</span>':'<span class="badge-err">Ditolak</span>'}</td>
-                <td class="p-2 text-right font-bold text-emerald-400 text-xs">${formatRp(a.affiliateBalance)}</td>
-                <td class="p-2 text-right font-bold text-violet-400 text-xs">${formatRp(a.totalEarned)}</td>
-                <td class="p-2 text-center">${a.upgradePPOB?'<span class="badge-ok">Ya</span>':'<span class="badge-err">Tdk</span>'}</td>
-                <td class="p-2 text-[9px] text-slate-400">${a.affiliateAppliedAt?new Date(a.affiliateAppliedAt).toLocaleDateString('id-ID'):'-'}</td>
-                <td class="p-2 text-center">
-                    ${a.affiliatePending&&!a.isAffiliate?`<button onclick="approveAffiliate('${a.randomId}')" class="text-[10px] bg-emerald-600 px-2 py-0.5 rounded mr-1">Terima</button><button onclick="rejectAffiliate('${a.randomId}')" class="text-[10px] bg-red-600 px-2 py-0.5 rounded">Tolak</button>`:''}
-                    ${a.isAffiliate?`<button onclick="editAffiliate('${a.randomId}',${a.customCommission||0},${a.maxMarkup||0},${a.isBanned||false})" class="text-[10px] bg-sky-600 px-2 py-0.5 rounded mr-1">Edit</button><button onclick="togglePPOB('${a.randomId}')" class="text-[10px] ${a.upgradePPOB?'bg-red-600':'bg-indigo-600'} px-2 py-0.5 rounded mr-1">${a.upgradePPOB?'PPOB Off':'PPOB On'}</button>
-                    <button onclick="setAffiliateBalance('${a.randomId}')" class="text-[10px] bg-amber-600 px-2 py-0.5 rounded">Edit Saldo</button>`:''}
-                </td></tr>`;
-            });
-            ah+=`</tbody></table></div>`;
-            c.innerHTML=ah;
-        }
-        // =============== 11. AFFILIATE CONFIG ===============
-        else if(tab==='affconfig'){
-            const cfg=await api('/api/admin/affiliate-config').then(r=>r.json());
-            c.innerHTML=`<h2 class="text-xl font-black mb-4">Pengaturan Global Affiliate</h2>
-            <div class="card p-6 max-w-2xl space-y-4">
-                <div><label class="text-xs font-bold text-slate-400 uppercase block mb-1">Status Affiliate System</label>
-                    <select id="ac-enabled" class="input-dark"><option value="true" ${cfg.affiliateEnabled?'selected':''}>Aktif</option><option value="false" ${!cfg.affiliateEnabled?'selected':''}>Nonaktif</option></select></div>
-                <div><label class="text-xs font-bold text-slate-400 uppercase block mb-1">Auto Approve</label>
-                    <select id="ac-auto" class="input-dark"><option value="true" ${cfg.affiliateAutoApprove?'selected':''}>Ya (Otomatis)</option><option value="false" ${!cfg.affiliateAutoApprove?'selected':''}>Manual</option></select></div>
-                <div><label class="text-xs font-bold text-slate-400 uppercase block mb-1">Komisi Default (%)</label><input type="number" id="ac-comm" class="input-dark" value="${cfg.affiliateCommissionPercent||20}"></div>
-                <div><label class="text-xs font-bold text-slate-400 uppercase block mb-1">Maks Markup (%)</label><input type="number" id="ac-markup" class="input-dark" value="${cfg.affiliateMaxMarkup||100}"></div>
-                <div><label class="text-xs font-bold text-slate-400 uppercase block mb-1">Minimal Withdraw (Rp)</label><input type="number" id="ac-minwd" class="input-dark" value="${cfg.affiliateMinWithdraw||10000}"></div>
-                <div><label class="text-xs font-bold text-slate-400 uppercase block mb-1">Teks Berjalan (Marquee)</label><textarea id="ac-welcome" class="input-dark" rows="3">${cfg.affiliateWelcomeMsg||''}</textarea></div>
-                <button onclick="saveAffConfig()" class="btn-primary w-full">Simpan Pengaturan</button>
-            </div>`;
-        }
-        // =============== 12. WITHDRAW ===============
-        else if(tab==='withdraw'){
-            const w=await api('/api/admin/withdraws').then(r=>r.json());
-            const pending=w.filter(x=>x.status==='PENDING');
-            let h=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Withdraw (${w.length})</h2>
-                <span class="text-xs bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full font-bold">${pending.length} Pending</span>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
-                <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Pending</p><h3 class="text-xl font-black mt-1 text-amber-400">${pending.length}</h3></div>
-                <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Sukses</p><h3 class="text-xl font-black mt-1 text-emerald-400">${w.filter(x=>x.status==='SUKSES').length}</h3></div>
-                <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Ditolak</p><h3 class="text-xl font-black mt-1 text-red-400">${w.filter(x=>x.status==='DITOLAK').length}</h3></div>
-                <div class="card p-3 text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Total Dicairkan</p><h3 class="text-sm font-black mt-1 text-emerald-400">${formatRp(w.filter(x=>x.status==='SUKSES').reduce((s,x)=>s+(x.amount||0),0))}</h3></div>
-            </div>
-            <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
-                <tr><th class="p-2.5 text-[10px]">Tanggal</th><th class="p-2.5 text-[10px]">User</th><th class="p-2.5 text-[10px]">Tujuan</th><th class="p-2.5 text-[10px] text-right">Jumlah</th><th class="p-2.5 text-[10px] text-center">Status</th><th class="p-2.5 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
-            w.sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(x=>{
-                let st='badge-warn';if(x.status==='SUKSES')st='badge-ok';if(x.status==='DITOLAK')st='badge-err';
-                h+=`<tr class="border-b border-white/5"><td class="p-2.5 text-[10px] text-slate-400">${x.date?.substring(0,16).replace('T',' ')||'-'}</td>
-                <td class="p-2.5"><code class="text-[10px] text-violet-300">${x.randomId||'-'}</code><br><span class="text-[10px] text-slate-500">${x.affiliateName||x.name||''}</span></td>
-                <td class="p-2.5 text-[10px] max-w-[120px] truncate">${x.bankDetails||'-'}</td>
-                <td class="p-2.5 text-right font-bold text-xs">${formatRp(x.amount)}</td>
-                <td class="p-2.5 text-center"><span class="${st}">${x.status}</span></td>
-                <td class="p-2.5 text-center">
-                    ${x.status==='PENDING'?`<button onclick="processWd('${x.id}','SUKSES')" class="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded mr-1">Setujui</button><button onclick="processWd('${x.id}','DITOLAK')" class="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded">Tolak</button>`:'−'}
-                </td></tr>`;
-            });
-            h+=`</tbody></table></div>`;
-            c.innerHTML=h;
-        }
-        // =============== 13. API CONFIG ===============
+        // =============== 11. API CONFIG ===============
         else if(tab==='config'){
             const cfg=await api('/api/admin/config').then(r=>r.json());
             c.innerHTML=`<h2 class="text-xl font-black mb-4">Konfigurasi API & Integrasi</h2>
@@ -629,7 +527,7 @@ async function loadTab(tab){
                             <p><strong class="text-white">7.</strong> Di Firebase Console kiri, buka <span class="text-emerald-400">Authentication</span> → <span class="text-emerald-400">Sign-in method</span></p>
                             <p><strong class="text-white">8.</strong> Klik <span class="text-emerald-400">Google</span>, aktifkan <span class="text-amber-400">Enable</span>, isi <span class="text-amber-400">Project support email</span> (email kamu)</p>
                             <p><strong class="text-white">9.</strong> Jika perlu, di <span class="text-emerald-400">Authorized domains</span>, tambahkan <code class="text-violet-300">rullzyestorepremium.my.id</code></p>
-                            <p><strong class="text-white">10.</strong> Simpan, lalu refresh halaman affiliate. Tombol "Masuk dengan Google" siap pakai!</p>
+                            <p><strong class="text-white">10.</strong> Simpan konfigurasi. Google Login siap digunakan!</p>
                         </div>
                     </details>
                 </div>
@@ -690,17 +588,13 @@ async function loadTab(tab){
             const cfg=await api('/api/admin/config').then(r=>r.json());
             const g=cfg.groupIds||{};
             const groups=[
-                {id:'affiliate',label:'Group Affiliate (notif affiliate baru)',placeholder:'-100123456789'},
-                {id:'report',label:'Group Laporan (report harian/bulanan)',placeholder:'-100123456789'},
-                {id:'withdraw',label:'Group Withdraw (notif withdraw masuk)',placeholder:'-100123456789'},
-                {id:'stock',label:'Group Stok (update stok produk)',placeholder:'-100123456789'},
-                {id:'order',label:'Group Order (notif order baru)',placeholder:'-100123456789'},
-                {id:'error',label:'Group Error (log error sistem)',placeholder:'-100123456789'},
-                {id:'broadcast',label:'Group Broadcast (saluran broadcast)',placeholder:'-100123456789'},
-                {id:'admin',label:'Group Admin (diskusi admin)',placeholder:'-100123456789'},
-                {id:'commission',label:'Group Komisi (data komisi)',placeholder:'-100123456789'},
-                {id:'promo',label:'Group Promo (pengumuman promo)',placeholder:'-100123456789'},
-                {id:'affiliate_news',label:'Group Berita Affiliate',placeholder:'-100123456789'}
+                {id:'order',label:'Group Order (notif order)',placeholder:'-100123456789'},
+                {id:'error',label:'Group Error (notif error sistem)',placeholder:'-100123456789'},
+                {id:'promo',label:'Group Promo (notif promo baru)',placeholder:'-100123456789'},
+                {id:'stock',label:'Group Stok (notif stok produk)',placeholder:'-100123456789'},
+                {id:'report',label:'Group Laporan',placeholder:'-100123456789'},
+                {id:'admin',label:'Group Admin',placeholder:'-100123456789'},
+                {id:'broadcast',label:'Group Broadcast',placeholder:'-100123456789'}
             ];
             let h=`<h2 class="text-xl font-black mb-4">Manajemen Grup Telegram</h2>
             <div class="card p-6 max-w-2xl">
@@ -766,7 +660,6 @@ async function loadTab(tab){
                     <div class="flex flex-wrap gap-2">
                         <a href="/api/admin/database/export/users" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-blue-500"><i class="fa-solid fa-download mr-1"></i>Users</a>
                         <a href="/api/admin/database/export/orders" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-download mr-1"></i>Orders</a>
-                        <a href="/api/admin/database/export/withdraws" class="bg-amber-600 text-white px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-download mr-1"></i>Withdraws</a>
                         <a href="/api/admin/database/export/all" class="bg-violet-600 text-white px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-download mr-1"></i>Backup All</a>
                     </div>
                 </div>
@@ -795,10 +688,10 @@ async function loadTab(tab){
                 <div class="flex flex-col sm:flex-row gap-3 items-end">
                     <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Username</label><input id="adm-username" class="input-dark mt-1" placeholder="admin1"></div>
                     <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">PIN</label><input id="adm-pin" type="password" class="input-dark mt-1" placeholder="123456"></div>
-                    <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Izin (pisahkan koma)</label><input id="adm-perms" class="input-dark mt-1" placeholder="orders,withdraws,users"></div>
+                    <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Izin (pisahkan koma)</label><input id="adm-perms" class="input-dark mt-1" placeholder="orders,users"></div>
                     <button onclick="addAdmin()" class="btn-primary shrink-0"><i class="fa-solid fa-plus mr-1"></i>Tambah</button>
                 </div>
-                <p class="text-[10px] text-slate-500 mt-3">Izin tersedia: <code class="text-violet-300">dashboard, orders, withdraws, users, products, config, broadcast, settings</code></p>
+                <p class="text-[10px] text-slate-500 mt-3">Izin tersedia: <code class="text-violet-300">dashboard, orders, users, products, config, broadcast, settings</code></p>
             </div>
             <div class="card p-5">
                 <h3 class="font-bold text-sm text-white mb-3">Daftar Admin</h3>
@@ -886,9 +779,6 @@ async function loadTab(tab){
                     {name:'PPOB',file:'ppob.html',url:'/ppob.html'},
                     {name:'Akun Digital',file:'akundigital.html',url:'/akundigital.html'},
                     {name:'FAQ',file:'faq.html',url:'/faq.html'},
-                    {name:'Affiliate Dashboard',file:'affiliate.html',url:'/affiliate.html'},
-                    {name:'Toko Affiliate',file:'toko.html',url:'/toko/:refCode'},
-                    {name:'Reseller',file:'rullzyereseler.html',url:'/rullzyereseler.html'},
                     {name:'Admin Panel',file:'admin.html',url:'/admin.html'},
                     {name:'Sitemap',file:'sitemap.xml',url:'/sitemap.xml'}
                 ].map(p=>`<a href="${p.url}" target="_blank" class="card p-4 hover:border-violet-500/30 transition block">
@@ -898,23 +788,7 @@ async function loadTab(tab){
                 </a>`).join('')}
             </div>`;
         }
-        // =============== 24. RESELLERS ===============
-        else if(tab==='resellers'){
-            const u=await api('/api/admin/users').then(r=>r.json());
-            const res=u.filter(x=>x.isReseller);
-            c.innerHTML=`<h2 class="text-xl font-black mb-4">Manajemen Reseller (${res.length})</h2>
-            <div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
-                <tr><th class="p-2.5 text-[10px]">Nama</th><th class="p-2.5 text-[10px]">ID</th><th class="p-2.5 text-[10px] text-right">Saldo</th><th class="p-2.5 text-[10px] text-right">Markup</th><th class="p-2.5 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
-            res.forEach(x=>{
-                h+=`<tr class="border-b border-white/5"><td class="p-2.5 font-bold text-xs">${x.firstName||'-'}<br><code class="text-[10px] text-slate-400">${x.randomId}</code></td>
-                <td class="p-2.5 font-mono text-[10px]">${x.chatId||'-'}</td>
-                <td class="p-2.5 text-right font-bold text-emerald-400 text-xs">${formatRp(x.balance)}</td>
-                <td class="p-2.5 text-right text-xs">${x.markup||0}%</td>
-                <td class="p-2.5 text-center"><button onclick="deleteUser('${x.randomId}')" class="text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded hover:bg-red-500 hover:text-white"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-            });
-            h+=`</tbody></table></div>`;
-            c.innerHTML=h;
-        }
+
         // =============== 25. CHECK IP ===============
         else if(tab==='checkip'){
             const r=await api('/api/admin/check-ip').then(r=>r.json());
@@ -978,19 +852,6 @@ async function saveConfig() {
     } catch(e){ showToast("Gagal: "+e.message,'error'); }
 }
 
-async function saveAffConfig(){
-    const d={
-        affiliateEnabled: document.getElementById('ac-enabled').value==='true',
-        affiliateAutoApprove: document.getElementById('ac-auto').value==='true',
-        affiliateCommissionPercent: parseInt(document.getElementById('ac-comm').value),
-        affiliateMaxMarkup: parseInt(document.getElementById('ac-markup').value),
-        affiliateMinWithdraw: parseInt(document.getElementById('ac-minwd').value),
-        affiliateWelcomeMsg: document.getElementById('ac-welcome').value.trim()
-    };
-    await api('/api/admin/affiliate-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-    showToast('Pengaturan Affiliate disimpan!');
-}
-
 window.filterUserTable=async function(q){
     const div=document.getElementById('userSearchResults');
     if(!q.trim()){div.innerHTML='';return;}
@@ -1012,8 +873,7 @@ window.showCreateUserModal=function(){
     div.innerHTML=`<div class="card p-6 max-w-sm w-full"><h3 class="font-bold text-white mb-4">Buat User Baru</h3>
         <input type="text" id="cu-name" placeholder="Nama User" class="input-dark mb-2">
         <input type="number" id="cu-balance" placeholder="Saldo Awal (Rp)" class="input-dark mb-2" value="0">
-        <label class="flex items-center gap-2 text-xs text-slate-300 mb-2"><input type="checkbox" id="cu-reseller"> Sebagai Reseller</label>
-        <label class="flex items-center gap-2 text-xs text-slate-300 mb-4"><input type="checkbox" id="cu-affiliate"> Sebagai Affiliate</label>
+
         <button onclick="createUser()" class="btn-primary w-full mb-2">Buat User</button>
         <button onclick="this.closest('.fixed').remove()" class="text-xs text-slate-400 w-full">Batal</button>
     </div>`;
@@ -1023,49 +883,14 @@ window.showCreateUserModal=function(){
 window.createUser=async function(){
     const name=document.getElementById('cu-name').value.trim();
     const balance=document.getElementById('cu-balance').value;
-    const isReseller=document.getElementById('cu-reseller').checked;
-    const isAffiliate=document.getElementById('cu-affiliate').checked;
     if(!name) return showToast('Nama wajib diisi!','error');
-    const r=await api('/api/admin/users/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,balance,isReseller,isAffiliate})});
+    const r=await api('/api/admin/users/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,balance})});
     const d=await r.json();
     if(d.success){showToast(d.message);document.querySelector('.fixed.inset-0')?.remove();loadTab('users');}
     else showToast(d.message||'Gagal','error');
 };
 
-window.showCreateAffiliateModal=function(){
-    const div=document.createElement('div');
-    div.className='fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4';
-    div.onclick=function(e){if(e.target===this)this.remove()};
-    div.innerHTML=`<div class="card p-6 max-w-sm w-full"><h3 class="font-bold text-white mb-4">Buat Affiliate Baru</h3>
-        <input type="text" id="ca-name" placeholder="Nama Affiliate" class="input-dark mb-2">
-        <input type="number" id="ca-balance" placeholder="Saldo Komisi Awal (Rp)" class="input-dark mb-2" value="0">
-        <input type="number" id="ca-comm" placeholder="Komisi Kustom (%)" class="input-dark mb-4" value="0">
-        <button onclick="createAffiliate()" class="btn-primary w-full mb-2">Buat Affiliate</button>
-        <button onclick="this.closest('.fixed').remove()" class="text-xs text-slate-400 w-full">Batal</button>
-    </div>`;
-    document.body.appendChild(div);
-    setTimeout(()=>document.getElementById('ca-name')?.focus(),100);
-};
-window.createAffiliate=async function(){
-    const name=document.getElementById('ca-name').value.trim();
-    const balance=document.getElementById('ca-balance').value;
-    const commissionPercent=document.getElementById('ca-comm').value;
-    if(!name) return showToast('Nama wajib diisi!','error');
-    const r=await api('/api/admin/affiliate/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,balance,commissionPercent})});
-    const d=await r.json();
-    if(d.success){showToast(d.message);document.querySelector('.fixed.inset-0')?.remove();loadTab('affiliate');}
-    else showToast(d.message||'Gagal','error');
-};
-window.setAffiliateBalance=async function(rid){
-    const amt=prompt('Edit saldo komisi (masukkan nominal baru):');
-    if(amt&&!isNaN(parseInt(amt))){
-        const users=await api('/api/admin/users').then(r=>r.json());
-        const u=users.find(x=>x.randomId===rid);
-        const currentBalance=u?u.balance:0;
-        await api('/api/admin/users/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid,balance:currentBalance,affiliateBalance:parseInt(amt)})});
-        loadTab('affiliate');
-    }
-};
+
 // ==================== PAGINATION FUNCTIONS ====================
 window.paginateUsers=function(page){
     if(page<1) return;
@@ -1090,7 +915,6 @@ window.showEditUserModal=async function(rid){
         <p class="text-[10px] text-slate-400 mb-4"><code class="text-violet-300">${u.randomId}</code></p>
         <input type="text" id="eu-name" class="input-dark mb-2" placeholder="Nama" value="${(u.firstName||'').replace(/"/g,'&quot;')}">
         <input type="number" id="eu-balance" class="input-dark mb-2" placeholder="Saldo" value="${u.balance||0}">
-        <input type="number" id="eu-aff-balance" class="input-dark mb-4" placeholder="Saldo Komisi" value="${u.affiliateBalance||0}">
         <button onclick="saveEditUser('${rid}')" class="btn-primary w-full mb-2">Simpan</button>
         <button onclick="this.closest('.fixed').remove()" class="text-xs text-slate-400 w-full">Batal</button>
     </div>`;
@@ -1100,8 +924,7 @@ window.showEditUserModal=async function(rid){
 window.saveEditUser=async function(rid){
     const name=document.getElementById('eu-name').value.trim();
     const balance=parseInt(document.getElementById('eu-balance').value)||0;
-    const affBalance=parseInt(document.getElementById('eu-aff-balance').value)||0;
-    const r=await api('/api/admin/users/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid,name,balance,affiliateBalance:affBalance})});
+    const r=await api('/api/admin/users/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid,name,balance})});
     const d=await r.json();
     if(d.success){showToast('User berhasil diperbarui!');document.querySelector('.fixed.inset-0')?.remove();loadTab('users');}
     else showToast(d.message||'Gagal','error');
@@ -1121,36 +944,6 @@ window.showUserSearchModal=function(){
     setTimeout(()=>document.getElementById('userSearchInput')?.focus(),100);
 };
 
-window.approveAffiliate=async function(rid){
-    if(!confirm('Setujui affiliate ini?')) return;
-    await api('/api/admin/affiliate/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid})});
-    showToast('Affiliate disetujui!');
-    loadTab('affiliate');
-};
-window.rejectAffiliate=async function(rid){
-    const r=prompt('Alasan penolakan:');
-    await api('/api/admin/affiliate/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid,reason:r||''})});
-    showToast('Affiliate ditolak!');
-    loadTab('affiliate');
-};
-window.togglePPOB=async function(rid){
-    await api('/api/admin/affiliate/toggle-ppob',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid})});
-    showToast('Status PPOB diubah!');
-    loadTab('affiliate');
-};
-window.addAffiliateBalance=async function(rid){
-    const amt=prompt('Masukkan nominal topup saldo komisi:');
-    if(amt&&parseInt(amt)>0){
-        await api('/api/admin/affiliate/add-balance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({randomId:rid,amount:parseInt(amt)})});
-        loadTab('affiliate');
-    }
-};
-window.processWd=async function(id,st){
-    if(!confirm(`Proses withdraw menjadi ${st}?`)) return;
-    await api('/api/admin/withdraw/process',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status:st})});
-    showToast(`Withdraw diubah menjadi ${st}`);
-    loadTab('withdraw');
-};
 window.sendBroadcast=async function(){
     const m=document.getElementById('bc-msg').value.trim();
     if(!m) return showToast('Pesan kosong!','error');
@@ -1162,19 +955,6 @@ window.sendBroadcast=async function(){
     } catch(e){ showToast('Gagal: '+e.message,'error'); }
     loadTab('broadcast');
 };
-window.editAffiliate=async function(rid,comm,markup,banned){
-    const p=prompt(`Format: Komisi,MaxMarkup,IsBanned,BannedReason\nContoh: 25,150,false,\n\nSaat ini: ${comm},${markup},${banned}`);
-    if(p){
-        const parts=p.split(',');
-        if(parts.length>=3){
-            const b={randomId:rid,commissionPercent:parseInt(parts[0]),maxMarkup:parseInt(parts[1]),isBanned:parts[2].trim()==='true',bannedReason:parts[3]||''};
-            await api('/api/admin/affiliate/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-            showToast('Affiliate diperbarui!');
-            loadTab('affiliate');
-        } else showToast('Format salah!','error');
-    }
-};
-
 window.forceOrderStatus=async function(id,status){
     if(!confirm(`Ubah status order ${id} menjadi ${status}?`)) return;
     await api('/api/admin/order/force-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status})});
@@ -1263,7 +1043,7 @@ async function testPremku(){
     try{const r=await fetch('/api/products').then(r=>r.json());document.getElementById('premku-test').innerHTML=r.success?`<span class="text-emerald-400 font-bold">✅ ${r.products?.length||0} produk</span>`:'<span class="text-red-400">❌ Gagal</span>';}catch(e){document.getElementById('premku-test').innerHTML='<span class="text-red-400">Error</span>';}
 }
 async function testFirebase(){
-    try{const r=await fetch('/api/affiliate/firebase-test').then(r=>r.json());document.getElementById('firebase-test-result').innerHTML=r.success?`<span class="text-emerald-400 font-bold">✅ ${r.message}</span>`:`<span class="text-red-400">❌ ${r.message}</span>`;}catch(e){document.getElementById('firebase-test-result').innerHTML='<span class="text-red-400">Error</span>';}
+    try{const r=await fetch('/api/auth/firebase-test').then(r=>r.json());document.getElementById('firebase-test-result').innerHTML=r.success?`<span class="text-emerald-400 font-bold">✅ ${r.message}</span>`:`<span class="text-red-400">❌ ${r.message}</span>`;}catch(e){document.getElementById('firebase-test-result').innerHTML='<span class="text-red-400">Error</span>';}
 }
 
 // Testimoni functions
