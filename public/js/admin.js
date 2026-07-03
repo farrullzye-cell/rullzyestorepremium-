@@ -131,7 +131,7 @@ async function loadTab(tab){
     const c=document.getElementById('tab-content');
     c.innerHTML='<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-3xl text-violet-500"></i><p class="mt-2 text-slate-400 text-sm">Memuat data...</p></div>';
     // Permission map: tab name → required permission
-    const permMap={orders:'orders',users:'users',products:'products',config:'config',broadcast:'broadcast',security:'settings',groups:'settings',botstatus:'settings',admins:'admins',database:'settings',system:'settings',checkip:'settings'};
+    const permMap={orders:'orders',users:'users',products:'products',profit:'config',config:'config',broadcast:'broadcast',security:'settings',groups:'settings',botstatus:'settings',admins:'admins',database:'settings',system:'settings',checkip:'settings'};
     const reqPerm=permMap[tab];
     if(reqPerm && adminRole!=='super_admin' && !adminPermissions.includes(reqPerm)){
         c.innerHTML=`<div class="text-center py-20"><i class="fa-solid fa-lock text-4xl text-slate-600 mb-4"></i><p class="text-slate-500 text-sm">Akses ditolak. Tidak ada izin untuk menu ini.</p></div>`;
@@ -333,7 +333,70 @@ async function loadTab(tab){
                 <button onclick="saveBadges()" class="btn-primary w-full">Simpan Badge</button>
             </div>`;
         }
-        // =============== 7. PROMO ===============
+        // =============== 6.5 PROFIT SETTINGS ===============
+        else if(tab==='profit'){
+            const [mixedRes, ppobCatRes] = await Promise.all([
+                fetch('/api/mixed-products').then(r=>r.json()),
+                api('/api/admin/ppob-category-profits').then(r=>r.json())
+            ]);
+            const allProds = mixedRes.products||[];
+            const premkuProds = allProds.filter(p => p.source === 'premku');
+            const ppobProds = allProds.filter(p => p.source === 'ppob');
+
+            // Extract unique PPOB brands/categories
+            const brandMap = {};
+            ppobProds.forEach(p => { brandMap[p.brand] = (brandMap[p.brand]||0) + 1; });
+            const brands = Object.keys(brandMap).sort();
+            const catProfits = ppobCatRes.data||{};
+
+            const globalProfit = await api('/api/admin/config').then(r=>r.json()).then(c=>c.profit||2000);
+
+            let h = `<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black">Pengaturan Keuntungan</h2></div>`;
+
+            // === PPOB Categories ===
+            h += `<div class="card p-5 mb-6">
+                <h3 class="font-bold text-emerald-400 text-sm mb-1"><i class="fa-solid fa-bolt mr-2"></i>Keuntungan per Kategori — PPOB/Flowix</h3>
+                <p class="text-[10px] text-slate-500 mb-4">Keuntungan global: <strong class="text-white">Rp ${formatRp(globalProfit)}</strong>. Kosongkan input untuk menggunakan keuntungan global.</p>
+                <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
+                    <tr><th class="p-2 text-[10px]">Kategori</th><th class="p-2 text-[10px]">Jumlah Produk</th><th class="p-2 text-[10px] text-right">Keuntungan (Rp)</th></tr></thead><tbody>`;
+            brands.forEach(b => {
+                const val = catProfits[b]!==undefined ? catProfits[b] : '';
+                h += `<tr class="border-b border-white/5">
+                    <td class="p-2 text-xs font-bold text-white">${b}</td>
+                    <td class="p-2 text-[10px] text-slate-400">${brandMap[b]} produk</td>
+                    <td class="p-2 text-right"><input type="number" class="ppob-cat-profit input-dark text-right text-xs py-1.5 px-2 w-32" data-brand="${b}" value="${val}" placeholder="${globalProfit}"></td>
+                </tr>`;
+            });
+            h += `</tbody></table></div>
+                <button onclick="savePPOBProfits()" class="btn-primary mt-4 text-xs"><i class="fa-solid fa-save mr-1"></i>Simpan Keuntungan PPOB</button>
+            </div>`;
+
+            // === Premku Products ===
+            h += `<div class="card p-5">
+                <h3 class="font-bold text-amber-400 text-sm mb-1"><i class="fa-solid fa-crown mr-2"></i>Keuntungan per Produk — Premku</h3>
+                <p class="text-[10px] text-slate-500 mb-4">Keuntungan global: <strong class="text-white">Rp ${formatRp(globalProfit)}</strong>. Kosongkan input untuk menggunakan keuntungan global.</p>
+                <div class="mb-3"><input type="text" id="profit-search" class="input-dark text-xs py-2 px-3" placeholder="Cari produk..." oninput="filterProfitTable()"></div>
+                <div class="overflow-x-auto max-h-96 overflow-y-auto"><table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10 sticky top-0" style="background:#0f172a">
+                    <tr><th class="p-2 text-[10px]">ID</th><th class="p-2 text-[10px]">Nama</th><th class="p-2 text-[10px] text-right">Harga Jual</th><th class="p-2 text-[10px] text-right">Keuntungan (Rp)</th></tr></thead><tbody id="profit-premku-tbody">`;
+            premkuProds.forEach(p => {
+                const prodId = p.id.replace('PREMKU-','');
+                h += `<tr class="border-b border-white/5 profit-row" data-name="${p.name.toLowerCase()}">
+                    <td class="p-2 text-[10px] font-mono text-slate-400">${prodId}</td>
+                    <td class="p-2 text-xs font-bold text-white max-w-[200px] truncate">${p.name}</td>
+                    <td class="p-2 text-right text-xs text-slate-300">${formatRp(p.price)}</td>
+                    <td class="p-2 text-right"><input type="number" class="premku-profit input-dark text-right text-xs py-1.5 px-2 w-32" data-prodid="${prodId}" placeholder="${globalProfit}"></td>
+                </tr>`;
+            });
+            h += `</tbody></table></div>
+                <div class="flex gap-2 mt-4">
+                    <button onclick="savePremkuProfits()" class="btn-primary text-xs"><i class="fa-solid fa-save mr-1"></i>Simpan Keuntungan Produk</button>
+                    <button onclick="loadProfitSettings()" class="text-xs bg-white/10 text-slate-300 px-4 py-2 rounded-xl hover:bg-white/20 transition"><i class="fa-solid fa-rotate mr-1"></i>Muat Ulang</button>
+                </div>
+            </div>`;
+            c.innerHTML = h;
+            // Load current settings after render
+            setTimeout(loadProfitSettings, 50);
+        }
         else if(tab==='promo'){
             const [promos, productsRes] = await Promise.all([
                 api('/api/admin/promos').then(r=>r.json()),
@@ -976,6 +1039,79 @@ window.saveBadges=async function(){
         await api('/api/admin/badge-settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
         showToast('Badge disimpan!');
     } catch(e){ showToast('JSON tidak valid: '+e.message,'error'); }
+};
+
+// ================= PROFIT HELPERS =================
+window.loadProfitSettings = async function() {
+    try {
+        const r = await api('/api/admin/product-settings').then(r=>r.json());
+        const settings = r.data || {};
+        document.querySelectorAll('.premku-profit').forEach(inp => {
+            const pid = inp.dataset.prodid;
+            if (settings[pid] && settings[pid].profit !== undefined) {
+                inp.value = settings[pid].profit;
+            }
+        });
+    } catch(e) {}
+};
+
+window.filterProfitTable = function() {
+    const q = (document.getElementById('profit-search')?.value||'').toLowerCase();
+    document.querySelectorAll('.profit-row').forEach(row => {
+        const name = row.dataset.name || '';
+        row.style.display = name.includes(q) ? '' : 'none';
+    });
+};
+
+window.savePremkuProfits = async function() {
+    try {
+        const settings = {};
+        document.querySelectorAll('.premku-profit').forEach(inp => {
+            const pid = inp.dataset.prodid;
+            const val = inp.value.trim();
+            if (val !== '') {
+                settings[pid] = { profit: parseInt(val) };
+            }
+        });
+        // Merge with existing settings (preserve badge, isOutOfStock)
+        const existing = await api('/api/admin/product-settings').then(r=>r.json());
+        const existingData = existing.data || {};
+        Object.keys(existingData).forEach(pid => {
+            if (!settings[pid]) {
+                settings[pid] = existingData[pid];
+            } else {
+                // Preserve other fields from existing
+                settings[pid] = { ...existingData[pid], ...settings[pid] };
+            }
+        });
+        const res = await api('/api/admin/product-settings', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({ productSettings: settings })
+        });
+        const d = await res.json();
+        showToast(d.message || 'Keuntungan produk disimpan!');
+    } catch(e) { showToast('Gagal: '+e.message, 'error'); }
+};
+
+window.savePPOBProfits = async function() {
+    try {
+        const ppobCategoryProfits = {};
+        document.querySelectorAll('.ppob-cat-profit').forEach(inp => {
+            const brand = inp.dataset.brand;
+            const val = inp.value.trim();
+            if (val !== '') {
+                ppobCategoryProfits[brand] = parseInt(val);
+            }
+        });
+        const res = await api('/api/admin/ppob-category-profits', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({ ppobCategoryProfits })
+        });
+        const d = await res.json();
+        showToast(d.message || 'Keuntungan PPOB disimpan!');
+    } catch(e) { showToast('Gagal: '+e.message, 'error'); }
 };
 
 async function testEmail(){

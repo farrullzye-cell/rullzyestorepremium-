@@ -68,7 +68,7 @@ const getConfig = () => {
         _configCacheTime = now;
         return _cachedConfig;
     }
-    catch(e) { return { apiKey: '', profit: 2000, botUsername: '', telegramToken: '', storeName: 'Rullzye Store', productSettings: {}, flowixApiKey: '', flowixMerchantId: '', firebaseConfig: {} }; }
+    catch(e) { return { apiKey: '', profit: 2000, botUsername: '', telegramToken: '', storeName: 'Rullzye Store', productSettings: {}, ppobCategoryProfits: {}, flowixApiKey: '', flowixMerchantId: '', firebaseConfig: {} }; }
 };
 const invalidateConfigCache = () => { _cachedConfig = null; _configCacheTime = 0; };
 const saveConfig = async (configData) => {
@@ -530,15 +530,18 @@ app.get('/api/mixed-products', async (req, res) => {
 
         if (ppobRes.data) {
             ppobRes.data.filter(p => p.status && p.status.toLowerCase() === 'aktif').forEach(p => {
+                const brand = p.brand || 'Umum';
+                const catProfit = cfg.ppobCategoryProfits?.[brand];
+                const pProfit = (catProfit !== null && catProfit !== undefined) ? parseInt(catProfit) : profit;
                 allProducts.push({
                     id: 'PPOB-' + p.code,
                     source: 'ppob',
                     name: p.name,
-                    price: parseInt(p.price) + profit,
+                    price: parseInt(p.price) + pProfit,
                     stock: 9999,
                     badge: null,
                     category: 'ppob',
-                    brand: p.brand || ''
+                    brand: brand
                 });
             });
         }
@@ -560,6 +563,44 @@ app.post('/api/admin/badge-settings', async (req, res) => {
         await axios.put(`${FIREBASE_URL}/badgeSettings.json`, req.body);
         res.json({ success: true });
     } catch (e) { res.json({ success: false }); }
+});
+
+// ================= PRODUCT SETTINGS (per-product profit) =================
+app.get('/api/admin/product-settings', (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin' && !req.admin.permissions?.includes('config')) return res.json({ success: false, message: 'Akses ditolak.' });
+        const cfg = getConfig();
+        res.json({ success: true, data: cfg.productSettings || {} });
+    } catch (e) { res.json({ success: false, data: {} }); }
+});
+
+app.post('/api/admin/product-settings', async (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
+        const cfg = getConfig();
+        cfg.productSettings = req.body.productSettings || {};
+        await saveConfig(cfg);
+        res.json({ success: true, message: 'Pengaturan produk disimpan.' });
+    } catch (e) { res.json({ success: false, message: e.message }); }
+});
+
+// ================= PPOB CATEGORY PROFITS =================
+app.get('/api/admin/ppob-category-profits', (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin' && !req.admin.permissions?.includes('config')) return res.json({ success: false, message: 'Akses ditolak.' });
+        const cfg = getConfig();
+        res.json({ success: true, data: cfg.ppobCategoryProfits || {} });
+    } catch (e) { res.json({ success: false, data: {} }); }
+});
+
+app.post('/api/admin/ppob-category-profits', async (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin') return res.json({ success: false, message: 'Akses ditolak.' });
+        const cfg = getConfig();
+        cfg.ppobCategoryProfits = req.body.ppobCategoryProfits || {};
+        await saveConfig(cfg);
+        res.json({ success: true, message: 'Keuntungan per kategori PPOB disimpan.' });
+    } catch (e) { res.json({ success: false, message: e.message }); }
 });
 
 // ================= 5. ADMIN API: FLOWIX CONFIG =================
@@ -687,15 +728,20 @@ app.get('/api/ppob-products', async (req, res) => {
         const profit = parseInt(cfg.profit || 2000);
         const products = result.data
             .filter(p => p.status && p.status.toLowerCase() === 'aktif')
-            .map(p => ({
-                id: p.code,
-                name: p.name,
-                price: parseInt(p.price) + profit,
-                basePrice: parseInt(p.price),
-                stock: 9999,
-                brand: p.brand || '',
-                category: p.brand || 'Umum'
-            }));
+            .map(p => {
+                const brand = p.brand || 'Umum';
+                const catProfit = cfg.ppobCategoryProfits?.[brand];
+                const pProfit = (catProfit !== null && catProfit !== undefined) ? parseInt(catProfit) : profit;
+                return {
+                    id: p.code,
+                    name: p.name,
+                    price: parseInt(p.price) + pProfit,
+                    basePrice: parseInt(p.price),
+                    stock: 9999,
+                    brand: brand,
+                    category: brand
+                };
+            });
 
         cachedPPOB = { data: products, time: Date.now(), ttl: 2 * 60 * 1000 };
         res.json({ success: true, products });
