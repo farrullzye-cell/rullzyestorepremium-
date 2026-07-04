@@ -135,7 +135,7 @@ function renderProducts() {
     const filtered = products.filter(p => {
         if (flt !== 'all' && p.category !== flt) return false;
         if (q && !p.name.toLowerCase().includes(q) && !p.description?.toLowerCase().includes(q)) return false;
-        return p.active !== false;
+        return p.active !== false && p.stock > 0;
     });
     const el = document.getElementById('productList');
     if (!filtered.length) {

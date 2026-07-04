@@ -239,7 +239,7 @@ async function loadProducts() {
         const res = await fetch('/api/mixed-products');
         const data = await res.json();
         if (data.success) {
-            allProducts = data.products;
+            allProducts = (data.products || []).filter(p => p.stock === undefined || p.stock > 0);
             renderBadgeSections();
         }
     } catch (e) {

@@ -246,7 +246,7 @@
         fetchPromos()
     ]).then(([res]) => {
         if (res.success && res.products) {
-          allProducts = res.products;
+          allProducts = (res.products || []).filter(p => p.stock === undefined || p.stock > 0);
           filterProducts('all');
         } else {
           document.getElementById('product-grid').innerHTML = '<p class="col-span-full text-center text-slate-400 py-10">Gagal memuat produk.</p>';
