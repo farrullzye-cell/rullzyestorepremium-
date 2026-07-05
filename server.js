@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 const security = require('./anti_fraud.js');
+const NokosAPI = require('./services/nokos');
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -1731,7 +1732,6 @@ async function initConfigFromFirebase() {
     // ===== NOKOS API =====
     app.post('/api/nokos/services', async (req, res) => {
         try {
-            const NokosAPI = require('./services/nokos');
             const cfg = getConfig();
             const nokosKey = cfg.nokosApiKey || '';
             if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.', services: [] });
@@ -1756,7 +1756,6 @@ async function initConfigFromFirebase() {
 
     app.post('/api/nokos/prices', async (req, res) => {
         try {
-            const NokosAPI = require('./services/nokos');
             const cfg = getConfig();
             const nokosKey = cfg.nokosApiKey || '';
             if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
@@ -1769,7 +1768,6 @@ async function initConfigFromFirebase() {
 
     app.post('/api/nokos/availability', async (req, res) => {
         try {
-            const NokosAPI = require('./services/nokos');
             const cfg = getConfig();
             const nokosKey = cfg.nokosApiKey || '';
             if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
@@ -1782,7 +1780,6 @@ async function initConfigFromFirebase() {
 
     app.post('/api/nokos/get-number', async (req, res) => {
         try {
-            const NokosAPI = require('./services/nokos');
             const cfg = getConfig();
             const nokosKey = cfg.nokosApiKey || '';
             if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
@@ -1826,7 +1823,6 @@ async function initConfigFromFirebase() {
 
     app.post('/api/nokos/status', async (req, res) => {
         try {
-            const NokosAPI = require('./services/nokos');
             const cfg = getConfig();
             const nokosKey = cfg.nokosApiKey || '';
             if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
@@ -1840,7 +1836,6 @@ async function initConfigFromFirebase() {
 
     app.post('/api/nokos/set-status', async (req, res) => {
         try {
-            const NokosAPI = require('./services/nokos');
             const cfg = getConfig();
             const nokosKey = cfg.nokosApiKey || '';
             if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
@@ -1873,7 +1868,6 @@ async function initConfigFromFirebase() {
 
     app.get('/api/nokos/balance', async (req, res) => {
         try {
-            const NokosAPI = require('./services/nokos');
             const cfg = getConfig();
             const nokosKey = cfg.nokosApiKey || '';
             if (!nokosKey) return res.json({ success: false, balance: 0, message: 'Nokos API Key belum dikonfigurasi.' });
