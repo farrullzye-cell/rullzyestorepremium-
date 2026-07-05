@@ -313,32 +313,61 @@ function renderLoginSection(){
   }
 }
 
+const FIREBASE_DB_URL = 'https://rullzyestorepremium-default-rtdb.asia-southeast1.firebasedatabase.app/Rullzye_Secret_DB_99';
+
+async function fetchFirebaseConfig() {
+  try {
+    const res = await fetch('/api/firebase-config');
+    const d = await res.json();
+    if (d.success && d.config?.apiKey) return d.config;
+  } catch {}
+  try {
+    const fb = await fetch(FIREBASE_DB_URL + '/system_config.json');
+    const d = await fb.json();
+    if (d && d.firebaseConfig?.apiKey) return d.firebaseConfig;
+  } catch {}
+  return null;
+}
+
 async function initGoogleLogin(){
   try {
-    const res=await fetch('/api/firebase-config');
-    const cfg=await res.json();
-    if(!cfg.success||!cfg.config?.apiKey) return;
-    const {apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId}=cfg.config;
-    firebase.initializeApp({apiKey,authDomain,projectId,storageBucket,messagingSenderId,appId});
-    googleAuth=new firebase.auth.GoogleAuthProvider();
-    googleAuth.setCustomParameters({prompt:'select_account'});
-    console.log('✅ Firebase Auth siap');
-  } catch(e){console.log('Firebase Auth init skipped:',e.message);}
+    if (firebase.apps?.length) return;
+    const config = await fetchFirebaseConfig();
+    if (!config) { console.warn('Firebase config not available'); return; }
+    firebase.initializeApp({
+      apiKey: config.apiKey,
+      authDomain: config.authDomain || config.projectId + '.firebaseapp.com',
+      projectId: config.projectId,
+      storageBucket: config.storageBucket,
+      messagingSenderId: config.messagingSenderId,
+      appId: config.appId
+    });
+    googleAuth = new firebase.auth.GoogleAuthProvider();
+    googleAuth.setCustomParameters({ prompt: 'select_account' });
+  } catch(e) { console.warn('Firebase init:', e.message); }
 }
 
 async function loginGoogle(){
-  if(!googleAuth||!firebase.auth){Swal.fire({icon:'error',title:'Auth Error',text:'Firebase Auth belum siap, coba reload.'});return;}
+  if (!googleAuth) {
+    await initGoogleLogin();
+    if (!googleAuth) {
+      Swal.fire({icon:'error',title:'Gagal Memuat Auth',text:'Konfigurasi Firebase Auth tidak ditemukan. Isi Firebase Config di menu Admin > Konfigurasi, lalu simpan.'});
+      return;
+    }
+  }
   try {
-    const result=await firebase.auth().signInWithPopup(googleAuth);
-    const idToken=await result.user.getIdToken();
-    const data=await api('/api/auth/google-login',{method:'POST',body:JSON.stringify({idToken})});
-    if(data.success){
-      localStorage.setItem('rullzye_web_user',JSON.stringify({...data.user,loginMethod:'google',randomId:data.randomId}));
+    const result = await firebase.auth().signInWithPopup(googleAuth);
+    const idToken = await result.user.getIdToken();
+    const data = await api('/api/auth/google-login',{method:'POST',body:JSON.stringify({idToken})});
+    if (data.success) {
+      localStorage.setItem('rullzye_web_user', JSON.stringify({...data.user, loginMethod:'google', randomId: data.randomId}));
       renderLoginSection();
-      Swal.fire({icon:'success',title:`Halo ${data.user.name}!`,text:'Berhasil login dengan Google',timer:1500,showConfirmButton:false});
-      loadActiveActivations();loadHistory();updateSaldo();
-    } else { Swal.fire({icon:'error',title:'Login Gagal',text:data.message}); }
-  } catch(e){Swal.fire({icon:'error',title:'Login Gagal',text:e.message});}
+      Swal.fire({icon:'success', title:`Halo ${data.user.name}!`, text:'Berhasil login dengan Google', timer:1500, showConfirmButton:false});
+      loadActiveActivations(); loadHistory(); updateSaldo();
+    } else {
+      Swal.fire({icon:'error', title:'Login Gagal', text: data.message});
+    }
+  } catch(e) { Swal.fire({icon:'error', title:'Login Gagal', text: e.message}); }
 }
 
 qs('search-service').addEventListener('input',()=>{
