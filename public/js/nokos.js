@@ -1,3 +1,4 @@
+const PAGE_SIZE = 24;
 const SERVICE_ICONS = {
   wa: { icon: 'fa-brands fa-whatsapp', color: '#25D366' },
   tg: { icon: 'fa-brands fa-telegram', color: '#26A5E4' },
@@ -9,9 +10,7 @@ const SERVICE_ICONS = {
   shop: { icon: 'fa-solid fa-bag-shopping', color: '#EE4D2D' },
   tokped: { icon: 'fa-solid fa-store', color: '#42B549' },
 };
-
 const DEFAULT_ICON = { icon: 'fa-solid fa-mobile-screen-button', color: '#64748b' };
-
 const CATEGORIES = [
   { key: 'all', label: 'Semua' },
   { key: 'populer', label: 'Populer' },
@@ -21,543 +20,342 @@ const CATEGORIES = [
   { key: 'ecommerce', label: 'E-commerce' },
   { key: 'otolain', label: 'Lainnya' },
 ];
+const FALLBACK_SERVICES = [
+  { id: 'wa', code: 'wa', name: 'WhatsApp', popular: true },
+  { id: 'tg', code: 'tg', name: 'Telegram', popular: true },
+  { id: 'fb', code: 'fb', name: 'Facebook', popular: true },
+  { id: 'ig', code: 'ig', name: 'Instagram', popular: true },
+  { id: 'shop', code: 'shop', name: 'Shopee', popular: true },
+  { id: 'tokped', code: 'tokped', name: 'Tokopedia', popular: true },
+  { id: 'oi', code: 'oi', name: 'Tinder', popular: true },
+  { id: 'go', code: 'go', name: 'Gojek', popular: false },
+  { id: 'gr', code: 'gr', name: 'Grab', popular: false },
+];
 
-let services = [];
-let prices = {};
-let activeActivations = [];
-let selectedService = null;
-let depositCheckTimer = null;
-let activationTimers = {};
+let services = [], prices = {}, activeActivations = [], selectedService = null;
+let currentCategory = 'all', currentPage = 1, filteredServices = [];
+let depositCheckTimer = null, activationTimers = {}, googleAuth = null;
 
 function getServiceIcon(svc) {
   const code = (svc.code || svc.id || '').toLowerCase();
-  for (const [key, val] of Object.entries(SERVICE_ICONS)) {
-    if (code.includes(key)) return val;
-  }
-  if ((svc.name || '').toLowerCase().includes('whatsapp')) return SERVICE_ICONS.wa;
-  if ((svc.name || '').toLowerCase().includes('telegram')) return SERVICE_ICONS.tg;
+  for (const [k, v] of Object.entries(SERVICE_ICONS)) { if (code.includes(k)) return v; }
+  const n = (svc.name || '').toLowerCase();
+  if (n.includes('whatsapp')) return SERVICE_ICONS.wa;
+  if (n.includes('telegram')) return SERVICE_ICONS.tg;
+  if (n.includes('google') || n.includes('gmail') || n.includes('youtube')) return { icon: 'fa-brands fa-google', color: '#4285F4' };
   return DEFAULT_ICON;
 }
-
 function getCategoryForService(svc) {
-  const n = (svc.name || '').toLowerCase();
-  const c = (svc.code || svc.id || '').toLowerCase();
-  if (n.includes('whatsapp') || c.includes('wa')) return 'whatsapp';
-  if (n.includes('telegram') || c.includes('tg')) return 'telegram';
-  if (n.includes('facebook') || c.includes('fb') || n.includes('instagram') || c.includes('ig') || n.includes('tiktok') || n.includes('twitter')) return 'sosmed';
-  if (n.includes('shopee') || c.includes('shop') || n.includes('tokopedia') || c.includes('tokped') || n.includes('lazada') || n.includes('bukalapak')) return 'ecommerce';
+  const n = (svc.name || '').toLowerCase(), c = (svc.code || '').toLowerCase();
+  if (n.includes('whatsapp') || c === 'wa') return 'whatsapp';
+  if (n.includes('telegram') || c === 'tg') return 'telegram';
+  if (n.includes('facebook') || c === 'fb' || n.includes('instagram') || c === 'ig' || n.includes('tiktok') || n.includes('twitter') || n.includes('threads')) return 'sosmed';
+  if (n.includes('shopee') || c.includes('shop') || n.includes('tokopedia') || c === 'xd' || n.includes('lazada') || n.includes('bukalapak')) return 'ecommerce';
   return 'otolain';
 }
-
-function getWebUser() {
-  try {
-    const raw = localStorage.getItem('rullzye_web_user');
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+function getWebUser() { try { const r = localStorage.getItem('rullzye_web_user'); return r ? JSON.parse(r) : null; } catch { return null; } }
+function getRandomId() { const u = getWebUser(); return u && u.randomId ? u.randomId : null; }
+async function api(url, opts = {}) {
+  try { const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts }); return await r.json(); } catch { return {}; }
 }
-
-function getRandomId() {
-  const u = getWebUser();
-  return u && u.randomId ? u.randomId : null;
-}
-
-async function apiPost(url, body) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  return res.json();
-}
-
-async function apiGet(url) {
-  const res = await fetch(url);
-  return res.json();
-}
+function qs(id) { return document.getElementById(id); }
 
 async function loadServices() {
-  try {
-    const data = await apiPost('/api/nokos/services', {});
-    if (data.success && data.services) {
-      services = data.services;
-    } else {
-      services = getDefaultServices();
-    }
-  } catch {
-    services = getDefaultServices();
-  }
+  qs('services-grid').innerHTML = renderSkeletons(8);
+  const data = await api('/api/nokos/services', { method: 'POST', body: JSON.stringify({}) });
+  services = data.success && data.services ? data.services : FALLBACK_SERVICES;
   await loadPrices();
   renderCategories();
-  renderServices();
+  applyFilter();
 }
-
-function getDefaultServices() {
-  return [
-    { id: 'wa', code: 'wa', name: 'WhatsApp', category: 'whatsapp', popular: true },
-    { id: 'tg', code: 'tg', name: 'Telegram', category: 'telegram', popular: true },
-    { id: 'fb', code: 'fb', name: 'Facebook', category: 'sosmed', popular: true },
-    { id: 'ig', code: 'ig', name: 'Instagram', category: 'sosmed', popular: true },
-    { id: 'shop', code: 'shop', name: 'Shopee', category: 'ecommerce', popular: true },
-    { id: 'tokped', code: 'tokped', name: 'Tokopedia', category: 'ecommerce', popular: true },
-    { id: 'oi', code: 'oi', name: 'Gojek', category: 'sosmed', popular: true },
-    { id: 'go', code: 'go', name: 'Grab', category: 'sosmed', popular: false },
-    { id: 'gr', code: 'gr', name: 'Gmail', category: 'otolain', popular: false },
-  ];
-}
-
 async function loadPrices() {
-  try {
-    const data = await apiPost('/api/nokos/prices', {});
-    if (data.success && data.prices) {
-      prices = data.prices;
-    }
-  } catch {}
+  const data = await api('/api/nokos/prices', { method: 'POST', body: JSON.stringify({}) });
+  if (data.success && data.prices) prices = data.prices;
 }
-
-function getPrice(serviceCode) {
-  const p = prices[serviceCode] || prices[serviceCode.toLowerCase()];
+function getPrice(code) {
+  const p = prices[code] || prices[code.toLowerCase()];
   if (p) return p;
-  const svc = services.find(s => s.code === serviceCode || s.id === serviceCode);
-  return svc && svc.price ? svc.price : 2500;
+  const s = services.find(x => x.code === code || x.id === code);
+  return s && s.price ? s.price : 2500;
 }
 
 function renderCategories() {
-  const container = document.getElementById('category-tabs');
-  container.innerHTML = CATEGORIES.map(c =>
-    `<button class="category-chip ${c.key === 'all' ? 'active' : ''}" data-cat="${c.key}" onclick="setCategory('${c.key}', this)">${c.label}</button>`
+  const c = qs('category-tabs');
+  c.innerHTML = CATEGORIES.map(x =>
+    `<button class="category-chip ${x.key === 'all' ? 'active' : ''}" data-cat="${x.key}" onclick="setCategory('${x.key}',this)">${x.label}</button>`
+  ).join('');
+}
+function setCategory(cat, btn) {
+  currentCategory = cat; currentPage = 1;
+  document.querySelectorAll('.category-chip').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  applyFilter();
+}
+function applyFilter() {
+  const q = (qs('search-service').value || '').toLowerCase();
+  filteredServices = services.filter(s => {
+    if (currentCategory !== 'all' && currentCategory === 'populer' && !s.popular) return false;
+    if (currentCategory !== 'all' && currentCategory !== 'populer' && getCategoryForService(s) !== currentCategory) return false;
+    return !q || s.name.toLowerCase().includes(q) || (s.code || '').toLowerCase().includes(q);
+  });
+  const totalPages = Math.ceil(filteredServices.length / PAGE_SIZE) || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+  renderServices();
+  renderPagination();
+}
+function renderServices() {
+  const grid = qs('services-grid'), info = qs('service-count');
+  const start = (currentPage - 1) * PAGE_SIZE, end = Math.min(start + PAGE_SIZE, filteredServices.length);
+  const page = filteredServices.slice(start, end);
+  if (info) info.textContent = filteredServices.length ? `Menampilkan ${start+1}-${end} dari ${filteredServices.length} layanan` : '';
+  if (!page.length) {
+    grid.innerHTML = `<div class="col-span-full text-center py-16"><i class="fa-solid fa-search text-4xl text-slate-600 mb-4"></i><p class="text-sm text-slate-500">Tidak ada layanan ditemukan</p><p class="text-xs text-slate-600 mt-1">Coba ubah kata kunci atau kategori</p></div>`;
+    return;
+  }
+  grid.innerHTML = page.map(s => {
+    const ic = getServiceIcon(s), price = getPrice(s.code || s.id);
+    return `<div class="card-nokos p-3 sm:p-4 group cursor-pointer" onclick="openOrderModal('${s.id || s.code}')" style="animation:fadeUp .35s ease both;animation-delay:${(page.indexOf(s)%6)*0.06}s">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center text-base sm:text-lg shrink-0 group-hover:scale-110 transition-transform" style="background:${ic.color}20;color:${ic.color}"><i class="${ic.icon}"></i></div>
+        <div class="min-w-0 flex-1"><p class="font-bold text-white text-sm truncate">${s.name}</p><p class="text-[10px] text-slate-500 mt-0.5">${(s.code||'').toUpperCase()}</p></div>
+      </div>
+      <div class="flex items-center justify-between bg-white/[0.03] rounded-xl p-2.5">
+        <span class="text-sm font-black text-violet-400">Rp ${Number(price).toLocaleString('id-ID')}</span>
+        <span class="text-[10px] font-bold text-violet-300 bg-violet-500/15 px-3 py-1 rounded-full group-hover:bg-violet-500/30 transition">Pilih <i class="fa-solid fa-arrow-right ml-1 text-[9px]"></i></span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderPagination() {
+  const total = Math.ceil(filteredServices.length / PAGE_SIZE) || 1;
+  const el = qs('pagination');
+  if (total <= 1) { el.innerHTML = ''; return; }
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}><i class="fa-solid fa-chevron-left"></i></button>`;
+  const range = 2; let s = Math.max(1, currentPage - range), e = Math.min(total, currentPage + range);
+  if (s > 1) { html += `<button class="page-btn" onclick="goPage(1)">1</button>`; if (s > 2) html += `<span class="page-dots">...</span>`; }
+  for (let i = s; i <= e; i++) html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  if (e < total) { if (e < total - 1) html += `<span class="page-dots">...</span>`; html += `<button class="page-btn" onclick="goPage(${total})">${total}</button>`; }
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage>=total?'disabled':''}><i class="fa-solid fa-chevron-right"></i></button>`;
+  el.innerHTML = html;
+}
+function goPage(p) { currentPage = p; renderServices(); renderPagination(); qs('services-grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function renderSkeletons(n) {
+  return Array.from({length:n}, (_,i) => `<div class="card-nokos p-4" style="animation:fadeUp .35s ease both;animation-delay:${i*0.05}s"><div class="flex items-center gap-3 mb-3"><div class="w-11 h-11 rounded-xl bg-white/5 skeleton-pulse"></div><div class="flex-1"><div class="h-4 w-28 bg-white/5 rounded skeleton-pulse mb-2"></div><div class="h-3 w-16 bg-white/5 rounded skeleton-pulse"></div></div></div><div class="h-10 bg-white/5 rounded-xl skeleton-pulse"></div></div>`
   ).join('');
 }
 
-let currentCategory = 'all';
-
-function setCategory(cat, btn) {
-  currentCategory = cat;
-  document.querySelectorAll('.category-chip').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  renderServices();
+async function openOrderModal(serviceId) {
+  const s = services.find(x => x.id === serviceId || x.code === serviceId);
+  if (!s) return; selectedService = s;
+  const ic = getServiceIcon(s), price = getPrice(s.code || s.id);
+  qs('modal-service-icon').innerHTML = `<i class="${ic.icon}" style="color:${ic.color};font-size:1.2rem"></i>`;
+  qs('modal-service-name').textContent = s.name;
+  qs('modal-service-code').textContent = (s.code||'').toUpperCase();
+  qs('modal-service-price').textContent = `Rp ${Number(price).toLocaleString('id-ID')}`;
+  qs('order-modal').style.display = 'flex';
 }
-
-function renderServices() {
-  const grid = document.getElementById('services-grid');
-  const q = (document.getElementById('search-service').value || '').toLowerCase();
-  let filtered = services.filter(s => {
-    if (currentCategory !== 'all' && currentCategory === 'populer' && !s.popular) return false;
-    if (currentCategory !== 'all' && currentCategory !== 'populer' && getCategoryForService(s) !== currentCategory) return false;
-    if (q && !s.name.toLowerCase().includes(q) && !(s.code || '').toLowerCase().includes(q)) return false;
-    return true;
-  });
-  if (filtered.length === 0) {
-    grid.innerHTML = `<div class="col-span-full text-center py-10 text-slate-500"><i class="fa-solid fa-search text-3xl mb-3"></i><p class="text-sm">Tidak ada layanan ditemukan</p></div>`;
-    return;
-  }
-  grid.innerHTML = filtered.map(s => {
-    const iconInfo = getServiceIcon(s);
-    const price = getPrice(s.code || s.id);
-    return `
-      <div class="card-nokos p-4" onclick="openOrderModal('${s.id || s.code}')">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-base" style="background:${iconInfo.color}20;color:${iconInfo.color}">
-            <i class="${iconInfo.icon}"></i>
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="font-bold text-white text-sm truncate">${s.name}</p>
-            <p class="text-[10px] text-slate-500">${(s.code || s.id || '').toUpperCase()}</p>
-          </div>
-        </div>
-        <div class="flex items-center justify-between">
-          <span class="text-sm font-black text-violet-400">Rp ${Number(price).toLocaleString('id-ID')}</span>
-          <span class="text-[10px] text-violet-300 bg-violet-500/10 px-2 py-1 rounded-full font-bold">Pilih</span>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-document.getElementById('search-service').addEventListener('input', renderServices);
-
-function openOrderModal(serviceId) {
-  const svc = services.find(s => s.id === serviceId || s.code === serviceId);
-  if (!svc) return;
-  selectedService = svc;
-  const iconInfo = getServiceIcon(svc);
-  const price = getPrice(svc.code || svc.id);
-
-  document.getElementById('modal-service-icon').innerHTML = `<i class="${iconInfo.icon}" style="color:${iconInfo.color};font-size:1.1rem"></i>`;
-  document.getElementById('modal-service-name').textContent = svc.name;
-  document.getElementById('modal-service-price').textContent = `Rp ${Number(price).toLocaleString('id-ID')}`;
-  document.getElementById('order-modal').style.display = 'flex';
-}
-
-function closeOrderModal() {
-  document.getElementById('order-modal').style.display = 'none';
-  selectedService = null;
-}
+function closeOrderModal() { qs('order-modal').style.display = 'none'; selectedService = null; }
 
 async function orderNumber() {
   const randomId = getRandomId();
-  if (!randomId) {
-    Swal.fire('Login Dulu', 'Buat ID Web terlebih dahulu melalui halaman utama.', 'warning');
-    return;
-  }
-  const country = document.getElementById('modal-country').value;
-  const operator = document.getElementById('modal-operator').value;
-  const server = document.getElementById('modal-server').value;
-  const btn = document.getElementById('btn-order-number');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
-
+  if (!randomId) { Swal.fire({icon:'warning',title:'Belum Login',text:'Login dulu dengan Google atau buat ID Web'}); return; }
+  const country = qs('modal-country').value, operator = qs('modal-operator').value, server = qs('modal-server').value;
+  const btn = qs('btn-order-number'); btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
   try {
-    const check = await apiPost('/api/nokos/availability', {
-      service: selectedService.code || selectedService.id,
-      country,
-      operator
-    });
-    if (!check.success || check.stock <= 0) {
-      Swal.fire('Stok Habis', 'Nomor untuk layanan ini sedang tidak tersedia.', 'error');
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> Beli Nomor';
-      return;
-    }
-    const data = await apiPost('/api/nokos/get-number', {
-      randomId,
-      service: selectedService.code || selectedService.id,
-      country,
-      operator,
-      server
-    });
+    const check = await api('/api/nokos/availability', { method:'POST', body:JSON.stringify({ service: selectedService.code||selectedService.id, country, operator }) });
+    if (!check.success || check.stock <= 0) { Swal.fire({icon:'error',title:'Stok Habis',text:'Nomor untuk layanan ini sedang tidak tersedia.'}); btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-cart-plus"></i> Beli Nomor'; return; }
+    const data = await api('/api/nokos/get-number', { method:'POST', body:JSON.stringify({ randomId, service: selectedService.code||selectedService.id, country, operator, server }) });
     if (data.success) {
-      Swal.fire('Berhasil!', `Nomor: ${data.phoneNumber}`, 'success');
-      closeOrderModal();
-      loadActiveActivations();
-      updateSaldo();
-    } else {
-      Swal.fire('Gagal', data.message || 'Tidak dapat memesan nomor.', 'error');
-    }
-  } catch (e) {
-    Swal.fire('Error', 'Gagal terhubung ke server.', 'error');
-  }
-  btn.disabled = false;
-  btn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> Beli Nomor';
+      Swal.fire({icon:'success',title:'Berhasil!',text:`Nomor: ${data.phoneNumber}`,footer:'Segera cek OTP di panel aktivasi'});
+      closeOrderModal(); loadActiveActivations(); updateSaldo();
+    } else { Swal.fire({icon:'error',title:'Gagal',text:data.message||'Saldo tidak cukup atau layanan error'}); }
+  } catch { Swal.fire({icon:'error',title:'Koneksi Error',text:'Gagal terhubung ke server.'}); }
+  btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-cart-plus"></i> Beli Nomor';
 }
 
 async function loadActiveActivations() {
-  const randomId = getRandomId();
-  if (!randomId) return;
-  try {
-    const data = await apiGet(`/api/nokos/history?randomId=${randomId}`);
-    if (data.success && data.activations) {
-      activeActivations = data.activations.filter(a => a.status === 'active' || a.status === 'pending');
-      renderActiveActivations();
-    }
-  } catch {}
-}
-
-function renderActiveActivations() {
-  const section = document.getElementById('active-activations-section');
-  const container = document.getElementById('active-activations');
-  const count = document.getElementById('active-count');
-
-  if (activeActivations.length === 0) {
-    section.classList.add('hidden');
-    return;
+  const rid = getRandomId(); if (!rid) return;
+  const data = await api(`/api/nokos/history?randomId=${rid}`);
+  if (data.success && data.activations) {
+    activeActivations = data.activations.filter(a => a.status === 'active' || a.status === 'pending');
+    renderActiveActivations();
   }
-  section.classList.remove('hidden');
-  count.textContent = `${activeActivations.length} aktif`;
-
+}
+function renderActiveActivations() {
+  const section = qs('active-activations-section'), container = qs('active-activations'), count = qs('active-count');
+  if (!activeActivations.length) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden'); count.textContent = `${activeActivations.length} aktif`;
   container.innerHTML = activeActivations.map(a => {
     const svc = services.find(s => s.code === a.service || s.id === a.service);
-    const iconInfo = svc ? getServiceIcon(svc) : DEFAULT_ICON;
+    const ic = svc ? getServiceIcon(svc) : DEFAULT_ICON;
     const otp = a.otp || a.otpCode || '';
-    return `
-      <div class="card-premium p-4" data-activation-id="${a.id || a._id}">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style="background:${iconInfo.color}20;color:${iconInfo.color}">
-              <i class="${iconInfo.icon}"></i>
-            </div>
-            <span class="text-xs font-bold text-white">${svc ? svc.name : (a.service || '').toUpperCase()}</span>
-          </div>
-          <span class="status-badge ${a.status === 'active' ? 'active' : 'pending'}">
-            <span class="live-dot" style="width:6px;height:6px"></span> ${a.status === 'active' ? 'Aktif' : 'Menunggu'}
-          </span>
-        </div>
-        <div class="bg-white/5 rounded-xl p-3 mb-3">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] text-slate-500">Nomor</p>
-              <p class="text-sm font-bold text-white font-mono">${a.phoneNumber || a.phone || '-'}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-[10px] text-slate-500">Timer</p>
-              <p class="text-xs font-bold font-mono timer-running" id="timer-${a.id || a._id}">${a.expiresIn ? formatTimer(a.expiresIn) : '--:--'}</p>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white/5 rounded-xl p-3 mb-3">
-          <div class="flex items-center justify-between">
-            <p class="text-[10px] text-slate-500">Kode OTP</p>
-            ${otp ? `
-              <span class="text-xs font-bold text-emerald-400 cursor-pointer otp-blurred" id="otp-${a.id || a._id}" onclick="revealOtp('${a.id || a._id}')">${otp}</span>
-            ` : `
-              <span class="text-[10px] text-slate-500">Menunggu OTP...</span>
-            `}
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <button onclick="finishActivation('${a.id || a._id}')" class="flex-1 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition">
-            <i class="fa-solid fa-check"></i> Sudah Dipakai
-          </button>
-          <button onclick="cancelActivation('${a.id || a._id}')" class="flex-1 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition">
-            <i class="fa-solid fa-xmark"></i> Batalkan
-          </button>
-        </div>
+    return `<div class="card-premium p-4 fade-up" data-id="${a.id||a._id}">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2"><div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style="background:${ic.color}20;color:${ic.color}"><i class="${ic.icon}"></i></div><span class="text-xs font-bold text-white">${svc?svc.name:(a.service||'').toUpperCase()}</span></div>
+        <span class="status-badge ${a.status==='active'?'active':'pending'}"><span class="live-dot" style="width:6px;height:6px"></span> ${a.status==='active'?'Aktif':'Menunggu'}</span>
       </div>
-    `;
+      <div class="bg-white/5 rounded-xl p-3 mb-3">
+        <div class="flex items-center justify-between"><div><p class="text-[10px] text-slate-500">Nomor</p><p class="text-sm font-bold text-white font-mono">${a.phoneNumber||a.phone||'-'}</p></div><div class="text-right"><p class="text-[10px] text-slate-500">Sisa Waktu</p><p class="text-xs font-bold font-mono timer-running" id="timer-${a.id||a._id}">${a.expiresIn?formatTimer(a.expiresIn):'--:--'}</p></div></div>
+      </div>
+      <div class="bg-white/5 rounded-xl p-3 mb-3">
+        <div class="flex items-center justify-between"><p class="text-[10px] text-slate-500">Kode OTP ${otp?'<span class="text-[9px] text-amber-400 ml-1">klik untuk lihat</span>':''}</p>${otp?`<span class="text-xs font-bold text-emerald-400 cursor-pointer otp-blurred" id="otp-${a.id||a._id}" onclick="revealOtp('${a.id||a._id}')">${otp}</span>`:`<span class="text-[10px] text-slate-500">Menunggu OTP... <i class="fa-solid fa-spinner fa-spin ml-1"></i></span>`}</div>
+      </div>
+      <div class="flex gap-2"><button onclick="finishActivation('${a.id||a._id}')" class="flex-1 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition"><i class="fa-solid fa-check"></i> Sudah Dipakai</button><button onclick="cancelActivation('${a.id||a._id}')" class="flex-1 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition"><i class="fa-solid fa-xmark"></i> Batalkan</button></div>
+    </div>`;
   }).join('');
-
   activeActivations.forEach(a => {
     const id = a.id || a._id;
     if (a.expiresIn && !activationTimers[id]) {
-      let remaining = a.expiresIn;
-      activationTimers[id] = setInterval(() => {
-        remaining--;
-        const el = document.getElementById(`timer-${id}`);
-        if (el) {
-          if (remaining <= 0) {
-            el.textContent = '00:00';
-            el.className = 'text-xs font-bold font-mono timer-expired';
-            clearInterval(activationTimers[id]);
-            delete activationTimers[id];
-          } else {
-            el.textContent = formatTimer(remaining);
-          }
-        }
+      let r = a.expiresIn;
+      activationTimers[id] = setInterval(() => { r--;
+        const el = qs(`timer-${id}`);
+        if (el) { if (r<=0) { el.textContent='00:00'; el.className='text-xs font-bold font-mono timer-expired'; clearInterval(activationTimers[id]); delete activationTimers[id]; } else el.textContent=formatTimer(r); }
       }, 1000);
     }
   });
 }
-
-function formatTimer(seconds) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function revealOtp(id) {
-  const el = document.getElementById(`otp-${id}`);
-  if (el) {
-    el.classList.toggle('revealed');
-    el.classList.toggle('otp-blurred');
-  }
-}
+function formatTimer(s) { return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+function revealOtp(id) { const el=qs(`otp-${id}`); if(el){el.classList.toggle('revealed');el.classList.toggle('otp-blurred');} }
 
 async function finishActivation(id) {
-  const randomId = getRandomId();
-  if (!randomId) return;
-  try {
-    const data = await apiPost('/api/nokos/set-status', { randomId, activationId: id, status: 'done' });
-    if (data.success) {
-      Swal.fire('Sukses', 'Status aktivasi diperbarui.', 'success');
-      loadActiveActivations();
-      loadHistory();
-    } else {
-      Swal.fire('Gagal', data.message || 'Tidak dapat memperbarui status.', 'error');
-    }
-  } catch {
-    Swal.fire('Error', 'Gagal terhubung ke server.', 'error');
-  }
+  const rid = getRandomId(); if(!rid)return;
+  const data=await api('/api/nokos/set-status',{method:'POST',body:JSON.stringify({randomId:rid,activationId:id,status:'done'})});
+  if(data.success){Swal.fire({icon:'success',title:'Selesai',text:'Status aktivasi diperbarui.'});loadActiveActivations();loadHistory();}else Swal.fire({icon:'error',title:'Gagal',text:data.message});
 }
-
 async function cancelActivation(id) {
-  const randomId = getRandomId();
-  if (!randomId) return;
-  const confirm = await Swal.fire({
-    title: 'Batalkan?',
-    text: 'Aktivasi nomor ini akan dibatalkan.',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#ef4444',
-    cancelButtonColor: '#64748b',
-    confirmButtonText: 'Ya, Batalkan'
-  });
-  if (!confirm.isConfirmed) return;
-  try {
-    const data = await apiPost('/api/nokos/set-status', { randomId, activationId: id, status: 'cancelled' });
-    if (data.success) {
-      Swal.fire('Dibatalkan', 'Aktivasi nomor berhasil dibatalkan.', 'success');
-      loadActiveActivations();
-      loadHistory();
-    } else {
-      Swal.fire('Gagal', data.message || 'Tidak dapat membatalkan.', 'error');
-    }
-  } catch {
-    Swal.fire('Error', 'Gagal terhubung ke server.', 'error');
-  }
+  const rid=getRandomId();if(!rid)return;
+  const c=await Swal.fire({title:'Batalkan?',text:'Aktivasi nomor ini akan dibatalkan.',icon:'warning',showCancelButton:true,confirmButtonColor:'#ef4444',cancelButtonColor:'#64748b',confirmButtonText:'Ya, Batalkan'});
+  if(!c.isConfirmed)return;
+  const data=await api('/api/nokos/set-status',{method:'POST',body:JSON.stringify({randomId:rid,activationId:id,status:'cancelled'})});
+  if(data.success){Swal.fire({icon:'success',title:'Dibatalkan'});loadActiveActivations();loadHistory();}else Swal.fire({icon:'error',title:'Gagal',text:data.message});
 }
 
 async function loadHistory() {
-  const randomId = getRandomId();
-  if (!randomId) return;
-  try {
-    const data = await apiGet(`/api/nokos/history?randomId=${randomId}`);
-    const tbody = document.getElementById('history-body');
-    const empty = document.getElementById('history-empty');
-    if (data.success && data.activations && data.activations.length > 0) {
-      empty.classList.add('hidden');
-      tbody.innerHTML = data.activations.map(a => {
-        const svc = services.find(s => s.code === a.service || s.id === a.service);
-        const iconInfo = svc ? getServiceIcon(svc) : DEFAULT_ICON;
-        return `
-          <tr class="border-b border-white/5 hover:bg-white/[0.02]">
-            <td class="py-3 px-2">
-              <div class="flex items-center gap-2">
-                <i class="${iconInfo.icon} text-xs" style="color:${iconInfo.color}"></i>
-                <span class="text-xs text-white font-medium">${svc ? svc.name : (a.service || '').toUpperCase()}</span>
-              </div>
-            </td>
-            <td class="py-3 px-2 text-xs text-slate-400 font-mono">${a.phoneNumber || a.phone || '-'}</td>
-            <td class="py-3 px-2"><span class="status-badge ${a.status}">${a.status}</span></td>
-            <td class="py-3 px-2 text-xs text-slate-500">${a.createdAt ? new Date(a.createdAt).toLocaleDateString('id-ID') : '-'}</td>
-          </tr>
-        `;
-      }).join('');
-    } else {
-      tbody.innerHTML = '';
-      empty.classList.remove('hidden');
-    }
-  } catch {}
+  const rid=getRandomId();if(!rid)return;
+  const data=await api(`/api/nokos/history?randomId=${rid}`);
+  const tb=qs('history-body'),em=qs('history-empty');
+  if(data.success&&data.activations?.length){
+    em.classList.add('hidden');
+    tb.innerHTML=data.activations.map(a=>{
+      const svc=services.find(s=>s.code===a.service||s.id===a.service),ic=svc?getServiceIcon(svc):DEFAULT_ICON;
+      return `<tr class="border-b border-white/5 hover:bg-white/[0.02]"><td class="py-3 px-2"><div class="flex items-center gap-2"><i class="${ic.icon} text-xs" style="color:${ic.color}"></i><span class="text-xs text-white font-medium">${svc?svc.name:(a.service||'').toUpperCase()}</span></div></td><td class="py-3 px-2 text-xs text-slate-400 font-mono">${a.phoneNumber||a.phone||'-'}</td><td class="py-3 px-2"><span class="status-badge ${a.status==='done'?'done':a.status==='cancelled'?'cancelled':'active'}">${a.status==='done'?'Selesai':a.status==='cancelled'?'Dibatalkan':a.status}</span></td><td class="py-3 px-2 text-xs text-slate-500">${a.createdAt?new Date(a.createdAt).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'-'}</td></tr>`;
+    }).join('');
+  } else { tb.innerHTML=''; em.classList.remove('hidden'); }
 }
 
 async function updateSaldo() {
-  const randomId = getRandomId();
-  const saldoDisplay = document.getElementById('saldo-display');
-  const saldoAmount = document.getElementById('saldo-amount');
-  const logoutBtn = document.getElementById('btn-logout');
-
-  if (!randomId) {
-    saldoDisplay.classList.add('hidden');
-    logoutBtn.classList.add('hidden');
-    return;
-  }
-  saldoDisplay.classList.remove('hidden');
-  logoutBtn.classList.remove('hidden');
-
-  try {
-    const data = await apiGet(`/api/wallet/balance?randomId=${randomId}`);
-    if (data.success) {
-      const balance = data.balance || data.saldo || 0;
-      saldoAmount.textContent = `Rp ${Number(balance).toLocaleString('id-ID')}`;
-      const depositSection = document.getElementById('deposit-section');
-      if (balance < 2500) {
-        depositSection.classList.remove('hidden');
-      } else {
-        depositSection.classList.add('hidden');
-      }
-    }
-  } catch {}
+  const rid=getRandomId(),sd=qs('saldo-display'),sa=qs('saldo-amount');
+  const user=getWebUser();
+  if(!rid){sd.classList.add('hidden');return;}
+  sd.classList.remove('hidden');
+  const data=await api(`/api/wallet/balance?randomId=${rid}`);
+  if(data.success) sa.textContent=`Rp ${Number(data.balance||0).toLocaleString('id-ID')}`;
+  const depSec=qs('deposit-section');
+  if((data.balance||0)<2500) depSec.classList.remove('hidden'); else depSec.classList.add('hidden');
 }
 
-function handleLogout() {
-  Swal.fire({
-    title: 'Logout?',
-    text: 'Kamu akan keluar dari sesi ini.',
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonColor: '#ef4444',
-    confirmButtonText: 'Logout'
-  }).then(res => {
-    if (res.isConfirmed) {
-      localStorage.removeItem('rullzye_web_user');
-      location.reload();
-    }
+function handleLogout(){
+  Swal.fire({title:'Logout?',text:'Kamu akan keluar dari sesi ini.',icon:'question',showCancelButton:true,confirmButtonColor:'#ef4444',confirmButtonText:'Logout'}).then(r=>{
+    if(r.isConfirmed){localStorage.removeItem('rullzye_web_user');location.reload();}
   });
 }
 
-async function createDeposit() {
-  const randomId = getRandomId();
-  if (!randomId) {
-    Swal.fire('Login Dulu', 'Buat ID Web terlebih dahulu.', 'warning');
-    return;
+async function createDeposit(){
+  const rid=getRandomId();if(!rid){Swal.fire({icon:'warning',title:'Login Dulu'});return;}
+  const amt=parseInt(qs('deposit-amount').value);
+  if(!amt||amt<10000){Swal.fire({icon:'warning',title:'Minimal Rp 10.000'});return;}
+  const btn=qs('btn-deposit');btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+  const data=await api('/api/deposit/create',{method:'POST',body:JSON.stringify({randomId:rid,amount:amt})});
+  if(data.success){
+    qs('qris-image').src=data.qrUrl||'';
+    qs('qris-amount').textContent=`Rp ${Number(amt).toLocaleString('id-ID')}`;
+    qs('qris-display').classList.remove('hidden');
+    if(depositCheckTimer)clearInterval(depositCheckTimer);
+    depositCheckTimer=setInterval(()=>checkDeposit(data.invoice),3000);
+  } else { Swal.fire({icon:'error',title:'Gagal',text:data.message}); }
+  btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-qrcode"></i> Deposit Sekarang';
+}
+async function checkDeposit(inv){
+  if(!inv)return;
+  const data=await api(`/api/deposit/check?invoice=${inv}`);
+  if(data.status==='APPROVED'||data.status==='SUKSES'){
+    if(depositCheckTimer)clearInterval(depositCheckTimer);
+    qs('qris-timer').textContent='✅ Pembayaran berhasil! Saldo masuk.'; qs('qris-timer').className='text-xs text-emerald-400 mt-2';
+    Swal.fire({icon:'success',title:'Deposit Berhasil!',text:'Saldo sudah ditambahkan ke akun kamu.'});
+    setTimeout(()=>{qs('qris-display').classList.add('hidden');updateSaldo();},2000);
+  } else if(data.status==='expired'||data.status==='REJECTED'){
+    if(depositCheckTimer)clearInterval(depositCheckTimer);
+    qs('qris-timer').textContent='⏰ Pembayaran kadaluwarsa.'; qs('qris-timer').className='text-xs text-rose-400 mt-2';
   }
-  const amount = parseInt(document.getElementById('deposit-amount').value);
-  if (!amount || amount < 10000) {
-    Swal.fire('Minimal Deposit', 'Minimal deposit Rp 10.000', 'warning');
-    return;
-  }
-  const btn = document.getElementById('btn-deposit');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
-
-  try {
-    const data = await apiPost('/api/deposit/create', { randomId, amount });
-    if (data.success) {
-      const qrisDisplay = document.getElementById('qris-display');
-      document.getElementById('qris-image').src = data.qrUrl || data.qr_image || '';
-      document.getElementById('qris-amount').textContent = `Rp ${Number(amount).toLocaleString('id-ID')}`;
-      qrisDisplay.classList.remove('hidden');
-      if (depositCheckTimer) clearInterval(depositCheckTimer);
-      depositCheckTimer = setInterval(() => checkDeposit(data.invoice || data.invoiceId), 3000);
-    } else {
-      Swal.fire('Gagal', data.message || 'Tidak dapat membuat deposit.', 'error');
+}
+async function checkOtpStatus(){
+  const rid=getRandomId();if(!rid||!activeActivations.length)return;
+  for(const a of activeActivations){
+    const data=await api('/api/nokos/status',{method:'POST',body:JSON.stringify({randomId:rid,activationId:a.id||a._id})});
+    if(data.success&&data.otp){
+      const el=qs(`otp-${a.id||a._id}`);
+      if(el&&el.textContent!==data.otp){el.textContent=data.otp;el.className='text-xs font-bold text-emerald-400 cursor-pointer otp-blurred';el.onclick=()=>revealOtp(a.id||a._id);}
     }
-  } catch {
-    Swal.fire('Error', 'Gagal terhubung ke server.', 'error');
   }
-  btn.disabled = false;
-  btn.innerHTML = '<i class="fa-solid fa-qrcode"></i> Deposit Sekarang';
 }
 
-async function checkDeposit(invoice) {
-  if (!invoice) return;
-  try {
-    const data = await apiGet(`/api/deposit/check?invoice=${invoice}`);
-    if (data.status === 'SUKSES' || data.status === 'success' || data.status === 'paid') {
-      if (depositCheckTimer) clearInterval(depositCheckTimer);
-      document.getElementById('qris-timer').textContent = 'Pembayaran berhasil! Saldo akan ditambahkan.';
-      document.getElementById('qris-timer').className = 'text-xs text-emerald-400 mt-2';
-      Swal.fire('Sukses!', 'Deposit berhasil, saldo telah ditambahkan.', 'success');
-      setTimeout(() => {
-        document.getElementById('qris-display').classList.add('hidden');
-        updateSaldo();
-      }, 2000);
-    } else if (data.status === 'expired') {
-      if (depositCheckTimer) clearInterval(depositCheckTimer);
-      document.getElementById('qris-timer').textContent = 'Pembayaran kadaluwarsa.';
-      document.getElementById('qris-timer').className = 'text-xs text-rose-400 mt-2';
-    }
-  } catch {}
+function renderLoginSection(){
+  const user=getWebUser(),ctr=qs('login-container'),pf=qs('user-profile'),sd=qs('saldo-display'),lo=qs('btn-logout');
+  if(user){
+    ctr.classList.add('hidden');pf.classList.remove('hidden');
+    qs('user-name').textContent=user.name||user.firstName||'User';
+    qs('user-avatar').innerHTML=user.photoURL?`<img src="${user.photoURL}" class="w-7 h-7 rounded-full object-cover" alt="">`:`<i class="fa-solid fa-user text-xs"></i>`;
+    sd.classList.remove('hidden');lo.classList.remove('hidden');
+    updateSaldo();
+  } else {
+    ctr.classList.remove('hidden');pf.classList.add('hidden');
+    sd.classList.add('hidden');lo.classList.add('hidden');
+  }
 }
 
-async function checkOtpStatus() {
-  const randomId = getRandomId();
-  if (!randomId || activeActivations.length === 0) return;
+async function initGoogleLogin(){
   try {
-    for (const a of activeActivations) {
-      const data = await apiPost('/api/nokos/status', {
-        randomId,
-        activationId: a.id || a._id
-      });
-      if (data.success && data.otp) {
-        const el = document.getElementById(`otp-${a.id || a._id}`);
-        if (el && el.textContent !== data.otp) {
-          el.textContent = data.otp;
-          el.className = 'text-xs font-bold text-emerald-400 cursor-pointer otp-blurred';
-          el.onclick = () => revealOtp(a.id || a._id);
-        }
-      }
-    }
-  } catch {}
+    const res=await fetch('/api/firebase-config');
+    const cfg=await res.json();
+    if(!cfg.success||!cfg.config?.apiKey) return;
+    const {apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId}=cfg.config;
+    firebase.initializeApp({apiKey,authDomain,projectId,storageBucket,messagingSenderId,appId});
+    googleAuth=new firebase.auth.GoogleAuthProvider();
+    googleAuth.setCustomParameters({prompt:'select_account'});
+    console.log('✅ Firebase Auth siap');
+  } catch(e){console.log('Firebase Auth init skipped:',e.message);}
 }
 
-async function init() {
+async function loginGoogle(){
+  if(!googleAuth||!firebase.auth){Swal.fire({icon:'error',title:'Auth Error',text:'Firebase Auth belum siap, coba reload.'});return;}
+  try {
+    const result=await firebase.auth().signInWithPopup(googleAuth);
+    const idToken=await result.user.getIdToken();
+    const data=await api('/api/auth/google-login',{method:'POST',body:JSON.stringify({idToken})});
+    if(data.success){
+      localStorage.setItem('rullzye_web_user',JSON.stringify({...data.user,loginMethod:'google',randomId:data.randomId}));
+      renderLoginSection();
+      Swal.fire({icon:'success',title:`Halo ${data.user.name}!`,text:'Berhasil login dengan Google',timer:1500,showConfirmButton:false});
+      loadActiveActivations();loadHistory();updateSaldo();
+    } else { Swal.fire({icon:'error',title:'Login Gagal',text:data.message}); }
+  } catch(e){Swal.fire({icon:'error',title:'Login Gagal',text:e.message});}
+}
+
+qs('search-service').addEventListener('input',()=>{
+  currentPage=1;applyFilter();
+  const v=qs('search-service').value;
+  qs('search-clear').classList.toggle('hidden',!v.length);
+});
+
+async function init(){
+  renderLoginSection();
   await loadServices();
-  await updateSaldo();
   await loadActiveActivations();
   await loadHistory();
-  setInterval(updateSaldo, 30000);
-  setInterval(loadActiveActivations, 15000);
-  setInterval(checkOtpStatus, 10000);
-  setInterval(loadHistory, 60000);
+  if(typeof firebase!=='undefined') await initGoogleLogin();
+  setInterval(updateSaldo,30000);
+  setInterval(loadActiveActivations,15000);
+  setInterval(checkOtpStatus,5000);
+  setInterval(loadHistory,60000);
 }
-
-init();
+document.addEventListener('DOMContentLoaded',init);

@@ -8,58 +8,70 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; background: #03050f; color: #e2e8f0; min-height: 100vh; overflow-x: hidden; }
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #03050f; }
-::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #7c3aed, #6d28d9); border-radius: 10px; }
-.bg-grid { background-image: linear-gradient(rgba(124,58,237,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(124,58,237,0.03) 1px, transparent 1px); background-size: 60px 60px; }
-.bg-glow { position: fixed; top: -40%; left: -20%; width: 80%; height: 80%; background: radial-gradient(ellipse, rgba(124,58,237,0.12) 0%, transparent 70%); pointer-events: none; z-index: 0; animation: floatGlow 20s ease-in-out infinite; }
-.bg-glow-2 { position: fixed; bottom: -30%; right: -20%; width: 70%; height: 70%; background: radial-gradient(ellipse, rgba(99,102,241,0.1) 0%, transparent 70%); pointer-events: none; z-index: 0; animation: floatGlow 25s ease-in-out infinite reverse; }
-@keyframes floatGlow { 0%,100%{transform:translate(0,0)scale(1)} 33%{transform:translate(5%,3%)scale(1.05)} 66%{transform:translate(-3%,-2%)scale(0.95)} }
-.card-premium { background: linear-gradient(135deg,rgba(15,23,42,0.8),rgba(30,27,75,0.4)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(124,58,237,0.12); border-radius: 20px; transition: all 0.4s cubic-bezier(0.25,0.8,0.25,1.2); position: relative; overflow: hidden; }
-.card-premium::before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(124,58,237,0.06),transparent); transition:left 0.6s ease; }
-.card-premium:hover::before { left:100%; }
-.card-premium:hover { transform:translateY(-6px); border-color:rgba(124,58,237,0.35); box-shadow:0 20px 40px -12px rgba(124,58,237,0.25); }
-.card-nokos { background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; cursor: pointer; transition: all 0.35s cubic-bezier(0.25,0.8,0.25,1.2); position: relative; overflow: hidden; }
-.card-nokos:hover { transform: translateY(-4px); border-color: rgba(124,58,237,0.4); box-shadow: 0 20px 40px -12px rgba(124,58,237,0.3); }
-.gradient-text { background:linear-gradient(135deg,#c084fc,#a78bfa,#818cf8,#6366f1,#c084fc); background-size:400% 400%; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; animation:gradientShift 6s ease infinite; }
-@keyframes gradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-.modal-pop { animation:pop 0.35s cubic-bezier(0.25,0.8,0.25,1.2); }
-@keyframes pop { from{transform:scale(0.92) translateY(10px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
-.fade-up { animation:fadeUp 0.6s ease forwards; opacity:0; }
-@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
-.hide-scrollbar::-webkit-scrollbar { display:none; }
-.hide-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
-.btn-primary { background: linear-gradient(135deg, #7c3aed, #6d28d9, #5b21b6); background-size: 200% 200%; animation: btnShine 4s ease infinite; transition: all 0.3s ease; border: none; color: white; font-weight: 700; padding: 12px 24px; border-radius: 16px; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.btn-primary:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 16px 32px -8px rgba(124,58,237,0.4); }
-.btn-primary:active { transform: scale(0.98); }
-.btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; transform: none; box-shadow: none; }
-@keyframes btnShine { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
-.input-dark { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 16px; color: #fff; font-size: 14px; outline: none; transition: border 0.2s; }
-.input-dark:focus { border-color: #7c3aed; }
-.input-dark::placeholder { color: #475569; }
-select.input-dark { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
-.otp-blurred { filter: blur(8px); user-select: none; cursor: pointer; transition: filter 0.3s; }
-.otp-blurred.revealed { filter: none; }
-.timer-running { color: #f59e0b; }
-.timer-expired { color: #ef4444; }
-.status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; }
-.status-badge.pending { background: rgba(245,158,11,0.15); color: #f59e0b; }
-.status-badge.active { background: rgba(16,185,129,0.15); color: #10b981; }
-.status-badge.done { background: rgba(99,102,241,0.15); color: #818cf8; }
-.status-badge.cancelled { background: rgba(239,68,68,0.15); color: #ef4444; }
-.nav-link { color: #94a3b8; font-size: 13px; font-weight: 600; transition: all 0.2s; text-decoration: none; }
-.nav-link:hover { color: #c084fc; }
-.nav-link.active { color: #c084fc; }
-.category-chip { white-space: nowrap; padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); background: transparent; color: #94a3b8; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
-.category-chip:hover { background: rgba(124,58,237,0.15); border-color: rgba(124,58,237,0.3); color: #c084fc; }
-.category-chip.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); } 70% { box-shadow: 0 0 0 10px rgba(16,185,129,0); } 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); } }
-.live-dot { display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%; animation:livePulse 2s ease-in-out infinite; box-shadow:0 0 12px rgba(16,185,129,0.4); }
-@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+*{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Plus Jakarta Sans','Inter',sans-serif;background:#03050f;color:#e2e8f0;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#03050f}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#7c3aed,#6d28d9);border-radius:10px}
+.bg-grid{background-image:linear-gradient(rgba(124,58,237,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.03) 1px,transparent 1px);background-size:60px 60px}
+.bg-glow{position:fixed;top:-40%;left:-20%;width:80%;height:80%;background:radial-gradient(ellipse,rgba(124,58,237,0.12)0%,transparent 70%);pointer-events:none;z-index:0;animation:floatGlow 20s ease-in-out infinite}
+.bg-glow-2{position:fixed;bottom:-30%;right:-20%;width:70%;height:70%;background:radial-gradient(ellipse,rgba(99,102,241,0.1)0%,transparent 70%);pointer-events:none;z-index:0;animation:floatGlow 25s ease-in-out infinite reverse}
+@keyframes floatGlow{0%,100%{transform:translate(0,0)scale(1)}33%{transform:translate(5%,3%)scale(1.05)}66%{transform:translate(-3%,-2%)scale(0.95)}}
+.card-premium{background:linear-gradient(135deg,rgba(15,23,42,0.8),rgba(30,27,75,0.4));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(124,58,237,0.12);border-radius:20px;transition:all 0.4s cubic-bezier(0.25,0.8,0.25,1.2);position:relative;overflow:hidden}
+.card-premium::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(124,58,237,0.06),transparent);transition:left 0.6s ease}
+.card-premium:hover::before{left:100%}
+.card-premium:hover{transform:translateY(-6px);border-color:rgba(124,58,237,0.35);box-shadow:0 20px 40px -12px rgba(124,58,237,0.25)}
+.card-nokos{background:rgba(15,23,42,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.05);border-radius:16px;cursor:pointer;transition:all 0.35s cubic-bezier(0.25,0.8,0.25,1.2);position:relative;overflow:hidden}
+.card-nokos:hover{transform:translateY(-4px);border-color:rgba(124,58,237,0.4);box-shadow:0 20px 40px -12px rgba(124,58,237,0.3)}
+.gradient-text{background:linear-gradient(135deg,#c084fc,#a78bfa,#818cf8,#6366f1,#c084fc);background-size:400% 400%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradientShift 6s ease infinite}
+@keyframes gradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.modal-pop{animation:pop 0.35s cubic-bezier(0.25,0.8,0.25,1.2)}
+@keyframes pop{from{transform:scale(0.92) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.fade-up{animation:fadeUp 0.6s ease forwards;opacity:0}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.hide-scrollbar::-webkit-scrollbar{display:none}
+.hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+.btn-primary{background:linear-gradient(135deg,#7c3aed,#6d28d9,#5b21b6);background-size:200% 200%;animation:btnShine 4s ease infinite;transition:all 0.3s ease;border:none;color:white;font-weight:700;padding:12px 24px;border-radius:16px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 16px 32px -8px rgba(124,58,237,0.4)}
+.btn-primary:active{transform:scale(0.98)}
+.btn-primary:disabled{background:#334155;color:#64748b;cursor:not-allowed;transform:none;box-shadow:none}
+@keyframes btnShine{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.input-dark{width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px 16px;color:#fff;font-size:14px;outline:none;transition:border 0.2s}
+.input-dark:focus{border-color:#7c3aed}
+.input-dark::placeholder{color:#475569}
+select.input-dark{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+.otp-blurred{filter:blur(8px);user-select:none;cursor:pointer;transition:filter 0.3s}
+.otp-blurred.revealed{filter:none}
+.timer-running{color:#f59e0b}
+.timer-expired{color:#ef4444}
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700}
+.status-badge.pending{background:rgba(245,158,11,0.15);color:#f59e0b}
+.status-badge.active{background:rgba(16,185,129,0.15);color:#10b981}
+.status-badge.done{background:rgba(99,102,241,0.15);color:#818cf8}
+.status-badge.cancelled{background:rgba(239,68,68,0.15);color:#ef4444}
+.nav-link{color:#94a3b8;font-size:13px;font-weight:600;transition:all 0.2s;text-decoration:none}
+.nav-link:hover{color:#c084fc}
+.nav-link.active{color:#c084fc}
+.category-chip{white-space:nowrap;padding:6px 16px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;flex-shrink:0}
+.category-chip:hover{background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.3);color:#c084fc}
+.category-chip.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(16,185,129,0.4)}70%{box-shadow:0 0 0 10px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
+.live-dot{display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;animation:livePulse 2s ease-in-out infinite;box-shadow:0 0 12px rgba(16,185,129,0.4)}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.3)}}
+.skeleton-pulse{animation:skeletonFade 1.5s ease-in-out infinite}
+@keyframes skeletonFade{0%,100%{opacity:0.3}50%{opacity:0.6}}
+.page-btn{width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;justify-content:center}
+.page-btn:hover{background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.3);color:#c084fc}
+.page-btn.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
+.page-btn:disabled{opacity:0.3;cursor:not-allowed}
+.page-dots{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;color:#475569;font-size:12px}
+.btn-google{background:#fff;color:#1e293b;border:none;border-radius:12px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.btn-google:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(66,133,244,0.3)}
+.btn-google:active{transform:scale(0.98)}
 </style>
 </head>
 <body>
@@ -76,17 +88,29 @@ select.input-dark { appearance: none; background-image: url("data:image/svg+xml,
       </div>
       <div>
         <span class="font-black text-lg sm:text-xl text-white tracking-tight">Rullzye<span class="text-violet-400">Store</span></span>
-        <span class="hidden sm:block text-[9px] text-slate-500 uppercase tracking-[0.2em] -mt-1">Nokos OTP Service</span>
+        <span class="hidden sm:block text-[9px] text-slate-500 uppercase tracking-[0.2em] -mt-1">Sewa Nomor OTP</span>
       </div>
     </a>
     <div class="flex items-center gap-2 sm:gap-3">
-      <div id="saldo-display" class="hidden items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-400">
-        <i class="fa-solid fa-wallet"></i>
-        <span id="saldo-amount">Rp 0</span>
+      <div id="login-container">
+        <button onclick="loginGoogle()" class="btn-google text-xs sm:text-sm">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 0 0 0 24c0 3.77.87 7.35 2.56 10.53l7.97-5.94z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.94C6.51 42.62 14.62 48 24 48z"/></svg>
+          Login dengan Google
+        </button>
       </div>
-      <button onclick="handleLogout()" id="btn-logout" class="hidden text-slate-400 hover:text-rose-400 transition text-lg" title="Logout">
-        <i class="fa-solid fa-right-from-bracket"></i>
-      </button>
+      <div id="user-profile" class="hidden items-center gap-2">
+        <div id="saldo-display" class="items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-400 hidden">
+          <i class="fa-solid fa-wallet"></i>
+          <span id="saldo-amount">Rp 0</span>
+        </div>
+        <div class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+          <div id="user-avatar" class="w-7 h-7 rounded-full bg-violet-500/20 flex items-center justify-center text-xs text-violet-400"></div>
+          <span id="user-name" class="text-xs font-bold text-white max-w-[80px] truncate">User</span>
+        </div>
+        <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-400 transition text-sm" title="Logout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+      </div>
     </div>
   </div>
 </header>
@@ -96,18 +120,26 @@ select.input-dark { appearance: none; background-image: url("data:image/svg+xml,
 
     <div class="fade-up mb-6">
       <h1 class="text-2xl sm:text-3xl font-black text-white">Sewa Nomor OTP</h1>
-      <p class="text-sm text-slate-400 mt-1">Dapatkan nomor virtual untuk verifikasi OTP akun digital kamu</p>
+      <p class="text-sm text-slate-400 mt-1">Dapatkan nomor virtual untuk verifikasi OTP akun digital kamu — WhatsApp, Telegram, Gojek, dan 2000+ layanan lainnya</p>
     </div>
 
     <div class="flex flex-col sm:flex-row gap-3 mb-6 fade-up">
       <div class="relative flex-1">
         <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
-        <input type="text" id="search-service" class="input-dark pl-10" placeholder="Cari layanan...">
+        <input type="text" id="search-service" class="input-dark pl-10 pr-10" placeholder="Cari layanan (nama atau kode)...">
+        <button onclick="document.getElementById('search-service').value='';document.getElementById('search-service').dispatchEvent(new Event('input'))" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition text-sm hidden" id="search-clear"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="flex gap-2 overflow-x-auto hide-scrollbar" id="category-tabs"></div>
     </div>
 
-    <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-10"></div>
+    <div class="flex items-center justify-between mb-3 fade-up">
+      <p id="service-count" class="text-[11px] text-slate-500 font-medium"></p>
+      <p class="text-[11px] text-slate-500">Nomor Indonesia & Internasional</p>
+    </div>
+
+    <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></div>
+
+    <div id="pagination" class="flex items-center justify-center gap-1.5 mb-10 fade-up"></div>
 
     <div id="active-activations-section" class="hidden mb-10">
       <div class="flex items-center justify-between mb-4">
@@ -128,17 +160,17 @@ select.input-dark { appearance: none; background-image: url("data:image/svg+xml,
           </div>
           <div>
             <h3 class="font-black text-white text-sm">Isi Saldo</h3>
-            <p class="text-xs text-slate-400">Saldo kamu tidak mencukupi, yuk isi dulu!</p>
+            <p class="text-xs text-slate-400">Saldo kamu tidak mencukupi (min. Rp 2.500), yuk isi dulu!</p>
           </div>
         </div>
         <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
           <div class="flex-1 w-full sm:w-auto">
-            <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Jumlah Deposit</label>
+            <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Jumlah Deposit (min Rp 10.000, fee Rp 2.000)</label>
             <div class="relative">
               <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</span>
-              <input type="number" id="deposit-amount" class="input-dark pl-12" placeholder="10000" min="10000" value="10000">
+              <input type="number" id="deposit-amount" class="input-dark pl-12" placeholder="10000" min="10000" value="25000">
             </div>
-            <p class="text-[10px] text-slate-500 mt-1">Min. Rp 10.000</p>
+            <p class="text-[10px] text-slate-500 mt-1">💡 Saldo masuk = nominal deposit - Rp 2.000 (fee admin)</p>
           </div>
           <button onclick="createDeposit()" id="btn-deposit" class="btn-primary w-full sm:w-auto">
             <i class="fa-solid fa-qrcode"></i> Deposit Sekarang
@@ -147,7 +179,7 @@ select.input-dark { appearance: none; background-image: url("data:image/svg+xml,
         <div id="qris-display" class="hidden mt-4 text-center">
           <div class="inline-block bg-white/5 rounded-2xl p-4 border border-white/10">
             <img id="qris-image" src="" alt="QRIS" class="w-48 h-48 mx-auto rounded-xl">
-            <p class="text-xs text-slate-400 mt-3">Scan QRIS di atas untuk melakukan pembayaran</p>
+            <p class="text-xs text-slate-400 mt-3">Scan QRIS di atas menggunakan GoPay, OVO, DANA, ShopeePay, atau Mobile Banking</p>
             <p class="text-lg font-black text-white mt-1" id="qris-amount"></p>
             <p class="text-xs text-amber-400 mt-2" id="qris-timer">Menunggu pembayaran...</p>
           </div>
@@ -159,7 +191,7 @@ select.input-dark { appearance: none; background-image: url("data:image/svg+xml,
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg sm:text-xl font-black text-white">
           <i class="fa-solid fa-clock-rotate-left text-violet-400 mr-2"></i>
-          Riwayat
+          Riwayat Aktivasi
         </h2>
       </div>
       <div id="history-table-wrapper" class="overflow-x-auto">
@@ -175,9 +207,10 @@ select.input-dark { appearance: none; background-image: url("data:image/svg+xml,
           <tbody id="history-body"></tbody>
         </table>
       </div>
-      <div id="history-empty" class="hidden text-center py-8 text-slate-500">
-        <i class="fa-solid fa-inbox text-3xl mb-2"></i>
-        <p class="text-sm">Belum ada riwayat aktivasi</p>
+      <div id="history-empty" class="hidden text-center py-12 text-slate-500">
+        <i class="fa-solid fa-inbox text-4xl mb-3 text-slate-600"></i>
+        <p class="text-sm font-medium">Belum ada riwayat aktivasi</p>
+        <p class="text-xs text-slate-600 mt-1">Login lalu pilih layanan untuk membeli nomor OTP</p>
       </div>
     </div>
 
@@ -188,10 +221,11 @@ select.input-dark { appearance: none; background-image: url("data:image/svg+xml,
   <div class="card-premium max-w-md w-full p-5 sm:p-6 modal-pop" style="max-height:90vh;overflow-y:auto">
     <div class="flex justify-between items-start mb-4">
       <div class="flex items-center gap-3">
-        <div id="modal-service-icon" class="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-lg"></div>
+        <div id="modal-service-icon" class="w-11 h-11 rounded-xl bg-violet-500/10 flex items-center justify-center text-lg"></div>
         <div>
           <h3 id="modal-service-name" class="font-black text-white text-sm"></h3>
-          <p id="modal-service-price" class="text-xs text-violet-400 font-bold"></p>
+          <p id="modal-service-code" class="text-[10px] text-slate-500"></p>
+          <p id="modal-service-price" class="text-xs text-violet-400 font-bold mt-1"></p>
         </div>
       </div>
       <button onclick="closeOrderModal()" class="text-slate-500 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
@@ -200,17 +234,17 @@ select.input-dark { appearance: none; background-image: url("data:image/svg+xml,
       <div>
         <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Negara</label>
         <select id="modal-country" class="input-dark">
-          <option value="Indonesia">Indonesia</option>
-          <option value="Malaysia">Malaysia</option>
-          <option value="India">India</option>
-          <option value="China">China</option>
-          <option value="USA">USA</option>
+          <option value="6">Indonesia</option>
+          <option value="1">Malaysia</option>
+          <option value="99">India</option>
+          <option value="156">China</option>
+          <option value="231">USA</option>
         </select>
       </div>
       <div>
         <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Operator</label>
         <select id="modal-operator" class="input-dark">
-          <option value="any">Any</option>
+          <option value="any">Any (Semua Operator)</option>
           <option value="telkomsel">Telkomsel</option>
           <option value="indosat">Indosat</option>
           <option value="xl">XL</option>
@@ -222,9 +256,13 @@ select.input-dark { appearance: none; background-image: url("data:image/svg+xml,
       <div>
         <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Server</label>
         <select id="modal-server" class="input-dark">
-          <option value="s2">Server Plus (s2)</option>
-          <option value="s1">Server Express (s1)</option>
+          <option value="s2">Server Plus (s2) — Recommended</option>
+          <option value="s1">Server Express (s1) — Cepat</option>
         </select>
+      </div>
+      <div class="bg-amber-500/5 border border-amber-500/10 rounded-xl p-3">
+        <p class="text-[10px] text-amber-400 font-bold"><i class="fa-solid fa-circle-info mr-1"></i> Informasi</p>
+        <p class="text-[10px] text-slate-400 mt-1">Harga dapat berbeda tergantung negara, operator, dan server. Saldo akan dipotong saat nomor berhasil didapatkan.</p>
       </div>
       <button onclick="orderNumber()" id="btn-order-number" class="btn-primary w-full text-sm">
         <i class="fa-solid fa-cart-plus"></i> Beli Nomor
