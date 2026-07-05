@@ -409,8 +409,19 @@ app.get('/api/admin/check-ip', async (req, res) => {
 });
 
 // ================= ADMIN: SYSTEM CONFIGURATION =================
-app.get('/api/firebase-config', (req, res) => {
-    const cfg = getConfig();
+app.get('/api/firebase-config', async (req, res) => {
+    let cfg = getConfig();
+    if (!cfg.firebaseConfig || !cfg.firebaseConfig.apiKey) {
+        try {
+            const fb = await axios.get(`${FIREBASE_URL}/system_config.json`);
+            if (fb.data && fb.data.firebaseConfig && fb.data.firebaseConfig.apiKey) {
+                fs.writeFileSync('./config.json', JSON.stringify(fb.data, null, 2));
+                invalidateConfigCache();
+                cfg = fb.data;
+                console.log('✅ FirebaseConfig: reloaded from Firebase RTDB');
+            }
+        } catch(e) { console.log('FirebaseConfig: fallback read failed', e.message); }
+    }
     res.json({ success: true, config: cfg.firebaseConfig || {} });
 });
 app.get('/api/admin/config', (req, res) => {
