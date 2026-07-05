@@ -221,7 +221,31 @@ async function loadTab(tab){
             </div>`;
             c.innerHTML=h;
         }
-        // =============== 3. ORDERS (with pagination) ===============
+        // =============== 3. DEPOSITS (approval) ===============
+        else if(tab==='deposits'){
+            const r=await api('/api/admin/deposits').then(r=>r.json());
+            const ds=r.deposits||[];
+            const nokosCfg=r.nokosConfigured?'✅ Terkonfigurasi':'❌ Belum';
+            let h=`<div class="flex flex-wrap items-center gap-3 mb-4"><h2 class="text-xl font-black"><i class="fa-solid fa-money-bill-transfer text-emerald-400 mr-2"></i>Deposit Requests</h2>
+                <span class="text-[10px] bg-violet-600/20 text-violet-400 px-2.5 py-1 rounded-full">Nokos API: ${nokosCfg}</span>
+                <span class="text-[10px] bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full">Total: ${ds.length}</span>
+                <span class="text-[10px] bg-amber-600/20 text-amber-400 px-2.5 py-1 rounded-full">Pending: ${ds.filter(d=>d.status==='MENUNGGU_APPROVAL').length}</span>
+            </div>
+            <div class="overflow-x-auto"><table class="w-full text-xs">
+            <thead><tr class="text-left text-slate-400 border-b border-white/5"><th class="pb-2 font-semibold">ID</th><th class="pb-2 font-semibold">User</th><th class="pb-2 font-semibold">Amount</th><th class="pb-2 font-semibold">Fee</th><th class="pb-2 font-semibold">Net</th><th class="pb-2 font-semibold">Status</th><th class="pb-2 font-semibold">Date</th><th class="pb-2 font-semibold">Action</th></tr></thead><tbody>`;
+            ds.forEach(d=>{
+                const statusClass=d.status==='MENUNGGU_APPROVAL'?'bg-amber-600/20 text-amber-400':d.status==='APPROVED'?'bg-emerald-600/20 text-emerald-400':d.status==='REJECTED'?'bg-red-600/20 text-red-400':'bg-slate-600/20 text-slate-400';
+                const actions=d.status==='MENUNGGU_APPROVAL'?`
+                    <button onclick="approveDeposit('${d.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded-lg text-[10px] hover:bg-emerald-500 mr-1"><i class="fa-solid fa-check mr-1"></i>Approve</button>
+                    <button onclick="rejectDeposit('${d.id}')" class="bg-red-600 text-white px-2 py-1 rounded-lg text-[10px] hover:bg-red-500"><i class="fa-solid fa-times mr-1"></i>Reject</button>
+                `:'<span class="text-slate-500">-</span>';
+                h+=`<tr class="border-b border-white/5"><td class="py-2.5 font-mono text-[10px]">${d.id}</td><td class="py-2.5">${d.randomId||'-'}</td><td class="py-2.5 font-semibold">${formatRp(d.amount)}</td><td class="py-2.5 text-slate-400">${formatRp(d.adminFee||0)}</td><td class="py-2.5 text-emerald-400 font-semibold">${formatRp(d.netAmount||0)}</td><td class="py-2.5"><span class="${statusClass} px-2 py-0.5 rounded-full text-[10px]">${d.status}</span></td><td class="py-2.5 text-slate-400">${new Date(d.createdAt).toLocaleDateString('id-ID')}</td><td class="py-2.5">${actions}</td></tr>`;
+            });
+            if(!ds.length) h+=`<tr><td colspan="8" class="text-center py-8 text-slate-500">Belum ada deposit</td></tr>`;
+            h+=`</tbody></table></div>`;
+            c.innerHTML=h;
+        }
+        // =============== 4. ORDERS (with pagination) ===============
         else if(tab==='orders'){
             const o=await api('/api/admin/orders').then(r=>r.json());
             o.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
@@ -538,6 +562,10 @@ async function loadTab(tab){
                 <div class="card p-5"><h3 class="font-bold text-emerald-400 mb-3 text-sm"><i class="fa-solid fa-bolt mr-2"></i>Flowix (PPOB)</h3>
                     <input type="text" id="cfg-flow-id" class="input-dark mb-2" placeholder="Merchant ID" value="${cfg.flowixMerchantId||''}">
                     <input type="text" id="cfg-flow-key" class="input-dark" placeholder="API Key" value="${cfg.flowixApiKey||''}">
+                </div>
+                <div class="card p-5"><h3 class="font-bold text-rose-400 mb-3 text-sm"><i class="fa-solid fa-mobile-screen-button mr-2"></i>Nokos (Sewa Nomor OTP)</h3>
+                    <input type="password" id="cfg-nokos-key" class="input-dark" placeholder="Nokos API Key" value="${cfg.nokosApiKey||''}">
+                    <p class="text-[9px] text-slate-500 mt-1">Dapatkan dari <a href="https://nokos.co.id" target="_blank" class="text-violet-400 underline">nokos.co.id</a> → Dashboard → Profile → API Key</p>
                 </div>
 
                 <div class="card p-5"><h3 class="font-bold text-sky-400 mb-3 text-sm"><i class="fa-solid fa-envelope mr-2"></i>Email (Kirim Akun)</h3>
@@ -889,6 +917,7 @@ async function saveConfig() {
             profit: parseInt(document.getElementById('cfg-profit').value),
             flowixMerchantId: document.getElementById('cfg-flow-id').value,
             flowixApiKey: document.getElementById('cfg-flow-key').value,
+            nokosApiKey: document.getElementById('cfg-nokos-key')?.value||'',
             apigamesMerchantId: document.getElementById('cfg-api-merchant')?.value||'',
             apigamesSecretKey: document.getElementById('cfg-api-secret')?.value||'',
             emailProvider: document.getElementById('cfg-email-provider')?.value||'smtp',
@@ -1447,6 +1476,20 @@ window.savePromo = async function(id) {
     const d = await res.json();
     showToast(d.success ? 'Promo disimpan!' : d.message||'Gagal');
     if (d.success) { document.querySelector('.fixed').remove(); loadTab('promo'); }
+};
+window.approveDeposit = async function(id) {
+    if (!confirm('Setujui deposit ini? Saldo akan ditambahkan ke user.')) return;
+    const r = await api('/api/admin/deposit/approve', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+    const d = await r.json();
+    showToast(d.message, d.success?'success':'error');
+    if (d.success) loadTab('deposits');
+};
+window.rejectDeposit = async function(id) {
+    if (!confirm('Tolak deposit ini?')) return;
+    const r = await api('/api/admin/deposit/reject', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+    const d = await r.json();
+    showToast(d.message, d.success?'warning':'error');
+    if (d.success) loadTab('deposits');
 };
 window.deletePromo = async function(id) {
     if (!confirm('Hapus promo ini?')) return;

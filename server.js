@@ -93,6 +93,12 @@ const getPanelProducts = async () => { try { const r = await axios.get(`${FIREBA
 const savePanelProducts = async (data) => { try { await axios.put(`${FIREBASE_URL}/panel_products.json`, data); } catch(e) {} };
 const getPanelOrders = async () => { try { const r = await axios.get(`${FIREBASE_URL}/panel_orders.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const savePanelOrders = async (data) => { try { await axios.put(`${FIREBASE_URL}/panel_orders.json`, data); } catch(e) {} };
+const getWallets = async () => { try { const r = await axios.get(`${FIREBASE_URL}/wallets.json`); return r.data || {}; } catch(e) { return {}; } };
+const saveWallets = async (data) => { try { await axios.put(`${FIREBASE_URL}/wallets.json`, data); } catch(e) {} };
+const getDeposits = async () => { try { const r = await axios.get(`${FIREBASE_URL}/deposits.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
+const saveDeposits = async (data) => { try { await axios.put(`${FIREBASE_URL}/deposits.json`, data); } catch(e) {} };
+const getNokosActivations = async () => { try { const r = await axios.get(`${FIREBASE_URL}/nokos_activations.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
+const saveNokosActivations = async (data) => { try { await axios.put(`${FIREBASE_URL}/nokos_activations.json`, data); } catch(e) {} };
 
 const getPromos = async () => { try { const r = await axios.get(`${FIREBASE_URL}/promos.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const savePromos = async (data) => { try { await axios.put(`${FIREBASE_URL}/promos.json`, data); } catch(e) {} };
@@ -1166,7 +1172,26 @@ async function autoProc() {
             }
         }
         if (changed) { await saveOrders(orders); console.log(`[AUTO] ${new Date().toLocaleTimeString('id-ID')} — ${changed ? 'Ada perubahan' : 'Tidak ada perubahan'}`); }
-        await autoProcPanel();
+        // Auto-check deposits from Firebase (Premku QRIS)
+    try {
+        let deposits = await getDeposits();
+        let depChanged = false;
+        for (let i = 0; i < deposits.length; i++) {
+            if (deposits[i].status === 'MENUNGGU_BAYAR') {
+                try {
+                    const resCek = await axios.post('https://premku.com/api/pay_status', { api_key: cfg.apiKey, invoice: deposits[i].id });
+                    if (resCek.data?.data?.status === 'success' || resCek.data?.status === 'success') {
+                        deposits[i].status = 'MENUNGGU_APPROVAL';
+                        deposits[i].paidAt = new Date().toISOString();
+                        depChanged = true;
+                        notifyGroupAdmin(`💰 *DEPOSIT BARU!*\n\n👤 User: \`${deposits[i].randomId || '-'}\`\n💵 Amount: *Rp ${(deposits[i].amount||0).toLocaleString('id-ID')}*\n🔖 Invoice: \`${deposits[i].id}\`\n📌 Status: *MENUNGGU APPROVAL*\n\nApprove di admin panel!`).catch(()=>{});
+                    }
+                } catch(e) {}
+            }
+        }
+        if (depChanged) await saveDeposits(deposits);
+    } catch(e) {}
+    await autoProcPanel();
     } finally { isProcessing = false; }
 }
 setInterval(autoProc, 10000);
@@ -1633,20 +1658,281 @@ async function initConfigFromFirebase() {
             let users = await getUsers();
             const existing = users.find(x => x.googleEmail === email);
             if (existing) {
-                return res.json({ success: true, message: 'Selamat datang kembali!', user: { name: existing.firstName, email } });
+                return res.json({ success: true, message: 'Selamat datang kembali!', user: { name: existing.firstName, email }, randomId: existing.randomId });
             }
             let randomId;
             do { randomId = 'G-' + crypto.randomBytes(3).toString('hex').toUpperCase(); } while (users.some(x => x.randomId === randomId));
             users.push({ randomId, firstName: name, googleEmail: email, registeredAt: new Date().toISOString(), balance: 0 });
             await saveUsers(users);
+            // Welcome email
+            const welcomeHtml = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:auto;background:#0b0e1a;border-radius:20px;overflow:hidden;border:1px solid #1e293b;padding:32px;text-align:center"><div style="font-size:48px;margin-bottom:12px">🎉</div><h1 style="color:#fff;font-size:22px;font-weight:900;margin:0">Selamat Datang di ${cfg.storeName || 'RullzyeStore'}!</h1><p style="color:#94a3b8;font-size:14px;margin:12px 0 16px">Halo <strong style="color:#fff">${name}</strong>, akun kamu berhasil dibuat.</p><div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:16px"><p style="color:#a78bfa;font-size:12px;margin:0 0 4px">🔑 Random ID Kamu</p><p style="color:#fff;font-size:18px;font-weight:900;font-family:monospace;margin:0">${randomId}</p></div><div style="background:#7c3aed20;border:1px solid #7c3aed40;border-radius:10px;padding:12px"><p style="color:#a78bfa;font-size:12px;margin:0">Gunakan Random ID di atas untuk deposit dan transaksi. Simpan baik-baik!</p></div><div style="margin-top:20px"><a href="${cfg.appUrl || 'https://rullzyestorepremium.my.id'}" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:10px 28px;border-radius:10px;font-size:14px;font-weight:bold">Mulai Belanja</a></div><p style="color:#475569;font-size:11px;margin-top:20px">© ${new Date().getFullYear()} ${cfg.storeName || 'Rullzye Store'}</p></div>`;
+            sendEmail(email, `🎉 Selamat Datang di ${cfg.storeName || 'RullzyeStore'}!`, welcomeHtml).catch(()=>{});
             res.json({ success: true, message: 'Akun berhasil dibuat!', user: { name, email }, randomId });
         } catch(e) {
             res.json({ success: false, message: 'Gagal verifikasi Google: ' + e.message });
         }
     });
 
+    // ===== WALLET & DEPOSIT API =====
+    app.get('/api/wallet/balance', async (req, res) => {
+        try {
+            const { randomId } = req.query;
+            if (!randomId) return res.json({ success: false, balance: 0 });
+            const wallets = await getWallets();
+            const w = wallets[randomId] || { balance: 0 };
+            res.json({ success: true, balance: w.balance });
+        } catch(e) { res.json({ success: false, balance: 0 }); }
+    });
+
+    app.post('/api/deposit/create', async (req, res) => {
+        try {
+            const { randomId, amount } = req.body;
+            if (!randomId || !amount) return res.json({ success: false, message: 'Parameter tidak lengkap.' });
+            const minDeposit = 10000;
+            if (parseInt(amount) < minDeposit) return res.json({ success: false, message: `Minimal deposit Rp ${minDeposit.toLocaleString('id-ID')}` });
+            const cfg = getConfig();
+            const payRes = await axios.post('https://premku.com/api/pay', { api_key: cfg.apiKey, amount: parseInt(amount) });
+            if (!payRes.data?.success) return res.json({ success: false, message: 'Gagal membuat QRIS.' });
+            const invoice = payRes.data.data.invoice;
+            let deposits = await getDeposits();
+            deposits.push({
+                id: invoice, randomId, amount: parseInt(amount),
+                status: 'MENUNGGU_BAYAR', premkuRef: invoice,
+                adminFee: 2000, netAmount: parseInt(amount) - 2000,
+                qrUrl: payRes.data.data.qr_image || payRes.data.data.qr_url || '',
+                createdAt: new Date().toISOString(), paidAt: null, approvedAt: null
+            });
+            await saveDeposits(deposits);
+            res.json({ success: true, invoice, qrUrl: payRes.data.data.qr_image || payRes.data.data.qr_url || '', amount: parseInt(amount) });
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.get('/api/deposit/history', async (req, res) => {
+        try {
+            const { randomId } = req.query;
+            if (!randomId) return res.json({ success: false, deposits: [] });
+            let deposits = await getDeposits();
+            const userDeposits = deposits.filter(d => d.randomId === randomId).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+            res.json({ success: true, deposits: userDeposits });
+        } catch(e) { res.json({ success: false, deposits: [] }); }
+    });
+
+    app.get('/api/deposit/check', async (req, res) => {
+        try {
+            const { invoice } = req.query;
+            if (!invoice) return res.json({ success: false, paid: false });
+            let deposits = await getDeposits();
+            const dep = deposits.find(d => d.id === invoice);
+            if (!dep) return res.json({ success: false, paid: false });
+            res.json({ success: true, paid: dep.status !== 'MENUNGGU_BAYAR', status: dep.status, qrUrl: dep.qrUrl });
+        } catch(e) { res.json({ success: false, paid: false }); }
+    });
+
+    // ===== NOKOS API =====
+    app.post('/api/nokos/services', async (req, res) => {
+        try {
+            const NokosAPI = require('./services/nokos');
+            const cfg = getConfig();
+            const nokosKey = cfg.nokosApiKey || '';
+            if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.', services: [] });
+            const nokos = new NokosAPI(nokosKey);
+            const result = await nokos.getServices();
+            if (result.success && result.data) {
+                const services = result.data.map(s => ({
+                    code: s.code,
+                    name: s.name,
+                    icon: NokosAPI.getServiceIcon(s.code),
+                    iconHtml: NokosAPI.getServiceIconHtml(s.code)
+                }));
+                return res.json({ success: true, services });
+            }
+            res.json({ success: false, message: 'Gagal mengambil layanan.', services: [] });
+        } catch(e) { res.json({ success: false, message: e.message, services: [] }); }
+    });
+
+    app.post('/api/nokos/prices', async (req, res) => {
+        try {
+            const NokosAPI = require('./services/nokos');
+            const cfg = getConfig();
+            const nokosKey = cfg.nokosApiKey || '';
+            if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
+            const nokos = new NokosAPI(nokosKey);
+            const { service, country = 6, server = 's2' } = req.body;
+            const result = await nokos.getPrices(service || '', country, server);
+            res.json(result);
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.post('/api/nokos/availability', async (req, res) => {
+        try {
+            const NokosAPI = require('./services/nokos');
+            const cfg = getConfig();
+            const nokosKey = cfg.nokosApiKey || '';
+            if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
+            const nokos = new NokosAPI(nokosKey);
+            const { service, country = 6, server = 's2' } = req.body;
+            const result = await nokos.getAvailability(service, country, server);
+            res.json(result);
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.post('/api/nokos/get-number', async (req, res) => {
+        try {
+            const NokosAPI = require('./services/nokos');
+            const cfg = getConfig();
+            const nokosKey = cfg.nokosApiKey || '';
+            if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
+            const nokos = new NokosAPI(nokosKey);
+            const { randomId, service, country = 6, operator = 'any', server = 's2' } = req.body;
+            if (!randomId || !service) return res.json({ success: false, message: 'Parameter tidak lengkap.' });
+            // Cek harga dulu
+            const priceRes = await nokos.getPrices(service, country, server);
+            let price = 0;
+            if (priceRes.success && priceRes.data && priceRes.data[country] && priceRes.data[country][service]) {
+                price = parseInt(priceRes.data[country][service].cost);
+            }
+            if (price <= 0) return res.json({ success: false, message: 'Gagal mendapatkan harga layanan.' });
+            // Cek saldo
+            const wallets = await getWallets();
+            const w = wallets[randomId] || { balance: 0 };
+            if (w.balance < price) return res.json({ success: false, message: `Saldo tidak mencukupi. Dibutuhkan Rp ${price.toLocaleString('id-ID')}`, price });
+            // Order nomor
+            const result = await nokos.getNumber(service, country, operator, server);
+            if (result.success && result.data) {
+                const activationId = result.data.activation_id;
+                const phone = result.data.phone;
+                // Potong saldo
+                w.balance -= price;
+                wallets[randomId] = w;
+                await saveWallets(wallets);
+                // Simpan aktivasi
+                let activations = await getNokosActivations();
+                activations.push({
+                    activationId, randomId, service, country, operator, server,
+                    phone, price, status: 'STATUS_WAIT_CODE',
+                    createdAt: new Date().toISOString(), completedAt: null
+                });
+                await saveNokosActivations(activations);
+                res.json({ success: true, activationId, phone, price, balance: w.balance });
+            } else {
+                res.json({ success: false, message: result.error || 'Gagal order nomor' });
+            }
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.post('/api/nokos/status', async (req, res) => {
+        try {
+            const NokosAPI = require('./services/nokos');
+            const cfg = getConfig();
+            const nokosKey = cfg.nokosApiKey || '';
+            if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
+            const nokos = new NokosAPI(nokosKey);
+            const { activationId } = req.body;
+            if (!activationId) return res.json({ success: false, message: 'Activation ID diperlukan.' });
+            const result = await nokos.getStatus(activationId);
+            res.json(result);
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.post('/api/nokos/set-status', async (req, res) => {
+        try {
+            const NokosAPI = require('./services/nokos');
+            const cfg = getConfig();
+            const nokosKey = cfg.nokosApiKey || '';
+            if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
+            const nokos = new NokosAPI(nokosKey);
+            const { activationId, status } = req.body;
+            if (!activationId || status === undefined) return res.json({ success: false, message: 'Parameter tidak lengkap.' });
+            const result = await nokos.setStatus(activationId, parseInt(status));
+            if (result.success) {
+                let activations = await getNokosActivations();
+                const idx = activations.findIndex(a => a.activationId == activationId);
+                if (idx !== -1) {
+                    activations[idx].status = status == 6 ? 'STATUS_FINISH' : (status == -1 || status == 8 ? 'STATUS_CANCEL' : activations[idx].status);
+                    if (status == 6) activations[idx].completedAt = new Date().toISOString();
+                    await saveNokosActivations(activations);
+                }
+            }
+            res.json(result);
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.get('/api/nokos/history', async (req, res) => {
+        try {
+            const { randomId } = req.query;
+            if (!randomId) return res.json({ success: false, activations: [] });
+            let activations = await getNokosActivations();
+            const userActs = activations.filter(a => a.randomId === randomId).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+            res.json({ success: true, activations: userActs });
+        } catch(e) { res.json({ success: false, activations: [] }); }
+    });
+
+    app.get('/api/nokos/balance', async (req, res) => {
+        try {
+            const NokosAPI = require('./services/nokos');
+            const cfg = getConfig();
+            const nokosKey = cfg.nokosApiKey || '';
+            if (!nokosKey) return res.json({ success: false, balance: 0, message: 'Nokos API Key belum dikonfigurasi.' });
+            const nokos = new NokosAPI(nokosKey);
+            const result = await nokos.getBalance();
+            res.json(result);
+        } catch(e) { res.json({ success: false, balance: 0 }); }
+    });
+
+    // ===== ADMIN: DEPOSIT APPROVAL =====
+    app.get('/api/admin/deposits', async (req, res) => {
+        try {
+            const cfg = getConfig();
+            const nokosKey = cfg.nokosApiKey || '';
+            let deposits = await getDeposits();
+            const sorted = deposits.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+            res.json({ success: true, deposits: sorted, nokosConfigured: !!nokosKey });
+        } catch(e) { res.json({ success: false, deposits: [] }); }
+    });
+
+    app.post('/api/admin/deposit/approve', async (req, res) => {
+        try {
+            const { id } = req.body;
+            if (!id) return res.json({ success: false, message: 'ID deposit diperlukan.' });
+            let deposits = await getDeposits();
+            const idx = deposits.findIndex(d => d.id === id);
+            if (idx === -1) return res.json({ success: false, message: 'Deposit tidak ditemukan.' });
+            if (deposits[idx].status !== 'MENUNGGU_APPROVAL') return res.json({ success: false, message: 'Deposit tidak dalam status approval.' });
+            const dep = deposits[idx];
+            const netAmount = dep.netAmount || (dep.amount - 2000);
+            // Tambah saldo user
+            let wallets = await getWallets();
+            if (!wallets[dep.randomId]) wallets[dep.randomId] = { balance: 0 };
+            wallets[dep.randomId].balance += netAmount;
+            await saveWallets(wallets);
+            deposits[idx].status = 'APPROVED';
+            deposits[idx].approvedAt = new Date().toISOString();
+            await saveDeposits(deposits);
+            // Kirim notifikasi
+            const users = await getUsers();
+            const user = users.find(u => u.randomId === dep.randomId);
+            if (user && user.googleEmail) {
+                sendEmail(user.googleEmail, '✅ Deposit Disetujui!', `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:auto;background:#0b0e1a;border-radius:20px;overflow:hidden;border:1px solid #1e293b;padding:32px;text-align:center"><div style="font-size:48px;margin-bottom:12px">✅</div><h1 style="color:#fff;font-size:20px;font-weight:900;margin:0">Deposit Disetujui!</h1><p style="color:#94a3b8;font-size:14px;margin:12px 0">Deposit <strong>Rp ${dep.amount.toLocaleString('id-ID')}</strong> telah disetujui.</p><div style="background:#1e293b;border-radius:10px;padding:16px;margin-bottom:16px"><p style="color:#34d399;font-size:22px;font-weight:900;margin:0">+Rp ${netAmount.toLocaleString('id-ID')}</p><p style="color:#94a3b8;font-size:12px;margin:4px 0 0">Saldo masuk (setelah fee Rp 2.000)</p></div></div>`).catch(()=>{});
+            }
+            res.json({ success: true, message: 'Deposit disetujui. Saldo user bertambah.' });
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.post('/api/admin/deposit/reject', async (req, res) => {
+        try {
+            const { id } = req.body;
+            if (!id) return res.json({ success: false, message: 'ID deposit diperlukan.' });
+            let deposits = await getDeposits();
+            const idx = deposits.findIndex(d => d.id === id);
+            if (idx === -1) return res.json({ success: false, message: 'Deposit tidak ditemukan.' });
+            deposits[idx].status = 'REJECTED';
+            deposits[idx].approvedAt = new Date().toISOString();
+            await saveDeposits(deposits);
+            res.json({ success: true, message: 'Deposit ditolak.' });
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
     // ===== Firebase test endpoint =====
-    app.get('/api/auth/firebase-test', async (req, res) => {
         try {
             const cfg = getConfig();
             const fc = cfg.firebaseConfig || {};
