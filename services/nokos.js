@@ -102,12 +102,26 @@ class NokosAPI {
     return this.request('checkDeposit', { transaction_id: transactionId });
   }
 
-  static getServiceIcon(serviceCode) {
-    return SERVICE_ICONS[serviceCode] || SERVICE_ICONS.default;
+  static getServiceIcon(code, name) {
+    const c = (code || '').toLowerCase();
+    const n = (name || '').toLowerCase();
+    for (const [key, val] of Object.entries(SERVICE_ICONS)) {
+      if (c.includes(key)) return val;
+    }
+    if (n.includes('whatsapp')) return SERVICE_ICONS.wa;
+    if (n.includes('telegram')) return SERVICE_ICONS.tg;
+    if (n.includes('facebook') || n.includes('instagram') || n.includes('twitter') || n.includes('tiktok') || n.includes('threads')) return { icon: 'fa-brands fa-facebook', color: '#1877F2', label: 'Sosmed' };
+    if (n.includes('shopee') || n.includes('tokopedia') || n.includes('lazada') || n.includes('bukalapak')) return { icon: 'fa-solid fa-bag-shopping', color: '#EE4D2D', label: 'E-commerce' };
+    if (n.includes('gojek') || c.includes('go')) return SERVICE_ICONS.go;
+    if (n.includes('grab') || c.includes('gr')) return SERVICE_ICONS.gr;
+    if (n.includes('discord')) return SERVICE_ICONS.dc;
+    if (n.includes('apple')) return SERVICE_ICONS.ap;
+    if (n.includes('google') || n.includes('gmail') || n.includes('youtube')) return SERVICE_ICONS.gp;
+    return SERVICE_ICONS.default;
   }
 
-  static getServiceIconHtml(serviceCode) {
-    const info = NokosAPI.getServiceIcon(serviceCode);
+  static getServiceIconHtml(code, name) {
+    const info = NokosAPI.getServiceIcon(code, name);
     return `<div class="nokos-icon" style="background:${info.color}20;border:2px solid ${info.color}40;border-radius:14px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:22px;color:${info.color}"><i class="${info.icon}"></i></div>`;
   }
 }

@@ -1737,14 +1737,18 @@ async function initConfigFromFirebase() {
             if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.', services: [] });
             const nokos = new NokosAPI(nokosKey);
             const result = await nokos.getServices();
-            if (result.success && result.data) {
-                const services = result.data.map(s => ({
-                    code: s.code,
-                    name: s.name,
-                    icon: NokosAPI.getServiceIcon(s.code),
-                    iconHtml: NokosAPI.getServiceIconHtml(s.code)
-                }));
-                return res.json({ success: true, services });
+            const rawServices = result?.services || result;
+            if (rawServices && typeof rawServices === 'object') {
+                const entries = Object.values(rawServices).filter(s => s && s.code);
+                if (entries.length) {
+                    const services = entries.map(s => ({
+                        code: s.code,
+                        name: s.name,
+                        icon: NokosAPI.getServiceIcon(s.code, s.name),
+                        iconHtml: NokosAPI.getServiceIconHtml(s.code, s.name)
+                    }));
+                    return res.json({ success: true, services });
+                }
             }
             res.json({ success: false, message: 'Gagal mengambil layanan.', services: [] });
         } catch(e) { res.json({ success: false, message: e.message, services: [] }); }
@@ -1932,7 +1936,7 @@ async function initConfigFromFirebase() {
         } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
-    // ===== Firebase test endpoint =====
+    app.get('/api/firebase-test', async (req, res) => {
         try {
             const cfg = getConfig();
             const fc = cfg.firebaseConfig || {};
