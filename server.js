@@ -1780,7 +1780,16 @@ async function initConfigFromFirebase() {
             const nokos = new NokosAPI(nokosKey);
             const result = await nokos.getCountries();
             if (result.success && result.countries) {
-                return res.json({ success: true, countries: Object.values(result.countries) });
+                const raw = Object.values(result.countries);
+                const merged = DEFAULT_COUNTRIES.map(dc => {
+                    const match = raw.find(r => r.id == dc.id || r.code == dc.code);
+                    return match ? { ...match, flag: dc.flag, name: dc.name, code: dc.code } : dc;
+                });
+                const extra = raw.filter(r => !DEFAULT_COUNTRIES.some(dc => dc.id == r.id)).map(r => ({
+                    id: r.id, code: r.code || '', name: r.name || r.country || r.title || 'Unknown',
+                    flag: ''
+                }));
+                return res.json({ success: true, countries: [...merged, ...extra] });
             }
             res.json({ success: true, countries: DEFAULT_COUNTRIES });
         } catch(e) { res.json({ success: true, countries: DEFAULT_COUNTRIES }); }
