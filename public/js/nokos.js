@@ -59,6 +59,8 @@ async function api(url, opts = {}) {
   try { const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts }); return await r.json(); } catch { return {}; }
 }
 function qs(id) { return document.getElementById(id); }
+function show(id) { const e=qs(id); if(e) e.classList.remove('hidden'); }
+function hide(id) { const e=qs(id); if(e) e.classList.add('hidden'); }
 
 async function loadServices() {
   qs('services-grid').innerHTML = renderSkeletons(8);
@@ -183,8 +185,8 @@ async function loadActiveActivations() {
 }
 function renderActiveActivations() {
   const section = qs('active-activations-section'), container = qs('active-activations'), count = qs('active-count');
-  if (!activeActivations.length) { section.classList.add('hidden'); return; }
-  section.classList.remove('hidden'); count.textContent = `${activeActivations.length} aktif`;
+  if (!activeActivations.length) { hide('active-activations-section'); return; }
+  show('active-activations-section'); count.textContent = `${activeActivations.length} aktif`;
   container.innerHTML = activeActivations.map(a => {
     const svc = services.find(s => s.code === a.service || s.id === a.service);
     const ic = svc ? getServiceIcon(svc) : DEFAULT_ICON;
@@ -235,23 +237,21 @@ async function loadHistory() {
   const data=await api(`/api/nokos/history?randomId=${rid}`);
   const tb=qs('history-body'),em=qs('history-empty');
   if(data.success&&data.activations?.length){
-    em.classList.add('hidden');
+    hide('history-empty');
     tb.innerHTML=data.activations.map(a=>{
       const svc=services.find(s=>s.code===a.service||s.id===a.service),ic=svc?getServiceIcon(svc):DEFAULT_ICON;
       return `<tr class="border-b border-white/5 hover:bg-white/[0.02]"><td class="py-3 px-2"><div class="flex items-center gap-2"><i class="${ic.icon} text-xs" style="color:${ic.color}"></i><span class="text-xs text-white font-medium">${svc?svc.name:(a.service||'').toUpperCase()}</span></div></td><td class="py-3 px-2 text-xs text-slate-400 font-mono">${a.phoneNumber||a.phone||'-'}</td><td class="py-3 px-2"><span class="status-badge ${a.status==='done'?'done':a.status==='cancelled'?'cancelled':'active'}">${a.status==='done'?'Selesai':a.status==='cancelled'?'Dibatalkan':a.status}</span></td><td class="py-3 px-2 text-xs text-slate-500">${a.createdAt?new Date(a.createdAt).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'-'}</td></tr>`;
     }).join('');
-  } else { tb.innerHTML=''; em.classList.remove('hidden'); }
+  } else { tb.innerHTML=''; show('history-empty'); }
 }
 
 async function updateSaldo() {
-  const rid=getRandomId(),sd=qs('saldo-display'),sa=qs('saldo-amount');
-  const user=getWebUser();
-  if(!rid){sd.classList.add('hidden');return;}
-  sd.classList.remove('hidden');
+  const rid=getRandomId(),sa=qs('saldo-amount');
+  if(!rid){hide('saldo-display');return;}
+  show('saldo-display');
   const data=await api(`/api/wallet/balance?randomId=${rid}`);
-  if(data.success) sa.textContent=`Rp ${Number(data.balance||0).toLocaleString('id-ID')}`;
-  const depSec=qs('deposit-section');
-  if((data.balance||0)<2500) depSec.classList.remove('hidden'); else depSec.classList.add('hidden');
+  if(data.success&&sa) sa.textContent=`Rp ${Number(data.balance||0).toLocaleString('id-ID')}`;
+  if((data.balance||0)<2500) show('deposit-section'); else hide('deposit-section');
 }
 
 function handleLogout(){
@@ -269,7 +269,7 @@ async function createDeposit(){
   if(data.success){
     qs('qris-image').src=data.qrUrl||'';
     qs('qris-amount').textContent=`Rp ${Number(amt).toLocaleString('id-ID')}`;
-    qs('qris-display').classList.remove('hidden');
+    show('qris-display');
     if(depositCheckTimer)clearInterval(depositCheckTimer);
     depositCheckTimer=setInterval(()=>checkDeposit(data.invoice),3000);
   } else { Swal.fire({icon:'error',title:'Gagal',text:data.message}); }
@@ -282,7 +282,7 @@ async function checkDeposit(inv){
     if(depositCheckTimer)clearInterval(depositCheckTimer);
     qs('qris-timer').textContent='✅ Pembayaran berhasil! Saldo masuk.'; qs('qris-timer').className='text-xs text-emerald-400 mt-2';
     Swal.fire({icon:'success',title:'Deposit Berhasil!',text:'Saldo sudah ditambahkan ke akun kamu.'});
-    setTimeout(()=>{qs('qris-display').classList.add('hidden');updateSaldo();},2000);
+    setTimeout(()=>{hide('qris-display');updateSaldo();},2000);
   } else if(data.status==='expired'||data.status==='REJECTED'){
     if(depositCheckTimer)clearInterval(depositCheckTimer);
     qs('qris-timer').textContent='⏰ Pembayaran kadaluwarsa.'; qs('qris-timer').className='text-xs text-rose-400 mt-2';
@@ -300,16 +300,17 @@ async function checkOtpStatus(){
 }
 
 function renderLoginSection(){
-  const user=getWebUser(),ctr=qs('login-container'),pf=qs('user-profile'),sd=qs('saldo-display'),lo=qs('btn-logout');
+  const user=getWebUser();
   if(user){
-    ctr.classList.add('hidden');pf.classList.remove('hidden');
-    qs('user-name').textContent=user.name||user.firstName||'User';
-    qs('user-avatar').innerHTML=user.photoURL?`<img src="${user.photoURL}" class="w-7 h-7 rounded-full object-cover" alt="">`:`<i class="fa-solid fa-user text-xs"></i>`;
-    sd.classList.remove('hidden');lo.classList.remove('hidden');
+    hide('login-container');show('user-profile');
+    const nm=qs('user-name');if(nm)nm.textContent=user.name||user.firstName||'User';
+    const av=qs('user-avatar');
+    if(av)av.innerHTML=user.photoURL?`<img src="${user.photoURL}" class="w-7 h-7 rounded-full object-cover" alt="">`:`<i class="fa-solid fa-user text-xs"></i>`;
+    show('saldo-display');show('btn-logout');
     updateSaldo();
   } else {
-    ctr.classList.remove('hidden');pf.classList.add('hidden');
-    sd.classList.add('hidden');lo.classList.add('hidden');
+    show('login-container');hide('user-profile');
+    hide('saldo-display');hide('btn-logout');
   }
 }
 
@@ -373,7 +374,7 @@ async function loginGoogle(){
 qs('search-service').addEventListener('input',()=>{
   currentPage=1;applyFilter();
   const v=qs('search-service').value;
-  qs('search-clear').classList.toggle('hidden',!v.length);
+  const sc=qs('search-clear'); if(sc) sc.classList.toggle('hidden',!v.length);
 });
 
 async function init(){
