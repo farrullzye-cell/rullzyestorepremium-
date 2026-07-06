@@ -501,6 +501,80 @@ function renderLoginSection(){
   }
 }
 
+// ===== PREMIUM NUMBERS =====
+async function loadPremiumNumbers() {
+  show('premium-loading'); hide('premium-grid'); hide('premium-empty');
+  const [numsRes, histRes] = await Promise.all([
+    api('/api/premium/numbers'),
+    getRandomId() ? api('/api/premium/history?randomId=' + getRandomId()) : Promise.resolve({ items: [] })
+  ]);
+  hide('premium-loading');
+  const nums = numsRes.numbers || [], markup = numsRes.markup || 0;
+  const grid = qs('premium-grid');
+  if (!nums.length) { show('premium-empty'); return; }
+  show('premium-grid');
+  grid.innerHTML = nums.map(n => {
+    const price = Math.round((n.basePrice || 0) * (1 + markup / 100));
+    return `<div class="card-nokos p-4 group" style="animation:fadeUp .35s ease both;animation-delay:${(nums.indexOf(n)%6)*0.06}s">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform" style="color:#10b981"><i class="fa-brands fa-whatsapp"></i></div>
+        <div class="min-w-0 flex-1">
+          <p class="font-bold text-white text-sm">Nomor Premium</p>
+          <p class="text-[10px] text-slate-500 mt-0.5 font-mono">${n.number}</p>
+        </div>
+      </div>
+      <div class="bg-white/[0.03] rounded-xl p-3 mb-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-400">Harga</span>
+          <span class="text-lg font-black text-amber-400">Rp ${price.toLocaleString('id-ID')}</span>
+        </div>
+        <div class="flex items-center gap-2 mt-2">
+          <span class="text-[9px] bg-white/5 text-slate-500 px-2 py-0.5 rounded-full">WhatsApp Business</span>
+          <span class="text-[9px] bg-white/5 text-slate-500 px-2 py-0.5 rounded-full">Indonesia</span>
+        </div>
+      </div>
+      <button onclick="buyPremium('${n.id}', ${price})" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs hover:shadow-lg hover:shadow-amber-500/25 transition-all">
+        <i class="fa-solid fa-cart-plus mr-1"></i> Beli Sekarang
+      </button>
+    </div>`;
+  }).join('');
+  renderPremiumHistory(histRes.items || []);
+}
+function renderPremiumHistory(items) {
+  const list = qs('premium-history-list'), empty = qs('premium-history-empty');
+  if (!items.length) { list.innerHTML = ''; show('premium-history-empty'); return; }
+  hide('premium-history-empty');
+  list.innerHTML = items.map(n => {
+    const price = Math.round((n.basePrice || 0) * (1 + ((qs('premium-markup') ? parseInt(qs('premium-markup').value) : 0)) / 100));
+    return `<div class="card-nokos p-3 mb-2 flex items-center justify-between">
+      <div><p class="text-xs font-bold text-white font-mono">${n.number||'-'}</p>
+      <p class="text-[10px] text-slate-500">${n.soldAt ? new Date(n.soldAt).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-'}</p></div>
+      <span class="status-badge done">Selesai</span>
+    </div>`;
+  }).join('');
+}
+async function buyPremium(id, price) {
+  const randomId = getRandomId();
+  if (!randomId) { Swal.fire({icon:'warning',title:'Belum Login',text:'Login dulu dengan Google'}); return; }
+  const c = await Swal.fire({title:'Beli Nomor Premium?',html:`Nomor Indonesia khusus WA Business<br><span class="text-2xl font-black text-amber-400">Rp ${price.toLocaleString('id-ID')}</span>`,icon:'question',showCancelButton:true,confirmButtonColor:'#f59e0b',confirmButtonText:'Ya, Beli',cancelButtonText:'Batal'});
+  if (!c.isConfirmed) return;
+  const data = await api('/api/premium/buy', { method:'POST', body:JSON.stringify({ randomId, numberId: id }) });
+  if (data.success) {
+    Swal.fire({icon:'success',title:'Berhasil!',text:`Nomor: ${data.phone}`,confirmButtonColor:'#7c3aed'});
+    loadPremiumNumbers(); updateSaldo();
+  } else {
+    Swal.fire({icon:'error',title:'Gagal',text:data.message});
+  }
+}
+function goToPremium() { switchPage('premium'); loadPremiumNumbers(); }
+function goToReguler() { switchPage('browse'); loadServices(); }
+function backToMenu() {
+  if (otpPollTimer) clearInterval(otpPollTimer);
+  if (otpCountdownTimer) clearInterval(otpCountdownTimer);
+  currentOtpActivation = null;
+  switchPage('menu');
+}
+
 qs('search-service').addEventListener('input',()=>{
   currentPage=1;applyFilter();
   const v=qs('search-service').value;
@@ -509,10 +583,13 @@ qs('search-service').addEventListener('input',()=>{
 
 async function init(){
   renderLoginSection();
-  await loadServices();
+  if(typeof firebase!=='undefined') await initGoogleLogin();
+  updateSaldo();
+  if (window.location.hash === '#reguler') { switchPage('browse'); await loadServices(); }
+  else if (window.location.hash === '#premium') { switchPage('premium'); loadPremiumNumbers(); }
+  else switchPage('menu');
   await loadActiveActivations();
   await loadHistory();
-  if(typeof firebase!=='undefined') await initGoogleLogin();
   setInterval(updateSaldo,30000);
   setInterval(loadActiveActivations,15000);
   setInterval(loadHistory,60000);

@@ -125,8 +125,53 @@ select.input-dark{appearance:none;background-image:url("data:image/svg+xml,%3Csv
 <main class="relative z-10 pt-20 sm:pt-24 pb-10">
   <div class="max-w-7xl mx-auto px-4">
 
+    <!-- PAGE: MENU (two choices) -->
+    <div id="page-menu" class="page-section active">
+      <div class="fade-up mb-8 text-center">
+        <h1 class="text-2xl sm:text-3xl font-black text-white">Sewa Nomor OTP</h1>
+        <p class="text-sm text-slate-400 mt-2 max-w-lg mx-auto">Pilih jenis nomor yang sesuai dengan kebutuhan kamu</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto">
+        <div class="card-premium p-6 sm:p-8 text-center cursor-pointer group hover:-translate-y-2 transition-all duration-300" onclick="goToPremium()">
+          <div class="w-20 h-20 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform" style="box-shadow:0 0 40px rgba(245,158,11,0.1)">
+            <i class="fa-solid fa-crown text-4xl text-amber-400"></i>
+          </div>
+          <h2 class="text-xl font-black text-white mb-2">Nomor Premium <span class="text-amber-400">Anti Banned</span></h2>
+          <p class="text-xs text-slate-400 mb-4">Nomor Indonesia khusus WhatsApp Business. Anti banned, cocok untuk blasting dan ngefile.</p>
+          <div class="bg-white/5 rounded-xl p-3 mb-4 text-left space-y-1.5">
+            <p class="text-[11px] text-slate-400"><i class="fa-solid fa-check-circle text-emerald-400 mr-2"></i>Nomor Indonesia (62xx)</p>
+            <p class="text-[11px] text-slate-400"><i class="fa-solid fa-check-circle text-emerald-400 mr-2"></i>Anti banned & stabil</p>
+            <p class="text-[11px] text-slate-400"><i class="fa-solid fa-check-circle text-emerald-400 mr-2"></i>Cocok WA Business blasting</p>
+            <p class="text-[11px] text-slate-400"><i class="fa-solid fa-check-circle text-emerald-400 mr-2"></i>Harga markup bisa diatur admin</p>
+          </div>
+          <span class="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold px-6 py-3 rounded-full text-sm shadow-lg shadow-amber-500/25 group-hover:shadow-amber-500/40 transition-all">
+            Pilih Premium <i class="fa-solid fa-arrow-right text-xs"></i>
+          </span>
+        </div>
+        <div class="card-premium p-6 sm:p-8 text-center cursor-pointer group hover:-translate-y-2 transition-all duration-300" onclick="goToReguler()">
+          <div class="w-20 h-20 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform" style="box-shadow:0 0 40px rgba(124,58,237,0.1)">
+            <i class="fa-solid fa-mobile-screen-button text-4xl text-violet-400"></i>
+          </div>
+          <h2 class="text-xl font-black text-white mb-2">Nomor Reguler <span class="text-violet-400">Nokos</span></h2>
+          <p class="text-xs text-slate-400 mb-4">Ribuan nomor virtual dari berbagai negara untuk verifikasi OTP akun digital.</p>
+          <div class="bg-white/5 rounded-xl p-3 mb-4 text-left space-y-1.5">
+            <p class="text-[11px] text-slate-400"><i class="fa-solid fa-globe text-violet-400 mr-2"></i>2000+ layanan internasional</p>
+            <p class="text-[11px] text-slate-400"><i class="fa-solid fa-globe text-violet-400 mr-2"></i>30+ negara tersedia</p>
+            <p class="text-[11px] text-slate-400"><i class="fa-solid fa-globe text-violet-400 mr-2"></i>Harga sesuai tampilan</p>
+            <p class="text-[11px] text-slate-400"><i class="fa-solid fa-globe text-violet-400 mr-2"></i>Cocok verifikasi OTP biasa</p>
+          </div>
+          <span class="inline-flex items-center gap-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white font-extrabold px-6 py-3 rounded-full text-sm shadow-lg shadow-violet-500/25 group-hover:shadow-violet-500/40 transition-all">
+            Pilih Reguler <i class="fa-solid fa-arrow-right text-xs"></i>
+          </span>
+        </div>
+      </div>
+      <div class="mt-10 text-center">
+        <button onclick="history.back()" class="text-xs text-slate-500 hover:text-violet-400 transition"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button>
+      </div>
+    </div>
+
     <!-- PAGE: BROWSE SERVICES -->
-    <div id="page-browse" class="page-section active">
+    <div id="page-browse" class="page-section">
       <div class="fade-up mb-6">
         <h1 class="text-2xl sm:text-3xl font-black text-white">Sewa Nomor OTP</h1>
         <p class="text-sm text-slate-400 mt-1">Dapatkan nomor virtual untuk verifikasi OTP akun digital kamu</p>
@@ -284,6 +329,53 @@ select.input-dark{appearance:none;background-image:url("data:image/svg+xml,%3Csv
             <button onclick="cancelCurrentOtp()" class="flex-1 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm font-bold hover:bg-rose-500/20 transition">
               <i class="fa-solid fa-xmark"></i> Batalkan
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: PREMIUM NUMBERS -->
+    <div id="page-premium" class="page-section">
+      <div class="fade-up">
+        <button onclick="backToMenu()" class="text-xs text-slate-500 hover:text-violet-400 transition mb-4 flex items-center gap-1">
+          <i class="fa-solid fa-arrow-left"></i> Kembali ke menu
+        </button>
+
+        <div class="card-premium p-5 sm:p-6 mb-6">
+          <div class="flex items-start gap-4 flex-wrap sm:flex-nowrap">
+            <div class="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-crown text-2xl text-amber-400"></i>
+            </div>
+            <div class="min-w-0">
+              <h2 class="text-xl font-black text-white">Nomor Premium Anti Banned</h2>
+              <p class="text-xs text-slate-400 mt-1">Nomor Indonesia khusus untuk WhatsApp Business. Wajib daftar menggunakan <strong class="text-amber-400">aplikasi WhatsApp Business</strong> agar nomor tidak mudah banned. Cocok untuk <strong class="text-amber-400">job blast</strong> dan <strong class="text-amber-400">ngefile</strong>.</p>
+              <div class="flex flex-wrap gap-2 mt-3">
+                <span class="text-[10px] bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/20"><i class="fa-brands fa-whatsapp mr-1"></i>WA Business</span>
+                <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20"><i class="fa-solid fa-shield mr-1"></i>Anti Banned</span>
+                <span class="text-[10px] bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full border border-blue-500/20"><i class="fa-solid fa-flag mr-1"></i>Indonesia</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="premium-loading" class="text-center py-12">
+          <i class="fa-solid fa-spinner fa-spin text-3xl text-violet-400"></i>
+          <p class="text-xs text-slate-400 mt-3">Memuat nomor premium...</p>
+        </div>
+
+        <div id="premium-empty" class="hidden text-center py-16">
+          <i class="fa-solid fa-inbox text-5xl text-slate-600 mb-4"></i>
+          <p class="text-sm text-slate-500 font-medium">Belum ada nomor premium tersedia</p>
+          <p class="text-xs text-slate-600 mt-1">Admin belum menambahkan nomor premium, cek lagi nanti</p>
+        </div>
+
+        <div id="premium-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-6"></div>
+
+        <div id="premium-history-section" class="mb-10">
+          <h3 class="font-black text-white text-sm mb-3"><i class="fa-solid fa-clock-rotate-left text-violet-400 mr-2"></i>Riwayat Pembelian Premium</h3>
+          <div id="premium-history-list"></div>
+          <div id="premium-history-empty" class="hidden text-center py-8 text-slate-500">
+            <p class="text-xs">Belum ada pembelian nomor premium</p>
           </div>
         </div>
       </div>

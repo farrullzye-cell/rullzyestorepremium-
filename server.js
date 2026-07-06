@@ -100,6 +100,8 @@ const getDeposits = async () => { try { const r = await axios.get(`${FIREBASE_UR
 const saveDeposits = async (data) => { try { await axios.put(`${FIREBASE_URL}/deposits.json`, data); } catch(e) {} };
 const getNokosActivations = async () => { try { const r = await axios.get(`${FIREBASE_URL}/nokos_activations.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const saveNokosActivations = async (data) => { try { await axios.put(`${FIREBASE_URL}/nokos_activations.json`, data); } catch(e) {} };
+const getPremiumData = async () => { try { const r = await axios.get(`${FIREBASE_URL}/premium_numbers.json`); return r.data || { numbers: [], markup: 0 }; } catch(e) { return { numbers: [], markup: 0 }; } };
+const savePremiumData = async (data) => { try { await axios.put(`${FIREBASE_URL}/premium_numbers.json`, data); } catch(e) {} };
 const DEFAULT_COUNTRIES = [
   { id: 6, code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
   { id: 1, code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
@@ -2021,6 +2023,92 @@ async function initConfigFromFirebase() {
             const hasAll = fc.apiKey && fc.authDomain && fc.projectId && fc.appId;
             res.json({ success: true, configured: !!hasAll, message: hasAll ? 'Firebase siap' : 'Firebase Config belum lengkap.' });
         } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    // ===== PREMIUM NUMBERS =====
+    app.get('/api/premium/numbers', async (req, res) => {
+        try {
+            const pd = await getPremiumData();
+            const available = (pd.numbers || []).filter(n => n.status === 'available');
+            const markup = pd.markup || 0;
+            res.json({ success: true, numbers: available, markup });
+        } catch(e) { res.json({ success: false, numbers: [], markup: 0 }); }
+    });
+
+    app.post('/api/premium/buy', async (req, res) => {
+        try {
+            const { randomId, numberId } = req.body;
+            if (!randomId || !numberId) return res.json({ success: false, message: 'Parameter tidak lengkap.' });
+            const pd = await getPremiumData();
+            const idx = (pd.numbers || []).findIndex(n => n.id == numberId && n.status === 'available');
+            if (idx === -1) return res.json({ success: false, message: 'Nomor tidak tersedia.' });
+            const markup = pd.markup || 0;
+            const price = Math.round((pd.numbers[idx].basePrice || 0) * (1 + markup / 100));
+            if (price <= 0) return res.json({ success: false, message: 'Harga tidak valid.' });
+            const wallets = await getWallets();
+            const w = wallets[randomId] || { balance: 0 };
+            if (w.balance < price) return res.json({ success: false, message: `Saldo tidak cukup. Dibutuhkan Rp ${price.toLocaleString('id-ID')}.` });
+            w.balance -= price;
+            wallets[randomId] = w;
+            await saveWallets(wallets);
+            pd.numbers[idx].status = 'sold';
+            pd.numbers[idx].soldTo = randomId;
+            pd.numbers[idx].soldAt = new Date().toISOString();
+            await savePremiumData(pd);
+            const sold = pd.numbers[idx];
+            res.json({ success: true, phone: sold.number, price, balance: w.balance, numberId: sold.id });
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.get('/api/premium/history', async (req, res) => {
+        try {
+            const { randomId } = req.query;
+            if (!randomId) return res.json({ success: false, items: [] });
+            const pd = await getPremiumData();
+            const items = (pd.numbers || []).filter(n => n.soldTo === randomId).sort((a,b) => new Date(b.soldAt||0) - new Date(a.soldAt||0));
+            res.json({ success: true, items });
+        } catch(e) { res.json({ success: false, items: [] }); }
+    });
+
+    app.post('/api/admin/premium/save', async (req, res) => {
+        try {
+            const { number, basePrice } = req.body;
+            if (!number || !basePrice) return res.json({ success: false, message: 'Nomor dan harga wajib diisi.' });
+            const pd = await getPremiumData();
+            if (!pd.numbers) pd.numbers = [];
+            pd.numbers.push({ id: Date.now().toString(), number, basePrice: parseInt(basePrice), status: 'available', soldTo: null, soldAt: null, createdAt: new Date().toISOString() });
+            await savePremiumData(pd);
+            res.json({ success: true, message: 'Nomor premium berhasil ditambahkan.' });
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.post('/api/admin/premium/delete', async (req, res) => {
+        try {
+            const { id } = req.body;
+            if (!id) return res.json({ success: false, message: 'ID diperlukan.' });
+            const pd = await getPremiumData();
+            pd.numbers = (pd.numbers || []).filter(n => n.id != id);
+            await savePremiumData(pd);
+            res.json({ success: true, message: 'Nomor premium dihapus.' });
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.post('/api/admin/premium/markup', async (req, res) => {
+        try {
+            const { markup } = req.body;
+            if (markup === undefined || markup < 0) return res.json({ success: false, message: 'Markup tidak valid.' });
+            const pd = await getPremiumData();
+            pd.markup = parseInt(markup) || 0;
+            await savePremiumData(pd);
+            res.json({ success: true, message: `Markup disimpan: ${pd.markup}%` });
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.get('/api/admin/premium/list', async (req, res) => {
+        try {
+            const pd = await getPremiumData();
+            res.json({ success: true, numbers: pd.numbers || [], markup: pd.markup || 0 });
+        } catch(e) { res.json({ success: false, numbers: [], markup: 0 }); }
     });
 
     scheduleDailyPromo();

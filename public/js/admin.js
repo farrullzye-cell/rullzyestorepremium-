@@ -891,6 +891,55 @@ async function loadTab(tab){
                 `<p class="text-red-400">${r.message||'Gagal mengambil IP'}</p>`}
             </div>`;
         }
+        // =============== PREMIUM NUMBERS ===============
+        else if(tab==='premium'){
+            const pd = await api('/api/admin/premium/list').then(r=>r.json());
+            const nums = pd.numbers||[], markup = pd.markup||0;
+            const avail = nums.filter(n=>n.status==='available').length;
+            const sold = nums.filter(n=>n.status==='sold').length;
+            let h=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black"><i class="fa-solid fa-crown text-amber-400 mr-2"></i>Nomor Premium</h2><button onclick="loadTab('premium')" class="text-violet-400 text-sm"><i class="fa-solid fa-rotate"></i></button></div>
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="card stat-card p-3"><p class="text-[10px] text-slate-400">Total</p><h3 class="text-2xl font-black mt-1 text-white">${nums.length}</h3></div>
+                <div class="card stat-card p-3"><p class="text-[10px] text-slate-400">Tersedia</p><h3 class="text-2xl font-black mt-1 text-emerald-400">${avail}</h3></div>
+                <div class="card stat-card p-3"><p class="text-[10px] text-slate-400">Terjual</p><h3 class="text-2xl font-black mt-1 text-amber-400">${sold}</h3></div>
+            </div>
+            <div class="card p-4 mb-4">
+                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-percent mr-2"></i>Markup Harga</h3>
+                <div class="flex gap-3 items-center">
+                    <div class="relative w-32">
+                        <input type="number" id="premium-markup" class="input-dark pr-8" value="${markup}" min="0" max="1000">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">%</span>
+                    </div>
+                    <button onclick="savePremiumMarkup()" class="btn-primary text-xs"><i class="fa-solid fa-save mr-1"></i>Simpan Markup</button>
+                </div>
+                <p class="text-[10px] text-slate-500 mt-2">Harga akhir = Harga dasar x (1 + markup/100). Contoh: dasar Rp 10.000 + markup ${markup}% = Rp ${(10000*(1+markup/100)).toLocaleString('id-ID')}</p>
+            </div>
+            <div class="card p-4 mb-4">
+                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-plus mr-2"></i>Tambah Nomor</h3>
+                <div class="flex gap-3 items-end flex-wrap">
+                    <div><label class="text-[9px] text-slate-500">Nomor HP</label><input type="text" id="premium-number" class="input-dark mt-1" placeholder="08123456789"></div>
+                    <div><label class="text-[9px] text-slate-500">Harga Dasar (Rp)</label><input type="number" id="premium-price" class="input-dark mt-1" placeholder="15000" min="1000"></div>
+                    <button onclick="addPremiumNumber()" class="btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i>Tambah</button>
+                </div>
+            </div>
+            <div class="card p-4">
+                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-list mr-2"></i>Daftar Nomor Premium</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
+                        <tr><th class="p-2 text-[10px]">Nomor</th><th class="p-2 text-[10px] text-right">Harga Dasar</th><th class="p-2 text-[10px] text-right">Harga Jual</th><th class="p-2 text-[10px]">Status</th><th class="p-2 text-[10px]">Pembeli</th><th class="p-2 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
+            if(!nums.length) h+=`<tr><td colspan="6" class="p-4 text-center text-slate-500 text-xs">Belum ada nomor premium.</td></tr>`;
+            nums.forEach(n=>{
+                const jual = Math.round((n.basePrice||0) * (1 + markup/100));
+                h+=`<tr class="border-b border-white/5"><td class="p-2 text-xs font-bold font-mono">${n.number||'-'}</td>
+                <td class="p-2 text-right text-xs">${formatRp(n.basePrice)}</td>
+                <td class="p-2 text-right text-xs text-violet-400 font-bold">${formatRp(jual)}</td>
+                <td class="p-2 text-xs">${n.status==='available'?'<span class="badge-ok">Tersedia</span>':'<span class="badge-warn">Terjual</span>'}</td>
+                <td class="p-2 text-xs text-slate-400">${n.soldTo||'-'}</td>
+                <td class="p-2 text-center"><button onclick="deletePremium('${n.id}')" class="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded hover:bg-red-500 hover:text-white"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+            });
+            h+=`</tbody></table></div></div>`;
+            c.innerHTML = h;
+        }
         // =============== 26. BOT STATUS ===============
         else if(tab==='botstatus'){
             const sys=await api('/api/admin/system').then(r=>r.json());
@@ -1495,6 +1544,29 @@ window.deletePromo = async function(id) {
     if (!confirm('Hapus promo ini?')) return;
     const res = await api('/api/admin/promos/' + id, {method:'DELETE'});
     showToast('Promo dihapus!'); loadTab('promo');
+};
+window.addPremiumNumber = async function() {
+    const number = document.getElementById('premium-number').value.trim();
+    const basePrice = parseInt(document.getElementById('premium-price').value);
+    if (!number || !basePrice) return showToast('Isi nomor dan harga!','error');
+    const r = await api('/api/admin/premium/save', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({number,basePrice})});
+    const d = await r.json();
+    showToast(d.message, d.success?'success':'error');
+    if (d.success) { document.getElementById('premium-number').value=''; document.getElementById('premium-price').value=''; loadTab('premium'); }
+};
+window.deletePremium = async function(id) {
+    if (!confirm('Hapus nomor premium ini?')) return;
+    const r = await api('/api/admin/premium/delete', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+    const d = await r.json();
+    showToast(d.message, d.success?'success':'error');
+    if (d.success) loadTab('premium');
+};
+window.savePremiumMarkup = async function() {
+    const markup = parseInt(document.getElementById('premium-markup').value) || 0;
+    const r = await api('/api/admin/premium/markup', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({markup})});
+    const d = await r.json();
+    showToast(d.message, d.success?'success':'error');
+    if (d.success) loadTab('premium');
 };
 window.togglePromo = async function(id) {
     const promos = await api('/api/admin/promos').then(r=>r.json());
