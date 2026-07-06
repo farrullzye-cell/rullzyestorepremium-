@@ -915,19 +915,20 @@ async function loadTab(tab){
                 <p class="text-[10px] text-slate-500 mt-2">Harga akhir = Harga dasar x (1 + markup/100). Contoh: dasar Rp 10.000 + markup ${markup}% = Rp ${(10000*(1+markup/100)).toLocaleString('id-ID')}</p>
             </div>
             <div class="card p-4 mb-4">
-                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-plus mr-2"></i>Tambah Nomor</h3>
+                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate Nomor</h3>
                 <div class="flex gap-3 items-end flex-wrap">
-                    <div><label class="text-[9px] text-slate-500">Nomor HP</label><input type="text" id="premium-number" class="input-dark mt-1" placeholder="08123456789"></div>
-                    <div><label class="text-[9px] text-slate-500">Harga Dasar (Rp)</label><input type="number" id="premium-price" class="input-dark mt-1" placeholder="15000" min="1000"></div>
-                    <button onclick="addPremiumNumber()" class="btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i>Tambah</button>
+                    <div><label class="text-[9px] text-slate-500">Jumlah Generate</label><input type="number" id="premium-count" class="input-dark mt-1" value="10" min="1" max="100"></div>
+                    <div><label class="text-[9px] text-slate-500">Harga Dasar (Rp)</label><input type="number" id="premium-price" class="input-dark mt-1" value="15000" min="1000"></div>
+                    <button onclick="generatePremium()" class="btn-primary text-xs"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Generate</button>
                 </div>
+                <p class="text-[10px] text-slate-500 mt-2">Nomor akan digenerate otomatis dengan format 62[operator][random]XXX. Operator random (Telkomsel, Indosat, XL, Tri, Smartfren, Axis).</p>
             </div>
             <div class="card p-4">
                 <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-list mr-2"></i>Daftar Nomor Premium</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
                         <tr><th class="p-2 text-[10px]">Nomor</th><th class="p-2 text-[10px] text-right">Harga Dasar</th><th class="p-2 text-[10px] text-right">Harga Jual</th><th class="p-2 text-[10px]">Status</th><th class="p-2 text-[10px]">Pembeli</th><th class="p-2 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
-            if(!nums.length) h+=`<tr><td colspan="6" class="p-4 text-center text-slate-500 text-xs">Belum ada nomor premium.</td></tr>`;
+            if(!nums.length) h+=`<tr><td colspan="6" class="p-4 text-center text-slate-500 text-xs">Belum ada nomor premium. Klik Generate untuk membuat nomor otomatis.</td></tr>`;
             nums.forEach(n=>{
                 const jual = Math.round((n.basePrice||0) * (1 + markup/100));
                 h+=`<tr class="border-b border-white/5"><td class="p-2 text-xs font-bold font-mono">${n.number||'-'}</td>
@@ -1545,14 +1546,16 @@ window.deletePromo = async function(id) {
     const res = await api('/api/admin/promos/' + id, {method:'DELETE'});
     showToast('Promo dihapus!'); loadTab('promo');
 };
-window.addPremiumNumber = async function() {
-    const number = document.getElementById('premium-number').value.trim();
-    const basePrice = parseInt(document.getElementById('premium-price').value);
-    if (!number || !basePrice) return showToast('Isi nomor dan harga!','error');
-    const r = await api('/api/admin/premium/save', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({number,basePrice})});
+window.generatePremium = async function() {
+    const count = parseInt(document.getElementById('premium-count').value) || 10;
+    const basePrice = parseInt(document.getElementById('premium-price').value) || 15000;
+    const btn = document.querySelector('#tab-content button:has(.fa-wand-magic-sparkles)');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...'; }
+    const r = await api('/api/admin/premium/generate', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({count,basePrice})});
     const d = await r.json();
     showToast(d.message, d.success?'success':'error');
-    if (d.success) { document.getElementById('premium-number').value=''; document.getElementById('premium-price').value=''; loadTab('premium'); }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate'; }
+    if (d.success) loadTab('premium');
 };
 window.deletePremium = async function(id) {
     if (!confirm('Hapus nomor premium ini?')) return;

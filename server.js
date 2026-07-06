@@ -2029,7 +2029,9 @@ async function initConfigFromFirebase() {
     app.get('/api/premium/numbers', async (req, res) => {
         try {
             const pd = await getPremiumData();
-            const available = (pd.numbers || []).filter(n => n.status === 'available');
+            const available = (pd.numbers || []).filter(n => n.status === 'available').map(n => ({
+                ...n, number: censorPhone(n.number)
+            }));
             const markup = pd.markup || 0;
             res.json({ success: true, numbers: available, markup });
         } catch(e) { res.json({ success: false, numbers: [], markup: 0 }); }
@@ -2070,15 +2072,33 @@ async function initConfigFromFirebase() {
         } catch(e) { res.json({ success: false, items: [] }); }
     });
 
-    app.post('/api/admin/premium/save', async (req, res) => {
+    const PREFIXES_62 = ['811','812','813','821','822','823','851','852','853','814','815','816','855','856','857','858','817','818','819','859','877','878','895','896','897','898','899','881','882','883','884','885','886','887','888','889','831','832','833','838'];
+    const generatePhone62 = () => {
+        const prefix = PREFIXES_62[Math.floor(Math.random() * PREFIXES_62.length)];
+        const rest = String(Math.floor(1000000 + Math.random() * 9000000));
+        return '62' + prefix + rest;
+    };
+    const censorPhone = (phone) => phone ? phone.slice(0, -3) + 'XXX' : '';
+
+    app.post('/api/admin/premium/generate', async (req, res) => {
         try {
-            const { number, basePrice } = req.body;
-            if (!number || !basePrice) return res.json({ success: false, message: 'Nomor dan harga wajib diisi.' });
+            const { count = 10, basePrice = 15000 } = req.body;
             const pd = await getPremiumData();
             if (!pd.numbers) pd.numbers = [];
-            pd.numbers.push({ id: Date.now().toString(), number, basePrice: parseInt(basePrice), status: 'available', soldTo: null, soldAt: null, createdAt: new Date().toISOString() });
+            const generated = [];
+            for (let i = 0; i < count; i++) {
+                const phone = generatePhone62();
+                pd.numbers.push({
+                    id: Date.now().toString() + '_' + i,
+                    number: phone,
+                    basePrice: parseInt(basePrice),
+                    status: 'available', soldTo: null, soldAt: null,
+                    createdAt: new Date().toISOString()
+                });
+                generated.push(phone);
+            }
             await savePremiumData(pd);
-            res.json({ success: true, message: 'Nomor premium berhasil ditambahkan.' });
+            res.json({ success: true, message: `${count} nomor premium berhasil digenerate.`, generated });
         } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
@@ -2107,7 +2127,11 @@ async function initConfigFromFirebase() {
     app.get('/api/admin/premium/list', async (req, res) => {
         try {
             const pd = await getPremiumData();
-            res.json({ success: true, numbers: pd.numbers || [], markup: pd.markup || 0 });
+            const numbers = (pd.numbers || []).map(n => ({
+                ...n,
+                number: n.status === 'available' ? censorPhone(n.number) : n.number
+            }));
+            res.json({ success: true, numbers, markup: pd.markup || 0 });
         } catch(e) { res.json({ success: false, numbers: [], markup: 0 }); }
     });
 
