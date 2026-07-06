@@ -75,9 +75,10 @@ async function loadPrices() {
   if (data.success && data.prices) prices = data.prices;
 }
 function getPrice(code) {
-  const p = prices[code] || prices[code.toLowerCase()];
-  if (p) return p;
-  const s = services.find(x => x.code === code || x.id === code);
+  const c = (code || '').toLowerCase();
+  const p = prices[c];
+  if (p && typeof p === 'number') return p;
+  const s = services.find(x => (x.code||'').toLowerCase() === c || (x.id||'').toLowerCase() === c);
   return s && s.price ? s.price : 2500;
 }
 

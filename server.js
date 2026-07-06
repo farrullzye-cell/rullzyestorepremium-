@@ -1773,6 +1773,19 @@ async function initConfigFromFirebase() {
             const nokos = new NokosAPI(nokosKey);
             const { service, country = 6, server = 's2' } = req.body;
             const result = await nokos.getPrices(service || '', country, server);
+            if (result.success && result.prices) {
+                const flat = {};
+                const markup = result.markup || 60;
+                const rate = 16500;
+                const countryData = result.prices[country] || result.prices[String(country)] || {};
+                for (const [code, info] of Object.entries(countryData)) {
+                    if (info && typeof info.cost === 'number') {
+                        flat[code] = Math.round(info.cost * (1 + markup / 100) * rate / 50) * 50;
+                        if (flat[code] < 500) flat[code] = 500;
+                    }
+                }
+                return res.json({ success: true, prices: flat });
+            }
             res.json(result);
         } catch(e) { res.json({ success: false, message: e.message }); }
     });
