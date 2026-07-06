@@ -284,7 +284,7 @@ function backToBrowse() {
   if (otpPollTimer) clearInterval(otpPollTimer);
   if (otpCountdownTimer) clearInterval(otpCountdownTimer);
   currentOtpActivation = null;
-  switchPage('browse');
+  switchPage('menu');
 }
 async function pollOtp() {
   const rid = getRandomId();
@@ -501,39 +501,53 @@ function renderLoginSection(){
   }
 }
 
-// ===== PREMIUM NUMBERS =====
+// ===== PREMIUM NUMBERS (via Nokos API - WA Indonesia) =====
 async function loadPremiumNumbers() {
-  show('premium-loading'); hide('premium-grid'); hide('premium-empty');
+  show('premium-loading'); hide('premium-grid'); hide('premium-error'); hide('premium-info-bar');
   const [numsRes, histRes] = await Promise.all([
     api('/api/premium/numbers'),
     getRandomId() ? api('/api/premium/history?randomId=' + getRandomId()) : Promise.resolve({ items: [] })
   ]);
   hide('premium-loading');
-  const nums = numsRes.numbers || [], markup = numsRes.markup || 0;
+  if (!numsRes.success) {
+    show('premium-error'); qs('premium-error-msg').textContent = numsRes.message || 'Gagal memuat data.';
+    return;
+  }
+  const ops = numsRes.operators || [];
+  show('premium-info-bar');
+  qs('premium-base-price').textContent = 'Rp ' + (numsRes.basePrice || 0).toLocaleString('id-ID');
+  qs('premium-profit').textContent = 'Rp ' + (numsRes.profit || 0).toLocaleString('id-ID');
   const grid = qs('premium-grid');
-  if (!nums.length) { show('premium-empty'); return; }
+  if (!ops.length) {
+    grid.innerHTML = `<div class="col-span-full text-center py-12"><i class="fa-solid fa-inbox text-4xl text-slate-600 mb-3"></i><p class="text-sm text-slate-500">Tidak ada operator tersedia</p></div>`;
+    show('premium-grid'); return;
+  }
   show('premium-grid');
-  grid.innerHTML = nums.map(n => {
-    const price = Math.round((n.basePrice || 0) * (1 + markup / 100));
-    return `<div class="card-nokos p-4 group" style="animation:fadeUp .35s ease both;animation-delay:${(nums.indexOf(n)%6)*0.06}s">
+  grid.innerHTML = ops.map(op => {
+    const antiColor = op.antiBanned >= 90 ? '#10b981' : op.antiBanned >= 85 ? '#f59e0b' : '#ef4444';
+    return `<div class="card-nokos p-4 group" style="animation:fadeUp .35s ease both;animation-delay:${(ops.indexOf(op)%6)*0.06}s">
       <div class="flex items-center gap-3 mb-3">
-        <div class="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform" style="color:#10b981"><i class="fa-brands fa-whatsapp"></i></div>
+        <div class="w-11 h-11 rounded-xl bg-amber-500/10 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform" style="color:#f59e0b"><i class="fa-brands fa-whatsapp"></i></div>
         <div class="min-w-0 flex-1">
-          <p class="font-bold text-white text-sm">Nomor Premium</p>
-          <p class="text-[10px] text-slate-500 mt-0.5 font-mono">${n.number}</p>
+          <p class="font-bold text-white text-sm">WhatsApp — ${op.name}</p>
+          <p class="text-[10px] text-slate-500 mt-0.5">${op.stock > 0 ? op.stock + ' tersedia' : 'Stok terbatas'}</p>
         </div>
       </div>
-      <div class="bg-white/[0.03] rounded-xl p-3 mb-3">
+      <div class="bg-white/[0.03] rounded-xl p-3 mb-3 space-y-1.5">
         <div class="flex items-center justify-between">
-          <span class="text-xs text-slate-400">Harga</span>
-          <span class="text-lg font-black text-amber-400">Rp ${price.toLocaleString('id-ID')}</span>
+          <span class="text-xs text-slate-400">Harga Premium</span>
+          <span class="text-lg font-black text-amber-400">Rp ${(op.price||0).toLocaleString('id-ID')}</span>
         </div>
-        <div class="flex items-center gap-2 mt-2">
-          <span class="text-[9px] bg-white/5 text-slate-500 px-2 py-0.5 rounded-full">WhatsApp Business</span>
-          <span class="text-[9px] bg-white/5 text-slate-500 px-2 py-0.5 rounded-full">Indonesia</span>
+        <div class="flex items-center justify-between text-[10px]">
+          <span class="text-slate-500">Anti Banned</span>
+          <span class="font-bold" style="color:${antiColor}">${op.antiBanned}% <i class="fa-solid fa-shield"></i></span>
+        </div>
+        <div class="flex items-center justify-between text-[10px]">
+          <span class="text-slate-500">Garansi</span>
+          <span class="font-bold text-emerald-400">Refund <i class="fa-solid fa-rotate-left"></i></span>
         </div>
       </div>
-      <button onclick="buyPremium('${n.id}', ${price})" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs hover:shadow-lg hover:shadow-amber-500/25 transition-all">
+      <button onclick="buyPremium('${op.id}', ${op.price||0})" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs hover:shadow-lg hover:shadow-amber-500/25 transition-all">
         <i class="fa-solid fa-cart-plus mr-1"></i> Beli Sekarang
       </button>
     </div>`;
@@ -544,24 +558,48 @@ function renderPremiumHistory(items) {
   const list = qs('premium-history-list'), empty = qs('premium-history-empty');
   if (!items.length) { list.innerHTML = ''; show('premium-history-empty'); return; }
   hide('premium-history-empty');
-  list.innerHTML = items.map(n => {
-    const price = Math.round((n.basePrice || 0) * (1 + ((qs('premium-markup') ? parseInt(qs('premium-markup').value) : 0)) / 100));
+  list.innerHTML = items.map(a => {
+    const opName = PREMIUM_OPERATORS ? (PREMIUM_OPERATORS.find(o=>o.id===a.operator)||{}).name||a.operator : a.operator;
     return `<div class="card-nokos p-3 mb-2 flex items-center justify-between">
-      <div><p class="text-xs font-bold text-white font-mono">${n.number||'-'}</p>
-      <p class="text-[10px] text-slate-500">${n.soldAt ? new Date(n.soldAt).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-'}</p></div>
-      <span class="status-badge done">Selesai</span>
+      <div><p class="text-xs font-bold text-white font-mono">${a.phone||'-'}</p>
+      <p class="text-[10px] text-slate-500">${opName} · ${a.createdAt ? new Date(a.createdAt).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-'}</p></div>
+      <div class="text-right">
+        <span class="status-badge ${a.status==='STATUS_WAIT_CODE'?'active':a.status==='STATUS_CANCEL'?'cancelled':'done'}">${a.status==='STATUS_WAIT_CODE'?'Aktif':a.status==='STATUS_CANCEL'?'Batal':'Selesai'}</span>
+        ${a.status==='STATUS_WAIT_CODE'?`<button onclick="cancelPremium('${a.activationId}')" class="block text-[9px] text-rose-400 hover:text-rose-300 mt-1">Batalkan & Refund</button>`:''}
+      </div>
     </div>`;
   }).join('');
 }
-async function buyPremium(id, price) {
+async function buyPremium(operator, price) {
   const randomId = getRandomId();
   if (!randomId) { Swal.fire({icon:'warning',title:'Belum Login',text:'Login dulu dengan Google'}); return; }
-  const c = await Swal.fire({title:'Beli Nomor Premium?',html:`Nomor Indonesia khusus WA Business<br><span class="text-2xl font-black text-amber-400">Rp ${price.toLocaleString('id-ID')}</span>`,icon:'question',showCancelButton:true,confirmButtonColor:'#f59e0b',confirmButtonText:'Ya, Beli',cancelButtonText:'Batal'});
+  const c = await Swal.fire({
+    title:'Beli Nomor Premium?',
+    html:`<div class="text-center"><p class="text-xs text-slate-400 mb-2">WhatsApp Indonesia — ${operator.toUpperCase()}</p>
+      <div class="flex justify-center gap-3 my-3"><span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-full"><i class="fa-solid fa-shield mr-1"></i>Anti Banned</span><span class="text-[10px] bg-rose-500/10 text-rose-400 px-2 py-1 rounded-full"><i class="fa-solid fa-rotate-left mr-1"></i>Garansi Refund</span></div>
+      <span class="text-2xl font-black text-amber-400">Rp ${price.toLocaleString('id-ID')}</span></div>`,
+    icon:'question',showCancelButton:true,confirmButtonColor:'#f59e0b',confirmButtonText:'Ya, Beli',cancelButtonText:'Batal'
+  });
   if (!c.isConfirmed) return;
-  const data = await api('/api/premium/buy', { method:'POST', body:JSON.stringify({ randomId, numberId: id }) });
+  const data = await api('/api/premium/buy', { method:'POST', body:JSON.stringify({ randomId, operator }) });
   if (data.success) {
-    Swal.fire({icon:'success',title:'Berhasil!',text:`Nomor: ${data.phone}`,confirmButtonColor:'#7c3aed'});
+    closeOrderModal();
+    selectedService = { code: 'wa', name: 'WhatsApp Premium - ' + operator.toUpperCase() };
+    showOtpPage(data);
     loadPremiumNumbers(); updateSaldo();
+  } else {
+    Swal.fire({icon:'error',title:'Gagal',text:data.message});
+  }
+}
+async function cancelPremium(activationId) {
+  const randomId = getRandomId();
+  if (!randomId) return;
+  const c = await Swal.fire({title:'Batalkan Nomor Premium?',text:'Saldo akan dikembalikan ke wallet kamu.',icon:'warning',showCancelButton:true,confirmButtonColor:'#ef4444',confirmButtonText:'Ya, Batalkan & Refund',cancelButtonText:'Batal'});
+  if (!c.isConfirmed) return;
+  const data = await api('/api/premium/cancel', { method:'POST', body:JSON.stringify({ randomId, activationId }) });
+  if (data.success) {
+    Swal.fire({icon:'success',title:'Dibatalkan',text:data.message||'Saldo sudah dikembalikan.',timer:2000,showConfirmButton:false});
+    loadPremiumNumbers(); loadActiveActivations(); loadHistory(); updateSaldo();
   } else {
     Swal.fire({icon:'error',title:'Gagal',text:data.message});
   }

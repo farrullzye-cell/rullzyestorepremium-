@@ -2025,40 +2025,122 @@ async function initConfigFromFirebase() {
         } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
-    // ===== PREMIUM NUMBERS =====
+    // ===== PREMIUM NUMBERS (via Nokos API - WA Indonesia) =====
+    const PREMIUM_OPERATORS = [
+        { id: 'telkomsel', name: 'Telkomsel', icon: 'fa-solid fa-signal' },
+        { id: 'indosat', name: 'Indosat', icon: 'fa-solid fa-signal' },
+        { id: 'xl', name: 'XL', icon: 'fa-solid fa-signal' },
+        { id: 'tri', name: 'Tri', icon: 'fa-solid fa-signal' },
+        { id: 'smartfren', name: 'Smartfren', icon: 'fa-solid fa-signal' },
+        { id: 'axis', name: 'Axis', icon: 'fa-solid fa-signal' },
+    ];
+
     app.get('/api/premium/numbers', async (req, res) => {
         try {
+            const cfg = getConfig();
+            if (!cfg.nokosApiKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
+            const nokos = new NokosAPI(cfg.nokosApiKey);
+            const priceRes = await nokos.getPrices('wa', 6, 's2');
+            const availRes = await nokos.getAvailability('wa', 6, 's2');
             const pd = await getPremiumData();
-            const available = (pd.numbers || []).filter(n => n.status === 'available').map(n => ({
-                ...n, number: censorPhone(n.number)
-            }));
-            const markup = pd.markup || 0;
-            res.json({ success: true, numbers: available, markup });
-        } catch(e) { res.json({ success: false, numbers: [], markup: 0 }); }
+            const markupPercent = pd.markup || 0;
+            const rawPrice = priceRes.success && priceRes.prices ? (priceRes.prices[6] || priceRes.prices['6'] || {}).wa || {} : {};
+            const basePrice = rawPrice.cost ? convertPrice(rawPrice.cost, priceRes.markup || 60) : 6350;
+            const minProfit = 10000, maxProfit = 21000;
+            const profit = Math.min(maxProfit, Math.max(minProfit, Math.round(basePrice * markupPercent / 100)));
+            const finalPrice = basePrice + profit;
+            const stocks = {};
+            const operatorList = PREMIUM_OPERATORS.map(op => {
+                const stock = availRes.success && availRes.data && availRes.data[op.id] !== undefined ? availRes.data[op.id] : 50;
+                stocks[op.id] = stock;
+                const antiBanned = 80 + Math.floor(Math.random() * 20);
+                return { ...op, stock, antiBanned, basePrice, profit, price: finalPrice };
+            });
+            res.json({ success: true, operators: operatorList, price: finalPrice, basePrice, profit, markupPercent });
+        } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
     app.post('/api/premium/buy', async (req, res) => {
         try {
-            const { randomId, numberId } = req.body;
-            if (!randomId || !numberId) return res.json({ success: false, message: 'Parameter tidak lengkap.' });
+            const cfg = getConfig();
+            if (!cfg.nokosApiKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
+            const { randomId, operator = 'any' } = req.body;
+            if (!randomId) return res.json({ success: false, message: 'Parameter tidak lengkap.' });
+            const nokos = new NokosAPI(cfg.nokosApiKey);
+            // Check availability
+            const availRes = await nokos.getAvailability('wa', 6, 's2');
+            if (!availRes.success || (availRes.data && availRes.data[operator] !== undefined && availRes.data[operator] <= 0)) {
+                return res.json({ success: false, message: 'Stok untuk operator ini sedang habis.' });
+            }
+            // Get price with markup
+            const priceRes = await nokos.getPrices('wa', 6, 's2');
+            const rawPrice = priceRes.success && priceRes.prices ? (priceRes.prices[6] || priceRes.prices['6'] || {}).wa || {} : {};
+            const basePrice = rawPrice.cost ? convertPrice(rawPrice.cost, priceRes.markup || 60) : 6350;
             const pd = await getPremiumData();
-            const idx = (pd.numbers || []).findIndex(n => n.id == numberId && n.status === 'available');
-            if (idx === -1) return res.json({ success: false, message: 'Nomor tidak tersedia.' });
-            const markup = pd.markup || 0;
-            const price = Math.round((pd.numbers[idx].basePrice || 0) * (1 + markup / 100));
-            if (price <= 0) return res.json({ success: false, message: 'Harga tidak valid.' });
+            const markupPercent = pd.markup || 0;
+            const profit = Math.min(21000, Math.max(10000, Math.round(basePrice * markupPercent / 100)));
+            const finalPrice = basePrice + profit;
+            // Check wallet
             const wallets = await getWallets();
             const w = wallets[randomId] || { balance: 0 };
-            if (w.balance < price) return res.json({ success: false, message: `Saldo tidak cukup. Dibutuhkan Rp ${price.toLocaleString('id-ID')}.` });
-            w.balance -= price;
+            if (w.balance < finalPrice) return res.json({ success: false, message: `Saldo tidak cukup. Dibutuhkan Rp ${finalPrice.toLocaleString('id-ID')}.` });
+            // Order from Nokos
+            const result = await nokos.getNumber('wa', 6, operator, 's2');
+            if (!result.success || !result.data) {
+                return res.json({ success: false, message: result.error || 'Gagal mendapatkan nomor dari Nokos.' });
+            }
+            // Deduct wallet
+            w.balance -= finalPrice;
             wallets[randomId] = w;
             await saveWallets(wallets);
-            pd.numbers[idx].status = 'sold';
-            pd.numbers[idx].soldTo = randomId;
-            pd.numbers[idx].soldAt = new Date().toISOString();
-            await savePremiumData(pd);
-            const sold = pd.numbers[idx];
-            res.json({ success: true, phone: sold.number, price, balance: w.balance, numberId: sold.id });
+            // Save activation with premium info
+            let activations = await getNokosActivations();
+            activations.push({
+                activationId: result.data.activation_id,
+                randomId, service: 'wa', country: 6, operator,
+                server: 's2', phone: result.data.phone,
+                price: finalPrice, basePrice, profit: profit,
+                type: 'premium',
+                status: 'STATUS_WAIT_CODE',
+                createdAt: new Date().toISOString(), completedAt: null
+            });
+            await saveNokosActivations(activations);
+            res.json({
+                success: true, activationId: result.data.activation_id,
+                phone: result.data.phone, price: finalPrice,
+                basePrice, profit, balance: w.balance
+            });
+        } catch(e) { res.json({ success: false, message: e.message }); }
+    });
+
+    app.post('/api/premium/cancel', async (req, res) => {
+        try {
+            const cfg = getConfig();
+            if (!cfg.nokosApiKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
+            const nokos = new NokosAPI(cfg.nokosApiKey);
+            const { randomId, activationId } = req.body;
+            if (!randomId || !activationId) return res.json({ success: false, message: 'Parameter tidak lengkap.' });
+            // Cancel on Nokos
+            const result = await nokos.setStatus(activationId, -1);
+            if (!result.success) return res.json({ success: false, message: result.error || 'Gagal membatalkan nomor.' });
+            // Find activation and refund
+            let activations = await getNokosActivations();
+            const idx = activations.findIndex(a => a.activationId == activationId && a.randomId === randomId);
+            if (idx !== -1) {
+                const refund = activations[idx].price || 0;
+                activations[idx].status = 'STATUS_CANCEL';
+                activations[idx].completedAt = new Date().toISOString();
+                await saveNokosActivations(activations);
+                // Refund wallet
+                if (refund > 0) {
+                    const wallets = await getWallets();
+                    if (!wallets[randomId]) wallets[randomId] = { balance: 0 };
+                    wallets[randomId].balance += refund;
+                    await saveWallets(wallets);
+                    return res.json({ success: true, message: `Nomor dibatalkan. Saldo Rp ${refund.toLocaleString('id-ID')} dikembalikan.`, refund, balance: wallets[randomId].balance });
+                }
+            }
+            res.json({ success: true, message: 'Nomor dibatalkan.' });
         } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
@@ -2066,54 +2148,20 @@ async function initConfigFromFirebase() {
         try {
             const { randomId } = req.query;
             if (!randomId) return res.json({ success: false, items: [] });
-            const pd = await getPremiumData();
-            const items = (pd.numbers || []).filter(n => n.soldTo === randomId).sort((a,b) => new Date(b.soldAt||0) - new Date(a.soldAt||0));
+            let activations = await getNokosActivations();
+            const items = activations.filter(a => a.randomId === randomId && a.type === 'premium').sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
             res.json({ success: true, items });
         } catch(e) { res.json({ success: false, items: [] }); }
     });
 
-    const PREFIXES_62 = ['811','812','813','821','822','823','851','852','853','814','815','816','855','856','857','858','817','818','819','859','877','878','895','896','897','898','899','881','882','883','884','885','886','887','888','889','831','832','833','838'];
-    const generatePhone62 = () => {
-        const prefix = PREFIXES_62[Math.floor(Math.random() * PREFIXES_62.length)];
-        const rest = String(Math.floor(1000000 + Math.random() * 9000000));
-        return '62' + prefix + rest;
-    };
-    const censorPhone = (phone) => phone ? phone.slice(0, -3) + 'XXX' : '';
-
-    app.post('/api/admin/premium/generate', async (req, res) => {
+    app.get('/api/admin/premium/settings', async (req, res) => {
         try {
-            const { count = 10, basePrice = 15000 } = req.body;
             const pd = await getPremiumData();
-            if (!pd.numbers) pd.numbers = [];
-            const generated = [];
-            for (let i = 0; i < count; i++) {
-                const phone = generatePhone62();
-                pd.numbers.push({
-                    id: Date.now().toString() + '_' + i,
-                    number: phone,
-                    basePrice: parseInt(basePrice),
-                    status: 'available', soldTo: null, soldAt: null,
-                    createdAt: new Date().toISOString()
-                });
-                generated.push(phone);
-            }
-            await savePremiumData(pd);
-            res.json({ success: true, message: `${count} nomor premium berhasil digenerate.`, generated });
-        } catch(e) { res.json({ success: false, message: e.message }); }
+            res.json({ success: true, markup: pd.markup || 0 });
+        } catch(e) { res.json({ success: false, markup: 0 }); }
     });
 
-    app.post('/api/admin/premium/delete', async (req, res) => {
-        try {
-            const { id } = req.body;
-            if (!id) return res.json({ success: false, message: 'ID diperlukan.' });
-            const pd = await getPremiumData();
-            pd.numbers = (pd.numbers || []).filter(n => n.id != id);
-            await savePremiumData(pd);
-            res.json({ success: true, message: 'Nomor premium dihapus.' });
-        } catch(e) { res.json({ success: false, message: e.message }); }
-    });
-
-    app.post('/api/admin/premium/markup', async (req, res) => {
+    app.post('/api/admin/premium/settings', async (req, res) => {
         try {
             const { markup } = req.body;
             if (markup === undefined || markup < 0) return res.json({ success: false, message: 'Markup tidak valid.' });
@@ -2122,17 +2170,6 @@ async function initConfigFromFirebase() {
             await savePremiumData(pd);
             res.json({ success: true, message: `Markup disimpan: ${pd.markup}%` });
         } catch(e) { res.json({ success: false, message: e.message }); }
-    });
-
-    app.get('/api/admin/premium/list', async (req, res) => {
-        try {
-            const pd = await getPremiumData();
-            const numbers = (pd.numbers || []).map(n => ({
-                ...n,
-                number: n.status === 'available' ? censorPhone(n.number) : n.number
-            }));
-            res.json({ success: true, numbers, markup: pd.markup || 0 });
-        } catch(e) { res.json({ success: false, numbers: [], markup: 0 }); }
     });
 
     scheduleDailyPromo();

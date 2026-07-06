@@ -893,52 +893,31 @@ async function loadTab(tab){
         }
         // =============== PREMIUM NUMBERS ===============
         else if(tab==='premium'){
-            const pd = await api('/api/admin/premium/list').then(r=>r.json());
-            const nums = pd.numbers||[], markup = pd.markup||0;
-            const avail = nums.filter(n=>n.status==='available').length;
-            const sold = nums.filter(n=>n.status==='sold').length;
-            let h=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black"><i class="fa-solid fa-crown text-amber-400 mr-2"></i>Nomor Premium</h2><button onclick="loadTab('premium')" class="text-violet-400 text-sm"><i class="fa-solid fa-rotate"></i></button></div>
-            <div class="grid grid-cols-3 gap-3 mb-4">
-                <div class="card stat-card p-3"><p class="text-[10px] text-slate-400">Total</p><h3 class="text-2xl font-black mt-1 text-white">${nums.length}</h3></div>
-                <div class="card stat-card p-3"><p class="text-[10px] text-slate-400">Tersedia</p><h3 class="text-2xl font-black mt-1 text-emerald-400">${avail}</h3></div>
-                <div class="card stat-card p-3"><p class="text-[10px] text-slate-400">Terjual</p><h3 class="text-2xl font-black mt-1 text-amber-400">${sold}</h3></div>
-            </div>
+            const pd = await api('/api/admin/premium/settings').then(r=>r.json());
+            const markup = pd.markup||0;
+            let h=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black"><i class="fa-solid fa-crown text-amber-400 mr-2"></i>Nomor Premium (Nokos API)</h2><button onclick="loadTab('premium')" class="text-violet-400 text-sm"><i class="fa-solid fa-rotate"></i></button></div>
             <div class="card p-4 mb-4">
-                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-percent mr-2"></i>Markup Harga</h3>
-                <div class="flex gap-3 items-center">
-                    <div class="relative w-32">
+                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-percent mr-2"></i>Pengaturan Markup</h3>
+                <div class="max-w-xs">
+                    <label class="text-[10px] text-slate-500">Persentase Markup (%)</label>
+                    <div class="relative mt-1">
                         <input type="number" id="premium-markup" class="input-dark pr-8" value="${markup}" min="0" max="1000">
                         <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">%</span>
                     </div>
-                    <button onclick="savePremiumMarkup()" class="btn-primary text-xs"><i class="fa-solid fa-save mr-1"></i>Simpan Markup</button>
+                    <p class="text-[10px] text-slate-500 mt-2">Markup diterapkan ke harga Nokos. Profit dipastikan antara <strong class="text-amber-400">Rp 10.000 - Rp 21.000</strong> per nomor tergantung rate.</p>
+                    <p class="text-[10px] text-slate-500">Contoh: Harga Nokos Rp 6.350 + markup ${markup}% = profit Rp ${Math.min(21000, Math.max(10000, Math.round(6350 * markup / 100))).toLocaleString('id-ID')} → harga jual Rp ${(6350 + Math.min(21000, Math.max(10000, Math.round(6350 * markup / 100)))).toLocaleString('id-ID')}</p>
                 </div>
-                <p class="text-[10px] text-slate-500 mt-2">Harga akhir = Harga dasar x (1 + markup/100). Contoh: dasar Rp 10.000 + markup ${markup}% = Rp ${(10000*(1+markup/100)).toLocaleString('id-ID')}</p>
-            </div>
-            <div class="card p-4 mb-4">
-                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate Nomor</h3>
-                <div class="flex gap-3 items-end flex-wrap">
-                    <div><label class="text-[9px] text-slate-500">Jumlah Generate</label><input type="number" id="premium-count" class="input-dark mt-1" value="10" min="1" max="100"></div>
-                    <div><label class="text-[9px] text-slate-500">Harga Dasar (Rp)</label><input type="number" id="premium-price" class="input-dark mt-1" value="15000" min="1000"></div>
-                    <button onclick="generatePremium()" class="btn-primary text-xs"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Generate</button>
-                </div>
-                <p class="text-[10px] text-slate-500 mt-2">Nomor akan digenerate otomatis dengan format 62[operator][random]XXX. Operator random (Telkomsel, Indosat, XL, Tri, Smartfren, Axis).</p>
+                <button onclick="savePremiumSettings()" class="btn-primary mt-3 text-xs"><i class="fa-solid fa-save mr-1"></i>Simpan Markup</button>
             </div>
             <div class="card p-4">
-                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-list mr-2"></i>Daftar Nomor Premium</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left"><thead class="bg-white/5 border-b border-white/10">
-                        <tr><th class="p-2 text-[10px]">Nomor</th><th class="p-2 text-[10px] text-right">Harga Dasar</th><th class="p-2 text-[10px] text-right">Harga Jual</th><th class="p-2 text-[10px]">Status</th><th class="p-2 text-[10px]">Pembeli</th><th class="p-2 text-[10px] text-center">Aksi</th></tr></thead><tbody>`;
-            if(!nums.length) h+=`<tr><td colspan="6" class="p-4 text-center text-slate-500 text-xs">Belum ada nomor premium. Klik Generate untuk membuat nomor otomatis.</td></tr>`;
-            nums.forEach(n=>{
-                const jual = Math.round((n.basePrice||0) * (1 + markup/100));
-                h+=`<tr class="border-b border-white/5"><td class="p-2 text-xs font-bold font-mono">${n.number||'-'}</td>
-                <td class="p-2 text-right text-xs">${formatRp(n.basePrice)}</td>
-                <td class="p-2 text-right text-xs text-violet-400 font-bold">${formatRp(jual)}</td>
-                <td class="p-2 text-xs">${n.status==='available'?'<span class="badge-ok">Tersedia</span>':'<span class="badge-warn">Terjual</span>'}</td>
-                <td class="p-2 text-xs text-slate-400">${n.soldTo||'-'}</td>
-                <td class="p-2 text-center"><button onclick="deletePremium('${n.id}')" class="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded hover:bg-red-500 hover:text-white"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-            });
-            h+=`</tbody></table></div></div>`;
+                <h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-circle-info mr-2"></i>Informasi</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-400">
+                    <div class="bg-white/5 rounded-xl p-3"><p class="font-bold text-white mb-1">Sumber Nomor</p>Nomor diambil real-time dari <strong class="text-violet-400">Nokos API</strong> untuk WhatsApp Indonesia.</div>
+                    <div class="bg-white/5 rounded-xl p-3"><p class="font-bold text-white mb-1">Anti Banned 80-99%</p>Rekomendasi daftar dengan <strong class="text-amber-400">WhatsApp Business</strong> agar lebih aman.</div>
+                    <div class="bg-white/5 rounded-xl p-3"><p class="font-bold text-white mb-1">Garansi Refund</p>Jika user batalkan nomor, saldo <strong class="text-emerald-400">dikembalikan penuh</strong> via Nokos API cancel.</div>
+                    <div class="bg-white/5 rounded-xl p-3"><p class="font-bold text-white mb-1">Operator Tersedia</p>Telkomsel, Indosat, XL, Tri, Smartfren, Axis — operator random dari stok Nokos.</div>
+                </div>
+            </div>`;
             c.innerHTML = h;
         }
         // =============== 26. BOT STATUS ===============
@@ -1546,27 +1525,9 @@ window.deletePromo = async function(id) {
     const res = await api('/api/admin/promos/' + id, {method:'DELETE'});
     showToast('Promo dihapus!'); loadTab('promo');
 };
-window.generatePremium = async function() {
-    const count = parseInt(document.getElementById('premium-count').value) || 10;
-    const basePrice = parseInt(document.getElementById('premium-price').value) || 15000;
-    const btn = document.querySelector('#tab-content button:has(.fa-wand-magic-sparkles)');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...'; }
-    const r = await api('/api/admin/premium/generate', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({count,basePrice})});
-    const d = await r.json();
-    showToast(d.message, d.success?'success':'error');
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate'; }
-    if (d.success) loadTab('premium');
-};
-window.deletePremium = async function(id) {
-    if (!confirm('Hapus nomor premium ini?')) return;
-    const r = await api('/api/admin/premium/delete', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
-    const d = await r.json();
-    showToast(d.message, d.success?'success':'error');
-    if (d.success) loadTab('premium');
-};
-window.savePremiumMarkup = async function() {
+window.savePremiumSettings = async function() {
     const markup = parseInt(document.getElementById('premium-markup').value) || 0;
-    const r = await api('/api/admin/premium/markup', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({markup})});
+    const r = await api('/api/admin/premium/settings', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({markup})});
     const d = await r.json();
     showToast(d.message, d.success?'success':'error');
     if (d.success) loadTab('premium');

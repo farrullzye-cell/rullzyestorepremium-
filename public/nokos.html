@@ -334,11 +334,11 @@ select.input-dark{appearance:none;background-image:url("data:image/svg+xml,%3Csv
       </div>
     </div>
 
-    <!-- PAGE: PREMIUM NUMBERS -->
+    <!-- PAGE: PREMIUM NUMBERS (via Nokos API - WA Indonesia) -->
     <div id="page-premium" class="page-section">
       <div class="fade-up">
         <button onclick="backToMenu()" class="text-xs text-slate-500 hover:text-violet-400 transition mb-4 flex items-center gap-1">
-          <i class="fa-solid fa-arrow-left"></i> Kembali ke menu
+          <i class="fa-solid fa-arrow-left"></i> Kembali
         </button>
 
         <div class="card-premium p-5 sm:p-6 mb-6">
@@ -348,31 +348,39 @@ select.input-dark{appearance:none;background-image:url("data:image/svg+xml,%3Csv
             </div>
             <div class="min-w-0">
               <h2 class="text-xl font-black text-white">Nomor Premium Anti Banned</h2>
-              <p class="text-xs text-slate-400 mt-1">Nomor Indonesia khusus untuk WhatsApp Business. Wajib daftar menggunakan <strong class="text-amber-400">aplikasi WhatsApp Business</strong> agar nomor tidak mudah banned. Cocok untuk <strong class="text-amber-400">job blast</strong> dan <strong class="text-amber-400">ngefile</strong>.</p>
+              <p class="text-xs text-slate-400 mt-1">Nomor Indonesia khusus <strong class="text-amber-400">WhatsApp Business</strong>. Wajib daftar pakai WA Business agar <strong class="text-emerald-400">anti banned 80-99%</strong>. Cocok untuk <strong class="text-amber-400">job blast</strong> & <strong class="text-amber-400">ngefile</strong>.</p>
               <div class="flex flex-wrap gap-2 mt-3">
                 <span class="text-[10px] bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/20"><i class="fa-brands fa-whatsapp mr-1"></i>WA Business</span>
-                <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20"><i class="fa-solid fa-shield mr-1"></i>Anti Banned</span>
+                <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20"><i class="fa-solid fa-shield mr-1"></i>Anti Banned 80-99%</span>
                 <span class="text-[10px] bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full border border-blue-500/20"><i class="fa-solid fa-flag mr-1"></i>Indonesia</span>
+                <span class="text-[10px] bg-rose-500/10 text-rose-400 px-2.5 py-1 rounded-full border border-rose-500/20"><i class="fa-solid fa-rotate-left mr-1"></i>Garansi Refund</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div id="premium-loading" class="text-center py-12">
-          <i class="fa-solid fa-spinner fa-spin text-3xl text-violet-400"></i>
-          <p class="text-xs text-slate-400 mt-3">Memuat nomor premium...</p>
+        <div id="premium-info-bar" class="hidden bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-violet-500/20 rounded-xl p-3 mb-4 flex items-center justify-between">
+          <span class="text-xs text-slate-400">Harga dasar Nokos: <strong id="premium-base-price" class="text-white">Rp 0</strong></span>
+          <span class="text-xs text-slate-400">Markup: <strong id="premium-profit" class="text-amber-400">Rp 0</strong></span>
+          <span class="text-xs text-slate-400">Garansi: <strong class="text-emerald-400">Refund jika batal</strong></span>
         </div>
 
-        <div id="premium-empty" class="hidden text-center py-16">
-          <i class="fa-solid fa-inbox text-5xl text-slate-600 mb-4"></i>
-          <p class="text-sm text-slate-500 font-medium">Belum ada nomor premium tersedia</p>
-          <p class="text-xs text-slate-600 mt-1">Admin belum menambahkan nomor premium, cek lagi nanti</p>
+        <div id="premium-loading" class="text-center py-12">
+          <i class="fa-solid fa-spinner fa-spin text-3xl text-violet-400"></i>
+          <p class="text-xs text-slate-400 mt-3">Memuat operator premium...</p>
+        </div>
+
+        <div id="premium-error" class="hidden text-center py-16">
+          <i class="fa-solid fa-exclamation-triangle text-5xl text-amber-500 mb-4"></i>
+          <p class="text-sm text-slate-500 font-medium">Gagal memuat data premium</p>
+          <p id="premium-error-msg" class="text-xs text-slate-600 mt-1"></p>
+          <button onclick="loadPremiumNumbers()" class="btn-primary mt-4 text-xs"><i class="fa-solid fa-rotate"></i> Coba Lagi</button>
         </div>
 
         <div id="premium-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-6"></div>
 
         <div id="premium-history-section" class="mb-10">
-          <h3 class="font-black text-white text-sm mb-3"><i class="fa-solid fa-clock-rotate-left text-violet-400 mr-2"></i>Riwayat Pembelian Premium</h3>
+          <h3 class="font-black text-white text-sm mb-3"><i class="fa-solid fa-clock-rotate-left text-violet-400 mr-2"></i>Riwayat Premium</h3>
           <div id="premium-history-list"></div>
           <div id="premium-history-empty" class="hidden text-center py-8 text-slate-500">
             <p class="text-xs">Belum ada pembelian nomor premium</p>
