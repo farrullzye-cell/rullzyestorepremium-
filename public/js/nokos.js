@@ -516,7 +516,6 @@ async function loadPremiumNumbers() {
   const ops = numsRes.operators || [];
   show('premium-info-bar');
   qs('premium-base-price').textContent = 'Rp ' + (numsRes.basePrice || 0).toLocaleString('id-ID');
-  qs('premium-profit').textContent = 'Rp ' + (numsRes.profit || 0).toLocaleString('id-ID');
   const grid = qs('premium-grid');
   if (!ops.length) {
     grid.innerHTML = `<div class="col-span-full text-center py-12"><i class="fa-solid fa-inbox text-4xl text-slate-600 mb-3"></i><p class="text-sm text-slate-500">Tidak ada operator tersedia</p></div>`;
