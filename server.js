@@ -100,6 +100,37 @@ const getDeposits = async () => { try { const r = await axios.get(`${FIREBASE_UR
 const saveDeposits = async (data) => { try { await axios.put(`${FIREBASE_URL}/deposits.json`, data); } catch(e) {} };
 const getNokosActivations = async () => { try { const r = await axios.get(`${FIREBASE_URL}/nokos_activations.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const saveNokosActivations = async (data) => { try { await axios.put(`${FIREBASE_URL}/nokos_activations.json`, data); } catch(e) {} };
+const DEFAULT_COUNTRIES = [
+  { id: 6, code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
+  { id: 1, code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
+  { id: 99, code: 'IN', name: 'India', flag: '🇮🇳' },
+  { id: 156, code: 'CN', name: 'China', flag: '🇨🇳' },
+  { id: 231, code: 'US', name: 'USA', flag: '🇺🇸' },
+  { id: 16, code: 'US', name: 'Amerika Serikat', flag: '🇺🇸' },
+  { id: 2, code: 'KR', name: 'Korea Selatan', flag: '🇰🇷' },
+  { id: 3, code: 'JP', name: 'Jepang', flag: '🇯🇵' },
+  { id: 4, code: 'PH', name: 'Filipina', flag: '🇵🇭' },
+  { id: 5, code: 'TH', name: 'Thailand', flag: '🇹🇭' },
+  { id: 7, code: 'VN', name: 'Vietnam', flag: '🇻🇳' },
+  { id: 8, code: 'SG', name: 'Singapura', flag: '🇸🇬' },
+  { id: 9, code: 'TW', name: 'Taiwan', flag: '🇹🇼' },
+  { id: 17, code: 'CA', name: 'Kanada', flag: '🇨🇦' },
+  { id: 18, code: 'GB', name: 'Inggris', flag: '🇬🇧' },
+  { id: 19, code: 'AU', name: 'Australia', flag: '🇦🇺' },
+  { id: 20, code: 'DE', name: 'Jerman', flag: '🇩🇪' },
+  { id: 21, code: 'FR', name: 'Perancis', flag: '🇫🇷' },
+  { id: 22, code: 'IT', name: 'Italia', flag: '🇮🇹' },
+  { id: 23, code: 'ES', name: 'Spanyol', flag: '🇪🇸' },
+  { id: 24, code: 'NL', name: 'Belanda', flag: '🇳🇱' },
+  { id: 25, code: 'RU', name: 'Rusia', flag: '🇷🇺' },
+  { id: 26, code: 'HK', name: 'Hongkong', flag: '🇭🇰' },
+  { id: 27, code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
+  { id: 28, code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
+  { id: 29, code: 'EG', name: 'Mesir', flag: '🇪🇬' },
+  { id: 30, code: 'SA', name: 'Arab Saudi', flag: '🇸🇦' },
+  { id: 10, code: 'BR', name: 'Brazil', flag: '🇧🇷' },
+  { id: 11, code: 'MX', name: 'Meksiko', flag: '🇲🇽' },
+];
 
 const getPromos = async () => { try { const r = await axios.get(`${FIREBASE_URL}/promos.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };
 const savePromos = async (data) => { try { await axios.put(`${FIREBASE_URL}/promos.json`, data); } catch(e) {} };
@@ -1741,6 +1772,20 @@ async function initConfigFromFirebase() {
     });
 
     // ===== NOKOS API =====
+    app.get('/api/nokos/countries', async (req, res) => {
+        try {
+            const cfg = getConfig();
+            const nokosKey = cfg.nokosApiKey || '';
+            if (!nokosKey) return res.json({ success: false, message: 'Nokos API Key belum dikonfigurasi.' });
+            const nokos = new NokosAPI(nokosKey);
+            const result = await nokos.getCountries();
+            if (result.success && result.countries) {
+                return res.json({ success: true, countries: Object.values(result.countries) });
+            }
+            res.json({ success: true, countries: DEFAULT_COUNTRIES });
+        } catch(e) { res.json({ success: true, countries: DEFAULT_COUNTRIES }); }
+    });
+
     app.post('/api/nokos/services', async (req, res) => {
         try {
             const cfg = getConfig();
@@ -1764,6 +1809,11 @@ async function initConfigFromFirebase() {
             res.json({ success: false, message: 'Gagal mengambil layanan.', services: [] });
         } catch(e) { res.json({ success: false, message: e.message, services: [] }); }
     });
+
+    const convertPrice = (cost, markup = 60, rate = 16500) => {
+        if (!cost || typeof cost !== 'number') return 0;
+        return Math.max(500, Math.round(cost * (1 + markup / 100) * rate / 50) * 50);
+    };
 
     app.post('/api/nokos/prices', async (req, res) => {
         try {
@@ -1799,11 +1849,6 @@ async function initConfigFromFirebase() {
             res.json(result);
         } catch(e) { res.json({ success: false, message: e.message }); }
     });
-
-    const convertPrice = (cost, markup = 60, rate = 16500) => {
-        if (!cost || typeof cost !== 'number') return 0;
-        return Math.max(500, Math.round(cost * (1 + markup / 100) * rate / 50) * 50);
-    };
 
     app.post('/api/nokos/get-number', async (req, res) => {
         try {
