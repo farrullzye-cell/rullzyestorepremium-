@@ -1776,12 +1776,10 @@ async function initConfigFromFirebase() {
             if (result.success && result.prices) {
                 const flat = {};
                 const markup = result.markup || 60;
-                const rate = 16500;
                 const countryData = result.prices[country] || result.prices[String(country)] || {};
                 for (const [code, info] of Object.entries(countryData)) {
                     if (info && typeof info.cost === 'number') {
-                        flat[code] = Math.round(info.cost * (1 + markup / 100) * rate / 50) * 50;
-                        if (flat[code] < 500) flat[code] = 500;
+                        flat[code] = convertPrice(info.cost, markup);
                     }
                 }
                 return res.json({ success: true, prices: flat });
@@ -1802,6 +1800,11 @@ async function initConfigFromFirebase() {
         } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
+    const convertPrice = (cost, markup = 60, rate = 16500) => {
+        if (!cost || typeof cost !== 'number') return 0;
+        return Math.max(500, Math.round(cost * (1 + markup / 100) * rate / 50) * 50);
+    };
+
     app.post('/api/nokos/get-number', async (req, res) => {
         try {
             const cfg = getConfig();
@@ -1813,8 +1816,11 @@ async function initConfigFromFirebase() {
             // Cek harga dulu
             const priceRes = await nokos.getPrices(service, country, server);
             let price = 0;
-            if (priceRes.success && priceRes.data && priceRes.data[country] && priceRes.data[country][service]) {
-                price = parseInt(priceRes.data[country][service].cost);
+            const markup = priceRes.markup || 60;
+            const countryData = (priceRes.prices || {})[country] || (priceRes.prices || {})[String(country)] || {};
+            const svc = countryData[service] || countryData[Object.keys(countryData).find(k => k.toLowerCase() === service.toLowerCase())];
+            if (svc && typeof svc.cost === 'number') {
+                price = convertPrice(svc.cost, markup);
             }
             if (price <= 0) return res.json({ success: false, message: 'Gagal mendapatkan harga layanan.' });
             // Cek saldo
