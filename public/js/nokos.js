@@ -387,10 +387,11 @@ async function loadHistory() {
 
 async function updateSaldo() {
   const rid=getRandomId(),sa=qs('saldo-amount');
-  if(!rid){hide('saldo-display');return;}
+  if(!rid){hide('saldo-display');hide('deposit-section');return;}
   show('saldo-display');
   const data=await api(`/api/wallet/balance?randomId=${rid}`);
   if(data.success&&sa) sa.textContent=`Rp ${Number(data.balance||0).toLocaleString('id-ID')}`;
+  if((data.balance||0)<2500) show('deposit-section'); else hide('deposit-section');
 }
 
 function handleLogout(){
