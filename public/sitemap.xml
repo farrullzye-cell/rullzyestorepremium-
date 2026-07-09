@@ -6,50 +6,44 @@
 
 <url>
   <loc>https://rullzyestorepremium.my.id/</loc>
-  <lastmod>2026-05-24</lastmod>
+  <lastmod>2026-07-09</lastmod>
   <priority>1.00</priority>
   <changefreq>daily</changefreq>
 </url>
 <url>
-  <loc>https://rullzyestorepremium.my.id/topup.html</loc>
-  <lastmod>2026-05-24</lastmod>
-  <priority>0.90</priority>
-  <changefreq>daily</changefreq>
-</url>
-<url>
   <loc>https://rullzyestorepremium.my.id/ppob.html</loc>
-  <lastmod>2026-05-24</lastmod>
+  <lastmod>2026-07-09</lastmod>
   <priority>0.90</priority>
   <changefreq>daily</changefreq>
 </url>
 <url>
   <loc>https://rullzyestorepremium.my.id/akundigital.html</loc>
-  <lastmod>2026-05-24</lastmod>
+  <lastmod>2026-07-09</lastmod>
   <priority>0.85</priority>
   <changefreq>daily</changefreq>
 </url>
 <url>
-  <loc>https://rullzyestorepremium.my.id/smmpanel.html</loc>
-  <lastmod>2026-05-24</lastmod>
+  <loc>https://rullzyestorepremium.my.id/nokos.html</loc>
+  <lastmod>2026-07-09</lastmod>
+  <priority>0.85</priority>
+  <changefreq>daily</changefreq>
+</url>
+<url>
+  <loc>https://rullzyestorepremium.my.id/panel.html</loc>
+  <lastmod>2026-07-09</lastmod>
   <priority>0.80</priority>
   <changefreq>weekly</changefreq>
 </url>
 <url>
-  <loc>https://rullzyestorepremium.my.id/affiliate.html</loc>
-  <lastmod>2026-05-24</lastmod>
-  <priority>0.80</priority>
-  <changefreq>weekly</changefreq>
-</url>
-<url>
-  <loc>https://rullzyestorepremium.my.id/faq.html</loc>
-  <lastmod>2026-05-24</lastmod>
+  <loc>https://rullzyestorepremium.my.id/tentang.html</loc>
+  <lastmod>2026-07-09</lastmod>
   <priority>0.70</priority>
   <changefreq>monthly</changefreq>
 </url>
 <url>
-  <loc>https://rullzyestorepremium.my.id/admin.html</loc>
-  <lastmod>2026-05-24</lastmod>
-  <priority>0.30</priority>
+  <loc>https://rullzyestorepremium.my.id/faq.html</loc>
+  <lastmod>2026-07-09</lastmod>
+  <priority>0.70</priority>
   <changefreq>monthly</changefreq>
 </url>
 </urlset>

@@ -12,6 +12,33 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+app.get('/sitemap.xml', (req, res) => {
+    const pages = [
+        { loc: 'https://rullzyestorepremium.my.id/', priority: '1.00', freq: 'daily' },
+        { loc: 'https://rullzyestorepremium.my.id/ppob.html', priority: '0.90', freq: 'daily' },
+        { loc: 'https://rullzyestorepremium.my.id/akundigital.html', priority: '0.85', freq: 'daily' },
+        { loc: 'https://rullzyestorepremium.my.id/nokos.html', priority: '0.85', freq: 'daily' },
+        { loc: 'https://rullzyestorepremium.my.id/panel.html', priority: '0.80', freq: 'weekly' },
+        { loc: 'https://rullzyestorepremium.my.id/tentang.html', priority: '0.70', freq: 'monthly' },
+        { loc: 'https://rullzyestorepremium.my.id/faq.html', priority: '0.70', freq: 'monthly' },
+    ];
+    const today = new Date().toISOString().slice(0, 10);
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+${pages.map(p => `  <url>
+    <loc>${p.loc}</loc>
+    <lastmod>${today}</lastmod>
+    <priority>${p.priority}</priority>
+    <changefreq>${p.freq}</changefreq>
+  </url>`).join('\n')}
+</urlset>`;
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+});
+
 // Multi-admin: verifikasi username + pin
 const verifyAdmin = (username, pin) => {
     const cfg = getConfig();
