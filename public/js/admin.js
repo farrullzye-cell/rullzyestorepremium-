@@ -931,6 +931,106 @@ async function loadTab(tab){
                 <p class="text-xs text-slate-500 mt-4"><i class="fa-solid fa-info-circle mr-1"></i>Bot aktif di Telegram. Pastikan bot sudah dijadikan admin di grup untuk fitur notifikasi grup.</p>
             </div>`;
         }
+        // =============== RESELLER DASHBOARD ===============
+        else if(tab==='reseller'){
+            const r = await api('/api/admin/reseller/stats').then(r=>r.json());
+            const s = r.stats || {};
+            const lvHtml = Object.entries(s.levelDistribution||{}).map(([lv,count])=>`<div class="bg-white/5 rounded-xl p-3 text-center"><p class="text-lg font-black text-white">${count}</p><p class="text-[10px] text-slate-400 uppercase">${lv.charAt(0).toUpperCase()+lv.slice(1)}</p></div>`).join('');
+            c.innerHTML=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black"><i class="fa-solid fa-store text-violet-400 mr-2"></i>Reseller Dashboard</h2><button onclick="loadTab('reseller')" class="text-violet-400 text-sm"><i class="fa-solid fa-rotate"></i></button></div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div class="card p-4 text-center"><p class="text-2xl font-black text-white">${s.totalResellers||0}</p><p class="text-[10px] text-slate-400 uppercase">Total Reseller</p></div>
+                <div class="card p-4 text-center"><p class="text-2xl font-black text-emerald-400">${s.activeResellers||0}</p><p class="text-[10px] text-slate-400 uppercase">Aktif</p></div>
+                <div class="card p-4 text-center"><p class="text-2xl font-black text-amber-400">Rp${(s.totalSales||0).toLocaleString('id-ID')}</p><p class="text-[10px] text-slate-400 uppercase">Total Penjualan</p></div>
+                <div class="card p-4 text-center"><p class="text-2xl font-black text-violet-400">${s.totalOrders||0}</p><p class="text-[10px] text-slate-400 uppercase">Total Order</p></div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div class="card p-4 text-center"><p class="text-lg font-black text-emerald-400">Rp${(s.totalDeposits||0).toLocaleString('id-ID')}</p><p class="text-[10px] text-slate-400 uppercase">Total Deposit</p></div>
+                <div class="card p-4 text-center"><p class="text-lg font-black text-amber-400">Rp${(s.totalCommissions||0).toLocaleString('id-ID')}</p><p class="text-[10px] text-slate-400 uppercase">Total Komisi</p></div>
+                <div class="card p-4 text-center"><p class="text-lg font-black text-rose-400">Rp${(s.totalWithdrawn||0).toLocaleString('id-ID')}</p><p class="text-[10px] text-slate-400 uppercase">Total Withdraw</p></div>
+                <div class="card p-4 text-center"><p class="text-lg font-black text-sky-400">${s.pendingWithdraws||0}</p><p class="text-[10px] text-slate-400 uppercase">Pending WD</p></div>
+            </div>
+            <div class="card p-4"><h3 class="font-bold text-sm text-white mb-3">Distribusi Level</h3><div class="grid grid-cols-5 gap-2">${lvHtml}</div></div>`;
+        }
+        // =============== RESELLER LIST ===============
+        else if(tab==='reseller-list'){
+            const r = await api('/api/admin/resellers').then(r=>r.json());
+            const resellers = r.resellers||[];
+            c.innerHTML=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black"><i class="fa-solid fa-users text-violet-400 mr-2"></i>Daftar Reseller</h2><span class="text-xs text-slate-400">${resellers.length} total</span></div>
+            <div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="text-slate-400 border-b border-white/5"><th class="text-left p-2">Nama</th><th class="text-left p-2">ID</th><th class="text-center p-2">Level</th><th class="text-center p-2">Status</th><th class="text-right p-2">Penjualan</th><th class="text-right p-2">Komisi</th><th class="text-right p-2">Referral</th><th class="text-center p-2">Aksi</th></tr></thead><tbody>
+                ${resellers.map(u => {
+                    const levelColor = {starter:'text-slate-400',silver:'text-slate-300',gold:'text-amber-400',platinum:'text-cyan-400',diamond:'text-violet-400'}[u.level]||'text-white';
+                    return `<tr class="border-b border-white/5 hover:bg-white/[0.02]">
+                        <td class="p-2 font-bold text-white">${u.displayName||'-'}</td>
+                        <td class="p-2"><code class="text-violet-300">${u.randomId||'-'}</code></td>
+                        <td class="p-2 text-center"><span class="${levelColor} font-bold">${u.level?u.level.charAt(0).toUpperCase()+u.level.slice(1):'-'}</span></td>
+                        <td class="p-2 text-center">${u.status==='active'?'<span class="text-emerald-400">Aktif</span>':'<span class="text-red-400">Suspend</span>'}</td>
+                        <td class="p-2 text-right font-bold">Rp${(u.totalSales||0).toLocaleString('id-ID')}</td>
+                        <td class="p-2 text-right font-bold text-emerald-400">Rp${(u.commissionBalance||0).toLocaleString('id-ID')}</td>
+                        <td class="p-2 text-right font-bold">${u.totalReferrals||0}</td>
+                        <td class="p-2 text-center"><button onclick="showResellerDetail('${u.randomId}')" class="text-violet-400 hover:text-violet-300 text-[10px]"><i class="fa-solid fa-eye"></i></button></td>
+                    </tr>`;
+                }).join('')}
+            </tbody></table></div>`;
+        }
+        // =============== RESELLER WITHDRAW ===============
+        else if(tab==='reseller-withdraw'){
+            const r = await api('/api/admin/reseller/withdraws').then(r=>r.json());
+            const items = r.items||[];
+            c.innerHTML=`<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black"><i class="fa-solid fa-arrow-up-from-bracket text-amber-400 mr-2"></i>Withdraw Reseller</h2><button onclick="loadTab('reseller-withdraw')" class="text-violet-400 text-sm"><i class="fa-solid fa-rotate"></i></button></div>
+            <div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="text-slate-400 border-b border-white/5"><th class="text-left p-2">Reseller</th><th class="text-left p-2">Bank</th><th class="text-left p-2">Rekening</th><th class="text-right p-2">Nominal</th><th class="text-center p-2">Status</th><th class="text-center p-2">Aksi</th></tr></thead><tbody>
+                ${items.map(w => {
+                    const st = w.status||'pending';
+                    const stCls = st==='paid'?'badge-ok':st==='approved'?'text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full text-[10px]':st==='rejected'?'badge-err':'badge-warn';
+                    return `<tr class="border-b border-white/5 hover:bg-white/[0.02]">
+                        <td class="p-2"><span class="text-white font-bold">${w.resellerName||'-'}</span><br><code class="text-[9px] text-violet-300">${w.resellerEmail||w.randomId||''}</code></td>
+                        <td class="p-2">${w.bankName||'-'}</td>
+                        <td class="p-2 font-mono">${w.bankAccount||'-'}<br><span class="text-slate-500">${w.bankHolder||''}</span></td>
+                        <td class="p-2 text-right font-bold text-white">Rp${(w.nominal||0).toLocaleString('id-ID')}</td>
+                        <td class="p-2 text-center"><span class="${stCls}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td>
+                        <td class="p-2 text-center">${st==='pending'?`<button onclick="approveWithdraw('${w.id}')" class="text-emerald-400 hover:text-emerald-300 text-[10px] mr-2"><i class="fa-solid fa-check"></i></button><button onclick="rejectWithdraw('${w.id}')" class="text-red-400 hover:text-red-300 text-[10px]"><i class="fa-solid fa-xmark"></i></button>`:st==='approved'?`<button onclick="payWithdraw('${w.id}')" class="text-cyan-400 hover:text-cyan-300 text-[10px]"><i class="fa-solid fa-hand-holding-dollar"></i> Bayar</button>`:''}</td>
+                    </tr>`;
+                }).join('')}
+            </tbody></table></div>`;
+        }
+        // =============== RESELLER LEVELS & PRICES ===============
+        else if(tab==='reseller-levels'){
+            const [pricesRes, levelsRes, banksRes] = await Promise.all([
+                api('/api/admin/reseller/prices').then(r=>r.json()),
+                api('/api/admin/reseller/levels').then(r=>r.json()),
+                api('/api/admin/reseller/banks').then(r=>r.json())
+            ]);
+            const levels = levelsRes.levels||{};
+            const levelOrder = ['starter','silver','gold','platinum','diamond'];
+            const levelColors = {starter:'text-slate-400',silver:'text-slate-300',gold:'text-amber-400',platinum:'text-cyan-400',diamond:'text-violet-400'};
+            const levelNames = {starter:'Starter',silver:'Silver',gold:'Gold',platinum:'Platinum',diamond:'Diamond'};
+
+            let lvHtml = `<div class="card p-4 mb-4"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-layer-group mr-2 text-violet-400"></i>Pengaturan Level</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">`;
+            levelOrder.forEach(lv => {
+                const ml = levels[lv]?.minSales||0;
+                lvHtml += `<div class="bg-white/5 rounded-xl p-3 text-center"><p class="${levelColors[lv]} font-bold text-sm">${levelNames[lv]}</p>
+                <div class="flex items-center gap-1 mt-2"><span class="text-[10px] text-slate-400">Min Penjualan:</span>
+                <input type="number" id="lvl-${lv}" class="input-dark text-[10px] py-1 h-7 w-full text-center" value="${ml}"></div></div>`;
+            });
+            lvHtml += `</div><button onclick="saveResellerLevels()" class="btn-primary mt-3 text-xs"><i class="fa-solid fa-save mr-1"></i>Simpan Level</button></div>`;
+
+            // Banks
+            const banks = banksRes.banks||[];
+            let bankHtml = `<div class="card p-4 mb-4"><h3 class="font-bold text-sm text-white mb-3"><i class="fa-solid fa-building-columns mr-2 text-emerald-400"></i>Daftar Bank</h3>
+            <div class="max-h-40 overflow-y-auto space-y-1 mb-3" id="bank-list">`;
+            banks.forEach(b => {
+                bankHtml += `<div class="flex gap-2 items-center bg-white/5 rounded-lg p-2">
+                    <input class="input-dark text-[10px] py-1 h-7 flex-1 bank-code" value="${b.code}" placeholder="Kode">
+                    <input class="input-dark text-[10px] py-1 h-7 flex-1 bank-name" value="${b.name}" placeholder="Nama Bank">
+                    <button onclick="this.parentElement.remove()" class="text-red-400 text-xs"><i class="fa-solid fa-trash"></i></button>
+                </div>`;
+            });
+            bankHtml += `</div><button onclick="addBankRow()" class="text-[10px] text-violet-400 mb-2"><i class="fa-solid fa-plus"></i> Tambah Bank</button>
+            <button onclick="saveResellerBanks()" class="btn-primary text-xs"><i class="fa-solid fa-save mr-1"></i>Simpan Bank</button></div>`;
+
+            c.innerHTML = `<div class="flex justify-between items-center mb-4"><h2 class="text-xl font-black"><i class="fa-solid fa-sliders text-violet-400 mr-2"></i>Level & Harga Reseller</h2><button onclick="loadTab('reseller-levels')" class="text-violet-400 text-sm"><i class="fa-solid fa-rotate"></i></button></div>
+            ${lvHtml}${bankHtml}`;
+        }
     } catch(e){ c.innerHTML=`<p class="text-red-400 text-center py-10">Error: ${e.message}</p>`; }
 }
 
@@ -1539,4 +1639,105 @@ window.togglePromo = async function(id) {
     p.active = !p.active;
     await api('/api/admin/promos', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
     showToast(p.active ? 'Promo diaktifkan!' : 'Promo dinonaktifkan!'); loadTab('promo');
+};
+// ==================== RESELLER ADMIN FUNCTIONS ====================
+window.showResellerDetail = async function(randomId) {
+    const r = await api('/api/admin/reseller/'+randomId).then(r=>r.json());
+    if (!r.success) return showToast('Reseller tidak ditemukan','error');
+    const u = r.reseller;
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4';
+    overlay.onclick = function(e){if(e.target===this)this.remove()};
+    const levelOpts = ['starter','silver','gold','platinum','diamond'].map(l => `<option value="${l}" ${u.level===l?'selected':''}>${l.charAt(0).toUpperCase()+l.slice(1)}</option>`).join('');
+    overlay.innerHTML = `<div class="card p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 p-0.5 flex-shrink-0">
+                <div class="w-full h-full rounded-[10px] bg-[#03050f] flex items-center justify-center overflow-hidden">
+                    <img src="${u.photoURL||'https://ui-avatars.com/api/?name='+encodeURIComponent(u.displayName||'U')+'&background=7c3aed&color=fff'}" class="w-full h-full object-cover rounded-[10px]">
+                </div>
+            </div>
+            <div><h3 class="font-bold text-white">${u.displayName||'-'}</h3><code class="text-[10px] text-violet-300">${u.randomId}</code></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs mb-4">
+            <div class="bg-white/5 rounded-xl p-2"><span class="text-slate-400">Level</span><br><span class="font-bold text-white">${u.level||'-'}</span></div>
+            <div class="bg-white/5 rounded-xl p-2"><span class="text-slate-400">Status</span><br><span class="font-bold ${u.status==='active'?'text-emerald-400':'text-red-400'}">${u.status||'-'}</span></div>
+            <div class="bg-white/5 rounded-xl p-2"><span class="text-slate-400">Penjualan</span><br><span class="font-bold text-white">Rp${(u.totalSales||0).toLocaleString('id-ID')}</span></div>
+            <div class="bg-white/5 rounded-xl p-2"><span class="text-slate-400">Order</span><br><span class="font-bold text-white">${u.totalOrders||0}</span></div>
+            <div class="bg-white/5 rounded-xl p-2"><span class="text-slate-400">Deposit</span><br><span class="font-bold text-emerald-400">Rp${(u.depositBalance||0).toLocaleString('id-ID')}</span></div>
+            <div class="bg-white/5 rounded-xl p-2"><span class="text-slate-400">Komisi</span><br><span class="font-bold text-amber-400">Rp${(u.commissionBalance||0).toLocaleString('id-ID')}</span></div>
+            <div class="bg-white/5 rounded-xl p-2"><span class="text-slate-400">Referral</span><br><span class="font-bold text-white">${u.totalReferrals||0}</span></div>
+            <div class="bg-white/5 rounded-xl p-2"><span class="text-slate-400">Withdraw</span><br><span class="font-bold text-rose-400">Rp${(u.totalWithdrawn||0).toLocaleString('id-ID')}</span></div>
+        </div>
+        <div class="space-y-2">
+            <div><label class="text-[10px] text-slate-400">Level</label><select id="ed-level" class="input-dark text-xs py-1 h-8">${levelOpts}</select></div>
+            <div><label class="text-[10px] text-slate-400">Status</label><select id="ed-status" class="input-dark text-xs py-1 h-8"><option value="active" ${u.status==='active'?'selected':''}>Aktif</option><option value="suspended" ${u.status==='suspended'?'selected':''}>Suspend</option></select></div>
+            <div><label class="text-[10px] text-slate-400">Kode Referral</label><input class="input-dark text-xs py-1 h-8" value="${u.referralCode||'-'}" disabled></div>
+            <div><label class="text-[10px] text-slate-400">Username Toko</label><input class="input-dark text-xs py-1 h-8" value="${u.storeUsername||'-'}" disabled></div>
+        </div>
+        <div class="flex gap-2 mt-4">
+            <button onclick="saveResellerDetail('${u.randomId}')" class="btn-primary flex-1 text-xs">Simpan</button>
+            <button onclick="this.closest('.fixed').remove()" class="bg-white/5 text-slate-400 px-4 py-2 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/10">Tutup</button>
+        </div>
+    </div>`;
+    document.body.appendChild(overlay);
+};
+window.saveResellerDetail = async function(randomId) {
+    const level = document.getElementById('ed-level').value;
+    const status = document.getElementById('ed-status').value;
+    const r = await api('/api/admin/reseller/'+randomId, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({level,status})});
+    const d = await r.json();
+    showToast(d.message, d.success?'success':'error');
+    if (d.success) { document.querySelector('.fixed.inset-0')?.remove(); loadTab('reseller-list'); }
+};
+window.approveWithdraw = async function(id) {
+    if (!confirm('Setujui withdraw ini?')) return;
+    const r = await api('/api/admin/reseller/withdraw/'+id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'approved'})});
+    const d = await r.json();
+    showToast(d.message, d.success?'success':'error');
+    if (d.success) loadTab('reseller-withdraw');
+};
+window.rejectWithdraw = async function(id) {
+    if (!confirm('Tolak withdraw ini? Komisi akan dikembalikan ke reseller.')) return;
+    const r = await api('/api/admin/reseller/withdraw/'+id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'rejected'})});
+    const d = await r.json();
+    showToast(d.message, d.success?'warning':'error');
+    if (d.success) loadTab('reseller-withdraw');
+};
+window.payWithdraw = async function(id) {
+    if (!confirm('Tandai withdraw ini sudah dibayar? Pastikan sudah transfer ke reseller.')) return;
+    const r = await api('/api/admin/reseller/withdraw/'+id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'paid'})});
+    const d = await r.json();
+    showToast(d.message, d.success?'success':'error');
+    if (d.success) loadTab('reseller-withdraw');
+};
+window.saveResellerLevels = async function() {
+    const levels = {};
+    ['starter','silver','gold','platinum','diamond'].forEach(lv => {
+        const val = parseInt(document.getElementById('lvl-'+lv).value) || 0;
+        levels[lv] = { minSales: val };
+    });
+    const r = await api('/api/admin/reseller/levels', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({levels})});
+    const d = await r.json();
+    showToast(d.message, d.success?'success':'error');
+    if (d.success) loadTab('reseller-levels');
+};
+window.addBankRow = function() {
+    const div = document.createElement('div');
+    div.className = 'flex gap-2 items-center bg-white/5 rounded-lg p-2';
+    div.innerHTML = `<input class="input-dark text-[10px] py-1 h-7 flex-1 bank-code" placeholder="Kode (BCA)">
+        <input class="input-dark text-[10px] py-1 h-7 flex-1 bank-name" placeholder="Nama Bank">
+        <button onclick="this.parentElement.remove()" class="text-red-400 text-xs"><i class="fa-solid fa-trash"></i></button>`;
+    document.getElementById('bank-list').appendChild(div);
+};
+window.saveResellerBanks = async function() {
+    const banks = [];
+    document.querySelectorAll('.bank-code').forEach((el, i) => {
+        const code = el.value.trim();
+        const name = document.querySelectorAll('.bank-name')[i]?.value.trim();
+        if (code && name) banks.push({code, name});
+    });
+    const r = await api('/api/admin/reseller/banks', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({banks})});
+    const d = await r.json();
+    showToast(d.message, d.success?'success':'error');
+    if (d.success) loadTab('reseller-levels');
 };
