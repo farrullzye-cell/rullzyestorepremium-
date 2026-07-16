@@ -518,6 +518,11 @@ function initResellerSystem(app) {
     } catch(e) { res.json({ success: false, reviews: [] }); }
   });
 
+  // ========== STORE REDIRECT ==========
+  app.get('/store/:username', (req, res) => {
+    res.redirect('/store.html?username=' + encodeURIComponent(req.params.username));
+  });
+
   // ========== NOTIFICATIONS ==========
   app.get('/api/reseller/notifications', async (req, res) => {
     try {

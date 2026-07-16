@@ -885,6 +885,7 @@ app.post('/api/ppob-order', async (req, res) => {
             status: 'MENUNGGU_BAYAR',
             accountDetails: '-',
             telegramChatId: user.chatId,
+            randomId: randomId||null,
             type: 'FLOWIX',
             resellerProfit: 0,
             displayPrice: displayPrice,
@@ -1074,7 +1075,7 @@ app.post('/api/order', async (req, res) => {
         const resPay = await axios.post('https://premku.com/api/pay', { api_key: cfg.apiKey, amount: finalTagihan });
         if (resPay.data && resPay.data.success) {
             let orders = await getOrders();
-            orders.push({ idDeposit: resPay.data.data.invoice, idOrder: null, productId: service, productName, targetPhone: target||'', status: 'MENUNGGU_BAYAR', accountDetails: '-', telegramChatId: user?.chatId||null, type: 'PREMKU', resellerProfit: parseInt(cfg.profit||2000) * qty, quantity: qty, displayPrice: finalTagihan, promoApplied: promoData, deliveryEmail: email, buyerEmail: email });
+            orders.push({ idDeposit: resPay.data.data.invoice, idOrder: null, productId: service, productName, targetPhone: target||'', status: 'MENUNGGU_BAYAR', accountDetails: '-', telegramChatId: user?.chatId||null, randomId: randomId||null, type: 'PREMKU', resellerProfit: parseInt(cfg.profit||2000) * qty, quantity: qty, displayPrice: finalTagihan, promoApplied: promoData, deliveryEmail: email, buyerEmail: email });
             await saveOrders(orders);
             res.json({ status: true, invoice: { orderId: resPay.data.data.invoice, amount: resPay.data.data.total_bayar, qr_url: resPay.data.data.qr_image, botLink: `https://t.me/${cfg.botUsername}?start=${resPay.data.data.invoice}` } });
         } else res.json({ status: false, message: 'Gagal membuat QRIS Premku' });
@@ -1159,6 +1160,7 @@ async function autoProc() {
                             }
                             orders[i].status = 'SUKSES'; orders[i].accountDetails = acc; orders[i].completedAt = new Date().toISOString(); orders[i].buyerName = orders[i].buyerName || 'Pelanggan'; changed = true;
                             try { const bc = await getBroadcastCount(); await saveBroadcastCount(bc + 1); if ((bc + 1) % 20 === 0) runBroadcast(); } catch(e) {}
+                            try { if (orders[i].randomId) await axios.post(`http://localhost:${PORT}/api/reseller/commission/add`, { buyerRandomId: orders[i].randomId, orderAmount: orders[i].displayPrice || 0 }, { timeout: 3000 }); } catch(e) {}
                             let msg = `🎉 *PESANAN SELESAI!*\n📦 *${o.productName}*${o.quantity > 1 ? ' ×' + o.quantity : ''}\n\n${acc}`;
                             if (promo) msg += `\n🏷️ *Promo:* ${promo.promoName}`;
                             if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, msg, { parse_mode: "Markdown" }).catch(()=>{});
@@ -1228,6 +1230,7 @@ async function autoProc() {
                                 orders[i].completedAt = new Date().toISOString();
                                 orders[i].buyerName = orders[i].buyerName || 'Pelanggan';
                                 changed = true;
+                                try { if (orders[i].randomId) await axios.post(`http://localhost:${PORT}/api/reseller/commission/add`, { buyerRandomId: orders[i].randomId, orderAmount: orders[i].displayPrice || 0 }, { timeout: 3000 }); } catch(e) {}
                                 if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `🎉 *TRANSAKSI BERHASIL*\n📦 ${o.productName}\n🎯 \`${o.targetPhone || '-'}\`\n🔖 SN: \`${ts.data.sn || '-'}\`\n\nTerima kasih telah berbelanja! 🙏`, { parse_mode: 'Markdown' }).catch(()=>{});
                             } else if (trx === 'failed' || trx === 'error') {
                                 orders[i].status = 'GAGAL'; orders[i].accountDetails = ts.data.note || ts.data.message || 'Transaksi gagal'; changed = true;
