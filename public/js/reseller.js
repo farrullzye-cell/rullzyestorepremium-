@@ -148,6 +148,9 @@ async function loadLevelProgress() {
   document.getElementById('nextLevelLabel').textContent = r.nextLevel ? capitalize(r.nextLevel) : 'MAX';
   document.getElementById('levelProgressText').textContent = r.nextLevel ? `Rp${formatNumber(r.totalSales)} / Rp${formatNumber(r.nextSales)}` : 'Level Tertinggi!';
   document.getElementById('levelProgressBar').style.width = `${r.progress}%`;
+  const cp = r.commissionPercent || 1;
+  document.getElementById('refCommissionPercent').textContent = cp + '%';
+  document.getElementById('bannerCommissionPercent').textContent = cp + '%';
 }
 
 async function loadReferralStats() {
@@ -241,26 +244,86 @@ async function loadWithdrawHistory() {
   } else { cont1.innerHTML = '<div class="text-xs text-slate-600 text-center py-4">Belum ada withdraw</div>'; cont2.innerHTML = cont1.innerHTML; }
 }
 
+// ===== IMAGE UPLOAD =====
+let uploadCallbacks = {};
+async function uploadImage(input, fieldName) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) return Swal.fire({ icon: 'error', title: 'Terlalu Besar', text: 'Maksimal 5MB' });
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const r = await fetch('/api/upload', { method: 'POST', body: formData });
+    const d = await r.json();
+    if (d.success) {
+      // Update the reseller profile with the new image URL
+      const updateData = { randomId: userData.randomId };
+      updateData[fieldName] = d.url;
+      const res = await api('/api/reseller/profile', { method: 'PUT', body: JSON.stringify(updateData) });
+      if (res.success) {
+        resellerData = res.reseller;
+        if (fieldName === 'photoURL') {
+          document.getElementById('profilePhoto').src = d.url;
+          document.getElementById('previewPhoto').src = d.url;
+          document.getElementById('storePhotoPreview').src = d.url;
+          document.getElementById('storePhotoPreview').classList.remove('hidden');
+        } else if (fieldName === 'storeBanner') {
+          document.getElementById('storeCoverPreview').src = d.url;
+          document.getElementById('storeCoverPreview').classList.remove('hidden');
+        }
+        Swal.fire({ icon: 'success', title: 'Upload Berhasil', timer: 1000, showConfirmButton: false });
+      }
+    } else Swal.fire({ icon: 'error', title: 'Gagal Upload', text: d.message });
+  } catch(e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); }
+  input.value = '';
+}
+
 // ===== STORE SETTINGS =====
 function loadStoreSettings() {
   if (!resellerData) return;
+  document.getElementById('storeName').value = resellerData.storeName || '';
   document.getElementById('storeUsername').value = resellerData.storeUsername || '';
   document.getElementById('storeBio').value = resellerData.storeBio || '';
   document.getElementById('storeWa').value = resellerData.storeWhatsapp || '';
   document.getElementById('storeIg').value = resellerData.storeInstagram || '';
   document.getElementById('storeTg').value = resellerData.storeTelegram || '';
   document.getElementById('storeTt').value = resellerData.storeTiktok || '';
+  // Theme
+  const tc = resellerData.storeThemeColors || {};
+  if (document.getElementById('themePrimary')) document.getElementById('themePrimary').value = tc.primary || '#7c3aed';
+  if (document.getElementById('themeBg')) document.getElementById('themeBg').value = tc.bg || '#03050f';
+  if (document.getElementById('themeAccent')) document.getElementById('themeAccent').value = tc.accent || '#c084fc';
+  if (document.getElementById('themeFontColor')) document.getElementById('themeFontColor').value = tc.font || '#e2e8f0';
+  if (document.getElementById('storeFont')) document.getElementById('storeFont').value = resellerData.storeFont || 'Plus Jakarta Sans';
+  // Photo previews
+  if (resellerData.photoURL) {
+    document.getElementById('storePhotoPreview').src = resellerData.photoURL;
+    document.getElementById('storePhotoPreview').classList.remove('hidden');
+  }
+  if (resellerData.storeBanner) {
+    document.getElementById('storeCoverPreview').src = resellerData.storeBanner;
+    document.getElementById('storeCoverPreview').classList.remove('hidden');
+  }
 }
 
 async function saveStoreSettings() {
   const data = {
     randomId: userData.randomId,
+    storeName: document.getElementById('storeName').value.trim(),
     storeUsername: document.getElementById('storeUsername').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, ''),
     storeBio: document.getElementById('storeBio').value.trim(),
     storeWhatsapp: document.getElementById('storeWa').value.trim(),
     storeInstagram: document.getElementById('storeIg').value.trim(),
     storeTelegram: document.getElementById('storeTg').value.trim(),
-    storeTiktok: document.getElementById('storeTt').value.trim()
+    storeTiktok: document.getElementById('storeTt').value.trim(),
+    storeThemeColors: {
+      primary: document.getElementById('themePrimary')?.value || '#7c3aed',
+      bg: document.getElementById('themeBg')?.value || '#03050f',
+      accent: document.getElementById('themeAccent')?.value || '#c084fc',
+      font: document.getElementById('themeFontColor')?.value || '#e2e8f0',
+      card: 'rgba(15,23,42,0.7)'
+    },
+    storeFont: document.getElementById('storeFont')?.value || 'Plus Jakarta Sans'
   };
   if (!data.storeUsername) return Swal.fire({ icon: 'warning', title: 'Username Diperlukan', text: 'Username toko harus diisi' });
 
@@ -274,9 +337,10 @@ async function saveStoreSettings() {
 
 function updateStorePreview() {
   const username = document.getElementById('storeUsername').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '') || '-';
+  const storeName = document.getElementById('storeName').value.trim() || resellerData?.displayName || '-';
   document.getElementById('storePreviewUrl').textContent = `rullzyestorepremium.my.id/store/${username}`;
   document.getElementById('storeUrlText').textContent = `https://rullzyestorepremium.my.id/store/${username}`;
-  document.getElementById('previewName').textContent = resellerData?.displayName || '-';
+  document.getElementById('previewName').textContent = storeName;
   document.getElementById('previewBio').textContent = document.getElementById('storeBio').value.trim() || 'Belum ada bio';
   if (username && username !== '-' && username !== 'belum diatur') {
     document.getElementById('storePreview').style.display = 'block';

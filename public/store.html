@@ -5,54 +5,45 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Toko - RullzyeStore Premium</title>
 <meta name="robots" content="index, follow">
-<meta name="theme-color" content="#03050f">
+<meta name="theme-color" id="metaTheme" content="#03050f">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>
-*{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;margin:0;padding:0;box-sizing:border-box}
+<style id="dynamicStyles">
+*{-webkit-font-smoothing:antialiased;margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:#03050f;color:#e2e8f0;min-height:100vh;overflow-x:hidden}
 ::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-track{background:#03050f}
 ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#7c3aed,#6d28d9);border-radius:10px}
 .glass{background:rgba(15,23,42,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:16px}
 .glass-card{background:rgba(15,23,42,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:20px;transition:all .3s}
-.glass-card:hover{border-color:rgba(124,58,237,0.3)}
 .btn-primary{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;padding:10px 24px;border-radius:12px;font-weight:700;font-size:13px;border:none;cursor:pointer;transition:all .3s}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px -8px rgba(124,58,237,0.4)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .skeleton{background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);background-size:200% 100%;animation:skeleton 1.5s infinite;border-radius:8px}
 @keyframes skeleton{0%{background-position:200% 0}100%{background-position:-200% 0}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pop{0%{transform:scale(.8);opacity:0}100%{transform:scale(1);opacity:1}}
 .bg-grid{background-image:linear-gradient(rgba(124,58,237,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.03) 1px,transparent 1px);background-size:60px 60px}
-.product-card{background:rgba(15,23,42,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:16px;transition:all .3s;cursor:pointer}
+.product-card{background:rgba(15,23,42,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:16px;transition:all .3s;cursor:default}
 .product-card:hover{border-color:rgba(124,58,237,0.4);transform:translateY(-4px);box-shadow:0 16px 32px -12px rgba(124,58,237,0.2)}
-.star{color:#f59e0b}
-.star-empty{color:#334155}
+.star{color:#f59e0b}.star-empty{color:#334155}
 </style>
 </head>
 <body class="bg-grid">
 <div id="app">
-  <!-- Loading -->
   <div id="loading" class="min-h-screen flex items-center justify-center">
     <div class="text-center">
-      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center mx-auto mb-4 animate-pulse">
-        <i class="fa-solid fa-store text-white text-2xl"></i>
-      </div>
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center mx-auto mb-4 animate-pulse"><i class="fa-solid fa-store text-white text-2xl"></i></div>
       <div class="skeleton w-48 h-4 mx-auto mb-2"></div>
       <div class="skeleton w-32 h-3 mx-auto"></div>
     </div>
   </div>
 
-  <!-- Store Content -->
   <div id="storeContent" style="display:none">
-    <!-- Banner -->
     <div id="storeBanner" class="h-40 sm:h-56 relative overflow-hidden bg-gradient-to-br from-violet-900/50 to-indigo-900/50">
       <div class="absolute inset-0 bg-grid opacity-30"></div>
     </div>
 
-    <!-- Profile -->
     <div class="max-w-4xl mx-auto px-4 -mt-16 relative z-10">
       <div class="glass-card text-center sm:text-left">
         <div class="flex flex-col sm:flex-row items-center gap-4">
@@ -62,14 +53,12 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#03050f;color:#e2e8f0
             </div>
           </div>
           <div class="flex-1 text-center sm:text-left">
-            <h1 id="storeName" class="text-xl sm:text-2xl font-black text-white">-</h1>
-            <p id="storeLevel" class="text-xs text-violet-400 font-medium flex items-center justify-center sm:justify-start gap-1.5 mt-0.5">
-              <i class="fa-solid fa-crown text-[10px]"></i> Reseller
-            </p>
+            <h1 id="storeName" class="text-xl sm:text-2xl font-black">-</h1>
+            <p id="storeLevel" class="text-xs font-medium flex items-center justify-center sm:justify-start gap-1.5 mt-0.5"><i class="fa-solid fa-crown text-[10px]"></i> Reseller</p>
             <p id="storeBio" class="text-sm text-slate-400 mt-2">-</p>
             <div id="storeStats" class="flex items-center justify-center sm:justify-start gap-4 mt-3 text-xs text-slate-500">
-              <span><i class="fa-solid fa-chart-line mr-1 text-violet-400"></i><span id="statSales">0</span> penjualan</span>
-              <span><i class="fa-solid fa-cart-shopping mr-1 text-emerald-400"></i><span id="statOrders">0</span> order</span>
+              <span><i class="fa-solid fa-chart-line mr-1"></i><span id="statSales">0</span> penjualan</span>
+              <span><i class="fa-solid fa-cart-shopping mr-1"></i><span id="statOrders">0</span> order</span>
             </div>
           </div>
           <div id="storeActions" class="flex gap-2 flex-wrap justify-center">
@@ -82,27 +71,22 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#03050f;color:#e2e8f0
         </div>
       </div>
 
-      <!-- Products -->
       <div class="mt-6">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="font-bold text-white text-sm"><i class="fa-solid fa-box mr-2 text-violet-400"></i>Produk</h2>
-          <div class="flex gap-2">
-            <input id="searchProd" class="bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-violet-500 w-40 sm:w-auto" placeholder="Cari produk..." oninput="filterProducts()">
-          </div>
+          <h2 class="font-bold text-sm"><i class="fa-solid fa-box mr-2"></i>Produk</h2>
+          <input id="searchProd" class="bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-violet-500 w-40 sm:w-auto" placeholder="Cari produk..." oninput="filterProducts()">
         </div>
         <div id="storeProducts" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
         <div id="noProducts" class="text-center py-10 text-slate-600 text-sm" style="display:none"><i class="fa-solid fa-box-open text-2xl mb-2"></i><p>Tidak ada produk</p></div>
       </div>
 
-      <!-- Reviews -->
       <div class="mt-8 mb-8">
-        <h2 class="font-bold text-white text-sm mb-4"><i class="fa-solid fa-star mr-2 text-amber-400"></i>Testimoni</h2>
+        <h2 class="font-bold text-sm mb-4"><i class="fa-solid fa-star mr-2"></i>Testimoni</h2>
         <div id="storeReviews" class="space-y-3"></div>
-        <button onclick="showReviewForm()" class="btn-ghost text-xs mt-3" style="background:rgba(255,255,255,0.05);color:#e2e8f0;padding:8px 16px;border-radius:10px;font-weight:600;border:1px solid rgba(255,255,255,0.1);cursor:pointer"><i class="fa-regular fa-pen-to-square mr-1"></i>Beri Testimoni</button>
+        <button onclick="showReviewForm()" class="text-xs mt-3 px-4 py-2 rounded-xl font-semibold border border-white/10 bg-white/5 hover:bg-white/10 transition"><i class="fa-regular fa-pen-to-square mr-1"></i>Beri Testimoni</button>
       </div>
     </div>
 
-    <!-- Footer -->
     <footer class="border-t border-white/[0.05] py-6 text-center text-xs text-slate-600">
       <p>© 2026 RullzyeStore Premium — Reseller independent</p>
     </footer>
@@ -111,18 +95,18 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#03050f;color:#e2e8f0
 
 <script>
 const username = new URLSearchParams(window.location.search).get('username') || '';
+let storeData = null;
 
 async function loadStore() {
-  if (!username) {
-    document.getElementById('loading').innerHTML = '<div class="text-center text-slate-500"><i class="fa-solid fa-circle-exclamation text-3xl mb-3"></i><p>Toko tidak ditemukan</p></div>';
-    return;
-  }
+  if (!username) { document.getElementById('loading').innerHTML = '<div class="text-center text-slate-500"><i class="fa-solid fa-circle-exclamation text-3xl mb-3"></i><p>Toko tidak ditemukan</p></div>'; return; }
   try {
     const r = await fetch('/api/store/' + username);
     const data = await r.json();
     if (!data.success) throw new Error(data.message);
-
+    storeData = data.store;
     const s = data.store;
+    applyTheme(s);
+
     document.title = s.displayName + ' - Toko Reseller RullzyeStore';
     document.getElementById('storeName').textContent = s.displayName;
     document.getElementById('storeBio').textContent = s.storeBio || 'Toko reseller RullzyeStore Premium';
@@ -131,33 +115,41 @@ async function loadStore() {
     document.getElementById('statSales').textContent = (s.totalSales||0).toLocaleString('id-ID');
     document.getElementById('statOrders').textContent = s.totalOrders||0;
 
-    // Social links
     const links = { wa: s.storeWhatsapp, ig: s.storeInstagram, tg: s.storeTelegram, tt: s.storeTiktok };
     Object.entries(links).forEach(([key, val]) => {
       const el = document.getElementById('store' + key.charAt(0).toUpperCase() + key.slice(1));
-      if (val) {
-        el.href = key === 'wa' ? 'https://wa.me/' + val.replace(/[^0-9]/g,'') : val.startsWith('http') ? val : 'https://' + val;
-      } else el.style.display = 'none';
+      if (val) el.href = key === 'wa' ? 'https://wa.me/' + val.replace(/[^0-9]/g,'') : val.startsWith('http') ? val : 'https://' + val;
+      else el.style.display = 'none';
     });
-
-    // Meta tags
-    let metaDesc = document.querySelector('meta[name="description"]');
-    if (!metaDesc) { metaDesc = document.createElement('meta'); metaDesc.name = 'description'; document.head.appendChild(metaDesc); }
-    metaDesc.content = s.storeBio || 'Toko ' + s.displayName + ' - Reseller RullzyeStore Premium. Jual akun premium, top up game, dan layanan digital.';
-    let ogTitle = document.querySelector('meta[property="og:title"]');
-    if (!ogTitle) { ogTitle = document.createElement('meta'); ogTitle.setAttribute('property','og:title'); document.head.appendChild(ogTitle); }
-    ogTitle.content = s.displayName + ' - Toko Reseller RullzyeStore';
-
-    // Load products
-    loadProducts();
-
-    // Load reviews
-    loadReviews();
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('storeContent').style.display = 'block';
+    loadProducts();
+    loadReviews();
   } catch(e) {
     document.getElementById('loading').innerHTML = '<div class="text-center text-slate-500"><i class="fa-solid fa-circle-exclamation text-3xl mb-3"></i><p>Toko tidak ditemukan</p><p class="text-xs mt-2">' + e.message + '</p></div>';
+  }
+}
+
+function applyTheme(s) {
+  const tc = s.storeThemeColors || {};
+  const root = document.documentElement;
+  if (tc.primary) root.style.setProperty('--primary', tc.primary);
+  if (tc.bg) { root.style.setProperty('--bg', tc.bg); document.body.style.background = tc.bg; }
+  if (tc.accent) root.style.setProperty('--accent', tc.accent);
+  if (tc.font) root.style.setProperty('--font-color', tc.font);
+  if (tc.card) root.style.setProperty('--card-bg', tc.card);
+  if (s.storeFont && s.features?.customFont) document.body.style.fontFamily = "'" + s.storeFont + "','Plus Jakarta Sans',sans-serif";
+  if (tc.primary) {
+    document.getElementById('metaTheme').content = tc.primary;
+    const style = document.getElementById('dynamicStyles');
+    if (style) {
+      style.textContent += `
+        .btn-primary{background:linear-gradient(135deg,${tc.primary},${tc.accent||tc.primary})}
+        .btn-primary:hover{box-shadow:0 8px 24px -8px ${tc.primary}66}
+        .product-card:hover{border-color:${tc.primary}66;box-shadow:0 16px 32px -12px ${tc.primary}33}
+      `;
+    }
   }
 }
 
@@ -172,11 +164,7 @@ async function loadProducts() {
 function renderProducts(prods) {
   const container = document.getElementById('storeProducts');
   const noProds = document.getElementById('noProducts');
-  if (!prods.length) {
-    container.innerHTML = '';
-    noProds.style.display = 'block';
-    return;
-  }
+  if (!prods.length) { container.innerHTML = ''; noProds.style.display = 'block'; return; }
   noProds.style.display = 'none';
   container.innerHTML = prods.map(p => `
     <div class="product-card">
@@ -185,24 +173,23 @@ function renderProducts(prods) {
           ${p.image ? '<img src="'+p.image+'" class="w-10 h-10 object-contain rounded-lg" onerror="this.parentElement.innerHTML=\'<i class=\\\'fa-solid fa-box text-slate-500\\\'></i>\'">' : '<i class="fa-solid fa-box text-slate-500"></i>'}
         </div>
         <div class="flex-1 min-w-0">
-          <h3 class="text-sm font-bold text-white truncate">${p.name}</h3>
+          <h3 class="text-sm font-bold truncate">${p.name}</h3>
           <p class="text-[10px] text-slate-500">${p.category||'Produk Digital'}</p>
           <div class="flex items-center gap-2 mt-1.5">
             <span class="text-sm font-black text-emerald-400">Rp${(p.price||0).toLocaleString('id-ID')}</span>
             <span class="text-[9px] text-slate-600 line-through">Rp${(p.originalPrice||0).toLocaleString('id-ID')}</span>
           </div>
-          <span class="text-[9px] text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded-full mt-1 inline-block">Harga ${p.level?.charAt(0).toUpperCase()+p.level?.slice(1)||'Starter'}</span>
+          <span class="text-[9px] bg-violet-500/10 px-2 py-0.5 rounded-full mt-1 inline-block">Harga ${p.level?.charAt(0).toUpperCase()+p.level?.slice(1)||'Starter'}</span>
         </div>
       </div>
-      <button onclick="orderProduct('${p.id}','${p.name.replace(/'/g,"\\'")}',${p.price},'${p.level||'starter'}')" class="btn-primary w-full mt-3 text-xs py-2"><i class="fa-solid fa-cart-shopping mr-1"></i>Beli</button>
+      <button onclick="buyProduct('${p.id}','${p.name.replace(/'/g,"\\'")}',${p.price})" class="btn-primary w-full mt-3 text-xs py-2"><i class="fa-solid fa-cart-shopping mr-1"></i>Beli Sekarang</button>
     </div>
   `).join('');
 }
 
 function filterProducts() {
   const q = document.getElementById('searchProd').value.toLowerCase();
-  const filtered = (window._storeProds||[]).filter(p => p.name?.toLowerCase().includes(q));
-  renderProducts(filtered);
+  renderProducts((window._storeProds||[]).filter(p => p.name?.toLowerCase().includes(q)));
 }
 
 async function loadReviews() {
@@ -210,21 +197,101 @@ async function loadReviews() {
   const data = await r.json();
   const container = document.getElementById('storeReviews');
   const reviews = data.reviews || [];
-  if (!reviews.length) {
-    container.innerHTML = '<div class="text-xs text-slate-600 text-center py-6">Belum ada testimoni</div>';
-    return;
-  }
+  if (!reviews.length) { container.innerHTML = '<div class="text-xs text-slate-600 text-center py-6">Belum ada testimoni</div>'; return; }
   container.innerHTML = reviews.slice(0, 10).map(rv => {
     const stars = Array(5).fill(0).map((_,i) => `<i class="fa-solid fa-star ${i < rv.rating ? 'star' : 'star-empty'} text-[10px]"></i>`).join('');
-    return `<div class="glass-card !p-4">
-      <div class="flex items-center justify-between mb-1">
-        <span class="text-xs font-bold text-white">${rv.reviewerName}</span>
-        <span class="text-[9px] text-slate-600">${timeAgo(rv.createdAt)}</span>
-      </div>
-      <div class="mb-1">${stars}</div>
-      <p class="text-xs text-slate-400">${rv.content}</p>
-    </div>`;
+    return `<div class="glass-card !p-4"><div class="flex items-center justify-between mb-1"><span class="text-xs font-bold">${rv.reviewerName}</span><span class="text-[9px] text-slate-600">${timeAgo(rv.createdAt)}</span></div><div class="mb-1">${stars}</div><p class="text-xs text-slate-400">${rv.content}</p></div>`;
   }).join('');
+}
+
+// ========== QRIS PURCHASE FLOW ==========
+function buyProduct(productId, productName, price) {
+  const user = JSON.parse(localStorage.getItem('rullzye_web_user') || '{}');
+  const refCode = new URLSearchParams(window.location.search).get('ref') || '';
+
+  Swal.fire({
+    title: 'Beli ' + productName,
+    html: `<div class="text-left">
+      <div class="bg-white/[0.03] rounded-xl p-3 mb-3 text-center">
+        <p class="text-xs text-slate-400">Harga</p>
+        <p class="text-2xl font-black text-emerald-400">Rp${price.toLocaleString('id-ID')}</p>
+      </div>
+      <div class="space-y-2">
+        <div><label class="text-[10px] text-slate-400">Email (untuk kirim akun)</label>
+        <input id="buy-email" class="swal2-input" style="margin:0;width:100%" value="${user.googleEmail||''}" placeholder="email@contoh.com"></div>
+        <div><label class="text-[10px] text-slate-400">Nama</label>
+        <input id="buy-name" class="swal2-input" style="margin:0;width:100%" value="${user.name||user.googleEmail?.split('@')[0]||''}" placeholder="Nama"></div>
+      </div>
+    </div>`,
+    showCancelButton: true, confirmButtonText: '<i class="fa-solid fa-qrcode mr-1"></i> Lanjut Bayar QRIS', cancelButtonText: 'Batal',
+    confirmButtonColor: '#7c3aed', cancelButtonColor: '#334155',
+    preConfirm: () => {
+      const email = document.getElementById('buy-email')?.value.trim();
+      const name = document.getElementById('buy-name')?.value.trim();
+      if (!email) { Swal.showValidationMessage('Email wajib diisi'); return; }
+      if (!email.includes('@')) { Swal.showValidationMessage('Email tidak valid'); return; }
+      return { buyerEmail: email, buyerName: name || 'Pembeli', randomId: user.randomId || null, referralCode: refCode || null };
+    }
+  }).then(async (res) => {
+    if (!res.isConfirmed) return;
+    Swal.fire({ title: 'Memproses...', html: '<i class="fa-solid fa-spinner fa-spin text-3xl text-violet-500"></i>', showConfirmButton: false, allowOutsideClick: false });
+    try {
+      const r = await fetch('/api/store/' + username + '/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, productName, price, ...res.value })
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.message);
+      showQRPayment(d.qrUrl, d.amount, d.invoice, productName);
+    } catch(e) { Swal.fire({ icon: 'error', title: 'Gagal', text: e.message }); }
+  });
+}
+
+function showQRPayment(qrUrl, amount, invoice, productName) {
+  let pollTimer;
+  Swal.fire({
+    title: 'Bayar QRIS',
+    html: `<div class="text-center">
+      <p class="text-xs text-slate-400 mb-2">Scan QRIS untuk membayar</p>
+      <div class="bg-white rounded-2xl p-3 inline-block mb-3">
+        <img src="${qrUrl}" class="w-48 h-48 mx-auto" alt="QRIS">
+      </div>
+      <p class="text-2xl font-black text-emerald-400 mb-1">Rp${(amount||0).toLocaleString('id-ID')}</p>
+      <p class="text-xs text-slate-500 mb-3">${productName}</p>
+      <div class="bg-violet-500/10 rounded-xl p-2 text-xs text-violet-300">
+        <i class="fa-solid fa-clock mr-1"></i> Menunggu pembayaran...
+        <span id="poll-status" class="block mt-1 text-emerald-400 font-bold">MEMINTA STATUS...</span>
+      </div>
+    </div>`,
+    showConfirmButton: false, showCloseButton: true,
+    didOpen: () => { startPolling(invoice); },
+    willClose: () => { if (pollTimer) clearInterval(pollTimer); }
+  });
+
+  function startPolling(inv) {
+    pollTimer = setInterval(async () => {
+      try {
+        const r = await fetch('/api/store/' + username + '/order/' + inv);
+        const d = await r.json();
+        if (d.paid && d.status === 'SUKSES') {
+          clearInterval(pollTimer);
+          const acc = d.accountDetails?.replace(/\n/g, '<br>') || 'Selesai';
+          Swal.fire({
+            icon: 'success', title: 'Pembayaran Berhasil!',
+            html: `<p class="text-sm text-slate-400 mb-2">Akun akan dikirim ke email kamu.</p><div class="bg-white/[0.03] rounded-xl p-3 text-xs text-left font-mono">${acc}</div>`,
+            confirmButtonColor: '#7c3aed'
+          });
+          loadProducts();
+        } else if (d.status === 'GAGAL') {
+          clearInterval(pollTimer);
+          Swal.fire({ icon: 'error', title: 'Pembayaran Gagal', text: 'Silakan coba lagi.' });
+        } else {
+          document.getElementById('poll-status').textContent = 'MENUNGGU PEMBAYARAN...';
+        }
+      } catch(e) { document.getElementById('poll-status').textContent = 'Error: ' + e.message; }
+    }, 3000);
+  }
 }
 
 function showReviewForm() {
@@ -256,20 +323,6 @@ function shareStore() {
   const url = window.location.href;
   if (navigator.share) navigator.share({ title: document.title, url });
   else navigator.clipboard.writeText(url).then(() => Swal.fire({ icon:'success', title:'Link disalin!', timer:1000, showConfirmButton:false }));
-}
-
-function orderProduct(id, name, price, level) {
-  Swal.fire({
-    title: 'Beli Produk',
-    html: `<p class="text-sm text-slate-400 mb-3">${name}</p>
-      <p class="text-2xl font-black text-emerald-400 mb-3">Rp${price.toLocaleString('id-ID')}</p>
-      <p class="text-xs text-slate-500 mb-3">Untuk beli, hubungi reseller langsung via:</p>
-      <div class="flex gap-2 justify-center">
-        <a href="https://wa.me/6285848651208?text=Halo%20saya%20mau%20beli%20${encodeURIComponent(name)}" target="_blank" class="btn-primary text-xs"><i class="fa-brands fa-whatsapp mr-1"></i>Chat WA</a>
-        <a href="https://rullzyestorepremium.my.id/akundigital.html" target="_blank" class="text-xs bg-white/5 text-slate-400 px-4 py-2 rounded-xl border border-white/10 hover:bg-white/10">Beli di Pusat</a>
-      </div>`,
-    showConfirmButton: false, showCloseButton: true
-  });
 }
 
 function timeAgo(dateStr) {
