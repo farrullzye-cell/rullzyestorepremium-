@@ -456,26 +456,27 @@ function initResellerSystem(app) {
       const r = resellers.find(x => x.storeUsername === username);
       if (!r) return res.status(404).json({ success: false, message: 'Toko tidak ditemukan' });
 
-      // Fetch products from Premku API
+      // Fetch products from Premku API (same pattern as main /api/products)
       const cfg = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'config.json')));
-      const prRes = await axios.get(`https://premku.com/api/products?api_key=${cfg.apiKey}`);
-      const premkuProducts = prRes.data?.data || [];
+      const prRes = await axios.post('https://premku.com/api/products', { api_key: cfg.apiKey });
+      const premkuProducts = prRes.data?.products || [];
 
       const prices = await getPrices();
       const level = r.level;
+      const profit = parseInt(cfg.profit || 2000);
       const products = premkuProducts.map(p => {
         const productId = `PREMKU-${p.id}`;
         const levelPrice = prices[productId]?.[level];
-        const basePrice = parseInt(p.harga_jual) || 0;
+        const basePrice = parseInt(p.price) + profit;
         return {
           id: productId,
-          name: p.nama || p.name || 'Produk',
-          category: p.kategori || p.category || 'Umum',
+          name: p.name || 'Produk',
+          category: p.category || 'Umum',
           price: levelPrice || basePrice,
           originalPrice: basePrice,
-          stock: parseInt(p.stok) || 0,
-          description: p.deskripsi || p.description || '',
-          image: p.gambar || p.image || '',
+          stock: parseInt(p.stock) || 0,
+          description: p.description || '',
+          image: p.image || '',
           level: level
         };
       });
