@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer');
 
 const security = require('./anti_fraud.js');
 const NokosAPI = require('./services/nokos');
+const { initResellerSystem } = require('./services/reseller');
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -2199,6 +2200,7 @@ async function initConfigFromFirebase() {
         } catch(e) { res.json({ success: false, message: e.message }); }
     });
 
+    initResellerSystem(app);
     scheduleDailyPromo();
     app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server berjalan di port ${PORT}`));
 })();
