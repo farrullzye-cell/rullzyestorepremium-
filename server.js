@@ -20,6 +20,7 @@ app.get('/sitemap.xml', (req, res) => {
         { loc: 'https://rullzyestorepremium.my.id/akundigital.html', priority: '0.85', freq: 'daily' },
         { loc: 'https://rullzyestorepremium.my.id/nokos.html', priority: '0.85', freq: 'daily' },
         { loc: 'https://rullzyestorepremium.my.id/panel.html', priority: '0.80', freq: 'weekly' },
+        { loc: 'https://rullzyestorepremium.my.id/reseller.html', priority: '0.80', freq: 'weekly' },
         { loc: 'https://rullzyestorepremium.my.id/tentang.html', priority: '0.70', freq: 'monthly' },
         { loc: 'https://rullzyestorepremium.my.id/faq.html', priority: '0.70', freq: 'monthly' },
     ];

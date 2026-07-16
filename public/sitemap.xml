@@ -46,4 +46,10 @@
   <priority>0.70</priority>
   <changefreq>monthly</changefreq>
 </url>
+<url>
+  <loc>https://rullzyestorepremium.my.id/reseller.html</loc>
+  <lastmod>2026-07-09</lastmod>
+  <priority>0.80</priority>
+  <changefreq>weekly</changefreq>
+</url>
 </urlset>
