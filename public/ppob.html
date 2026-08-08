@@ -107,9 +107,13 @@
                         <input type="text" id="input-target" placeholder="0812xxxxxx" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 font-bold text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder-slate-500 transition-all">
                     </div>
                     <div>
-                        <label class="block text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 sm:mb-2">Random ID Telegram <span class="text-red-500">*</span></label>
+                        <label class="block text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 sm:mb-2">Email (untuk kirim struk) <span class="text-red-500">*</span></label>
+                        <input type="email" id="input-email" placeholder="email@contoh.com" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 font-bold text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder-slate-500 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 sm:mb-2">Random ID Telegram <span class="text-slate-500">(opsional)</span></label>
                         <input type="text" id="input-randomid" placeholder="ID-ABC123" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 font-bold text-xs sm:text-sm uppercase text-white focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder-slate-500 transition-all">
-                        <p class="text-[9px] sm:text-[10px] text-slate-500 mt-1"><i class="fa-solid fa-circle-info"></i> Belum punya? Ketik <b>/daftar</b> di <a href="https://t.me/RullzyeBot" target="_blank" class="text-violet-400 font-bold underline hover:text-violet-300">Bot Telegram</a></p>
+                        <p class="text-[9px] sm:text-[10px] text-slate-500 mt-1"><i class="fa-solid fa-circle-info"></i> Opsional. Belum punya? Ketik <b>/daftar</b> di <a href="https://t.me/RullzyeBot" target="_blank" class="text-violet-400 font-bold underline hover:text-violet-300">Bot Telegram</a> agar dapat notifikasi di Telegram juga.</p>
                     </div>
                 </div>
             </div>
@@ -256,16 +260,18 @@
         function submitOrder() {
             if (!selectedProduct) return alert('Pilih nominal dulu!');
             const target = document.getElementById('input-target').value.trim();
+            const email = document.getElementById('input-email').value.trim();
             const randomId = document.getElementById('input-randomid').value.trim().toUpperCase();
             if (!target) return alert('Masukkan nomor tujuan!');
-            if (!randomId) return alert('Masukkan Random ID Telegram!');
+            if (!email) return alert('Masukkan email untuk kirim struk!');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert('Email tidak valid!');
             document.getElementById('modal-pay').style.display = 'flex';
             document.getElementById('pay-loader').classList.remove('hidden');
             document.getElementById('pay-result').classList.add('hidden');
             fetch('/api/ppob-order', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ productId: selectedProduct.id, target: target, productName: selectedProduct.name, displayPrice: selectedProduct.price, randomId: randomId })
+                body: JSON.stringify({ productId: selectedProduct.id, target: target, productName: selectedProduct.name, displayPrice: selectedProduct.price, randomId: randomId, email: email })
             })
             .then(r => r.json())
             .then(res => {
@@ -278,6 +284,7 @@
                         <h3 class="text-base sm:text-lg font-black text-white mb-2">QRIS Siap!</h3>
                         <p class="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4">Total: <b class="text-white">Rp ${res.invoice.amount.toLocaleString('id-ID')}</b></p>
                         <div class="bg-white/5 p-2 sm:p-3 rounded-2xl sm:rounded-3xl mb-3 sm:mb-4 inline-block border border-white/10"><img src="${res.invoice.qr_url}" class="w-36 h-36 sm:w-40 sm:h-40 mx-auto rounded-lg sm:rounded-xl"></div>
+                        <p class="text-[10px] sm:text-xs text-slate-500 mb-3">Struk akan dikirim ke email kamu setelah pembayaran selesai.</p>
                         <a href="${res.invoice.botLink}" target="_blank" class="block w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm mb-2 transition-all"><i class="fa-brands fa-telegram mr-2"></i> Konfirmasi via Bot</a>
                         <button onclick="closePayModal()" class="text-slate-500 text-[10px] sm:text-xs font-bold uppercase hover:text-slate-300 transition">Tutup</button>
                     `;

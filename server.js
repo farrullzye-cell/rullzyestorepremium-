@@ -250,6 +250,109 @@ const sendEmail = async (to, subject, html) => {
     }
 };
 
+const REFUND_WA_NUMBER = '6287788901239';
+const REFUND_WA_DISPLAY = '0877-8890-1239';
+
+const buildPPOBPaymentEmail = (storeName, order) => {
+    return `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:auto;background:#0b0e1a;border-radius:20px;overflow:hidden;border:1px solid #1e293b">
+<div style="background:linear-gradient(135deg,#7c3aed,#a78bfa);padding:24px 32px;text-align:center">
+<div style="font-size:36px;margin-bottom:8px">🧾</div>
+<h1 style="color:#fff;margin:0;font-size:20px;font-weight:900;letter-spacing:-0.5px">Invoice Pembayaran</h1>
+<p style="color:#c4b5fd;margin:4px 0 0;font-size:13px">${storeName}</p>
+</div>
+<div style="padding:24px 32px">
+<div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:16px">
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<tr><td style="padding:6px 0;color:#94a3b8">Order ID</td><td style="padding:6px 0;text-align:right;color:#fff;font-family:monospace;font-weight:bold">${order.idDeposit || '-'}</td></tr>
+<tr><td style="padding:6px 0;color:#94a3b8">Produk</td><td style="padding:6px 0;text-align:right;color:#fff;font-weight:bold">${order.productName || '-'}</td></tr>
+<tr><td style="padding:6px 0;color:#94a3b8">Nomor Tujuan</td><td style="padding:6px 0;text-align:right;color:#fff;font-family:monospace">${order.targetPhone || '-'}</td></tr>
+<tr><td style="padding:6px 0;color:#94a3b8">Total Bayar</td><td style="padding:6px 0;text-align:right;color:#fbbf24;font-size:16px;font-weight:900">Rp ${(parseInt(order.displayPrice)||0).toLocaleString('id-ID')}</td></tr>
+</table></div>
+${order.qrUrl ? `<div style="background:#131826;border-radius:12px;padding:16px;text-align:center;margin-bottom:16px">
+<p style="color:#94a3b8;font-size:12px;margin:0 0 12px">Scan QRIS berikut untuk membayar</p>
+<img src="${order.qrUrl}" style="width:180px;height:180px;border-radius:12px;background:#000" alt="QRIS">
+<p style="color:#64748b;font-size:11px;margin:12px 0 0">Setelah dibayar, pesanan diproses otomatis dan struk dikirim ke email ini.</p>
+</div>` : ''}
+<div style="background:linear-gradient(135deg,#1e293b,#131826);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px">
+<p style="color:#94a3b8;font-size:12px;margin:0 0 8px">Butuh bantuan? Hubungi kami di Telegram</p>
+<a href="https://t.me/RullzyeBot" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:8px 24px;border-radius:8px;font-size:13px;font-weight:bold">📲 Hubungi CS</a>
+</div>
+<p style="color:#475569;font-size:11px;text-align:center;margin:0">© ${new Date().getFullYear()} ${storeName} — All rights reserved</p>
+</div></div>`;
+};
+
+const buildPPOBInvoiceHtml = (storeName, order) => {
+    const status = order.status === 'SUKSES' ? '✅ TRANSAKSI BERHASIL' : order.status;
+    return `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:auto;background:#0b0e1a;border-radius:20px;overflow:hidden;border:1px solid #1e293b">
+<div style="background:linear-gradient(135deg,#7c3aed,#a78bfa);padding:24px 32px;text-align:center">
+<div style="font-size:36px;margin-bottom:8px">🧾</div>
+<h1 style="color:#fff;margin:0;font-size:20px;font-weight:900;letter-spacing:-0.5px">${order.status === 'SUKSES' ? 'Struk Transaksi' : 'Info Transaksi'}</h1>
+<p style="color:#c4b5fd;margin:4px 0 0;font-size:13px">${storeName}</p>
+</div>
+<div style="padding:24px 32px">
+<div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:16px">
+<p style="color:#a78bfa;font-size:12px;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;font-weight:bold">${status}</p>
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<tr><td style="padding:6px 0;color:#94a3b8">Order ID</td><td style="padding:6px 0;text-align:right;color:#fff;font-family:monospace;font-weight:bold">${order.idDeposit || order.idOrder || '-'}</td></tr>
+<tr><td style="padding:6px 0;color:#94a3b8">Produk</td><td style="padding:6px 0;text-align:right;color:#fff;font-weight:bold">${order.productName || '-'}</td></tr>
+<tr><td style="padding:6px 0;color:#94a3b8">Nomor Tujuan</td><td style="padding:6px 0;text-align:right;color:#fff;font-family:monospace">${order.targetPhone || '-'}</td></tr>
+<tr><td style="padding:6px 0;color:#94a3b8">Serial / SN</td><td style="padding:6px 0;text-align:right;color:#34d399;font-family:monospace;font-weight:bold">${order.sn || '-'}</td></tr>
+<tr><td style="padding:6px 0;color:#94a3b8">Total</td><td style="padding:6px 0;text-align:right;color:#fbbf24;font-size:16px;font-weight:900">Rp ${(parseInt(order.displayPrice)||0).toLocaleString('id-ID')}</td></tr>
+<tr><td style="padding:6px 0;color:#94a3b8">Waktu</td><td style="padding:6px 0;text-align:right;color:#fff">${new Date(order.completedAt || Date.now()).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</td></tr>
+</table></div>
+<div style="background:linear-gradient(135deg,#1e293b,#131826);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px">
+<p style="color:#94a3b8;font-size:12px;margin:0 0 8px">Terima kasih telah berbelanja di ${storeName} 🙏</p>
+<a href="https://t.me/RullzyeBot" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:8px 24px;border-radius:8px;font-size:13px;font-weight:bold">📲 Hubungi CS</a>
+</div>
+<p style="color:#475569;font-size:11px;text-align:center;margin:0">© ${new Date().getFullYear()} ${storeName} — All rights reserved</p>
+</div></div>`;
+};
+
+const buildPPOBRefundHtml = (storeName, order, reason) => {
+    const waText = encodeURIComponent(`Halo admin RullzyeStore, saya ingin mengajukan refund.\n\nOrder ID: ${order.idDeposit || order.idOrder || '-'}\nProduk: ${order.productName || '-'}\nNomor Tujuan: ${order.targetPhone || '-'}\nTotal: Rp ${(parseInt(order.displayPrice)||0).toLocaleString('id-ID')}\nAlasan: ${reason || 'Transaksi gagal'}\n\nMohon diproses refundnya. Terima kasih.`);
+    return `
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:auto;background:#0b0e1a;border-radius:20px;overflow:hidden;border:1px solid #1e293b">
+        <div style="background:linear-gradient(135deg,#f59e0b,#f97316);padding:24px 32px;text-align:center">
+        <div style="font-size:36px;margin-bottom:8px">⚠️</div>
+        <h1 style="color:#fff;margin:0;font-size:20px;font-weight:900;letter-spacing:-0.5px">Transaksi Gagal</h1>
+        <p style="color:#fde68a;margin:4px 0 0;font-size:13px">${storeName}</p>
+        </div>
+        <div style="padding:24px 32px">
+        <div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:16px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <tr><td style="padding:6px 0;color:#94a3b8">Order ID</td><td style="padding:6px 0;text-align:right;color:#fff;font-family:monospace;font-weight:bold">${order.idDeposit || order.idOrder || '-'}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8">Produk</td><td style="padding:6px 0;text-align:right;color:#fff;font-weight:bold">${order.productName || '-'}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8">Nomor Tujuan</td><td style="padding:6px 0;text-align:right;color:#fff;font-family:monospace">${order.targetPhone || '-'}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8">Alasan</td><td style="padding:6px 0;text-align:right;color:#f87171;font-weight:bold">${reason || '-'}</td></tr>
+        </table></div>
+        <div style="background:#131826;border:1px solid #f59e0b33;border-radius:12px;padding:20px;text-align:center;margin-bottom:16px">
+        <p style="color:#e2e8f0;font-size:14px;font-weight:bold;margin:0 0 6px">💰 Ajukan Refund via WhatsApp</p>
+        <p style="color:#94a3b8;font-size:12px;margin:0 0 14px">Hubungi admin di <b style="color:#fbbf24">${REFUND_WA_DISPLAY}</b> dengan membawa Order ID di atas. Dana akan kami kembalikan.</p>
+        <a href="https://wa.me/${REFUND_WA_NUMBER}?text=${waText}" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:10px 28px;border-radius:8px;font-size:13px;font-weight:bold">💬 Ajukan Refund</a>
+        </div>
+        <p style="color:#475569;font-size:11px;text-align:center;margin:0">© ${new Date().getFullYear()} ${storeName} — All rights reserved</p>
+        </div></div>`;
+};
+
+const getPPOBRefundMessage = (order, reason) => {
+    const waText = encodeURIComponent(`Halo admin RullzyeStore, saya ingin mengajukan refund.\n\nOrder ID: ${order.idDeposit || order.idOrder || '-'}\nProduk: ${order.productName || '-'}\nNomor Tujuan: ${order.targetPhone || '-'}\nTotal: Rp ${(parseInt(order.displayPrice)||0).toLocaleString('id-ID')}\nAlasan: ${reason || 'Transaksi gagal'}`);
+    return `❌ *TRANSAKSI GAGAL*\n\n📦 ${order.productName || '-'}\n🎯 \`${order.targetPhone || '-'}\`\n🔖 Order ID: \`${order.idDeposit || order.idOrder || '-'}\`\n⚠️ ${reason || ''}\n\n💰 *AJUKAN REFUND:* Hubungi admin via WhatsApp ${REFUND_WA_DISPLAY} dengan membawa Order ID di atas.\n${'https://wa.me/' + REFUND_WA_NUMBER + '?text=' + waText}`;
+};
+
+const sendPPOBRefund = async (order, reason) => {
+    const cfg = getConfig();
+    const storeName = cfg.storeName || 'Rullzye Store';
+    if (order.telegramChatId) {
+        try { if (bot) await bot.sendMessage(order.telegramChatId, getPPOBRefundMessage(order, reason), { parse_mode: 'Markdown' }); } catch(e) {}
+    }
+    if (order.deliveryEmail) {
+        sendEmail(order.deliveryEmail, `Transaksi Gagal — Ajukan Refund — ${order.productName || 'PPOB'}`, buildPPOBRefundHtml(storeName, order, reason)).catch(()=>{});
+    }
+    notifyGroupOrderRefund(order, reason, storeName).catch(()=>{});
+};
+
 const getPremkuBasePrice = async (productId) => {
     try { const cfg = getConfig(); const r = await axios.post('https://premku.com/api/products', { api_key: cfg.apiKey }); const p = r.data?.products?.find(x => x.id == productId); return p ? parseInt(p.price) : null; } catch(e) { return null; }
 };
@@ -340,7 +443,7 @@ let isProcessing = false;
 const ppob = require('./ppob.js');
 
 // ================= 3. BOT SYSTEM VARS (dideklarasikan dulu, di-load setelah config) =================
-let bot, sendBroadcast, notifyGroupOrderNew, notifyGroupOrderSuccess, notifyGroupError, notifyGroupStockUpdate, notifyGroupAdmin;
+let bot, sendBroadcast, notifyGroupOrderNew, notifyGroupOrderSuccess, notifyGroupOrderRefund, notifyGroupError, notifyGroupStockUpdate, notifyGroupAdmin;
 
 // ================= ADMIN: AUTH ENDPOINT =================
 app.post('/api/admin/auth', (req, res) => {
@@ -845,19 +948,41 @@ app.get('/api/ppob-products-debug', async (req, res) => {
 const checkRandomId = async (randomId) => { if (!randomId) return null; const users = await getUsers(); return users.find(u => u.randomId === randomId); };
 
 app.post('/api/ppob-order', async (req, res) => {
-    const { productId, target, productName, displayPrice, randomId } = req.body;
-    console.log(`[ORDER] productId=${productId}, target=${target}, randomId=${randomId}`);
+    const { productId, target, productName, displayPrice, randomId, email } = req.body;
+    console.log(`[ORDER] productId=${productId}, target=${target}, randomId=${randomId || '- (opsional)'}, email=${email || '-'}`);
     const cfg = getConfig();
-    const user = await checkRandomId(randomId);
-    if (!user) return res.json({ status: false, message: '❌ Random ID Tidak Valid! Daftar di Bot.' });
+    const user = randomId ? await checkRandomId(randomId) : null;
+    if (randomId && !user) return res.json({ status: false, message: '❌ Random ID Tidak Valid! Daftar di Bot.' });
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json({ status: false, message: '❌ Format email tidak valid.' });
+    if (!email) return res.json({ status: false, message: '❌ Email wajib diisi untuk kirim struk.' });
     if (!cfg.flowixApiKey || !cfg.flowixMerchantId) {
         return res.json({ status: false, message: '❌ Layanan Flowix belum diatur oleh Admin.' });
     }
 
     try {
-        const productInfo = cachedPPOB.data ? cachedPPOB.data.find(p => p.id === productId) : null;
+        // ===== SINKRONISASI PRODUK DENGAN FLOWIX (cek fresh, bukan cache) =====
+        let productInfo = null;
+        try {
+            const live = await ppob.getProducts(cfg.flowixApiKey, cfg.flowixMerchantId, 'prepaid');
+            if (live.success && Array.isArray(live.data)) {
+                productInfo = live.data.find(p => p.code === productId && p.status && p.status.toLowerCase() === 'aktif');
+                const freshProducts = live.data
+                    .filter(p => p.status && p.status.toLowerCase() === 'aktif')
+                    .map(p => {
+                        const brand = p.brand || 'Umum';
+                        const catProfit = cfg.ppobCategoryProfits?.[brand];
+                        const pProfit = (catProfit !== null && catProfit !== undefined) ? parseInt(catProfit) : (parseInt(cfg.profit || 2000));
+                        return { id: p.code, name: p.name, price: parseInt(p.price) + pProfit, basePrice: parseInt(p.price), stock: 9999, brand, category: brand };
+                    });
+                cachedPPOB = { data: freshProducts, time: Date.now(), ttl: 2 * 60 * 1000 };
+            } else {
+                productInfo = cachedPPOB.data ? cachedPPOB.data.find(p => p.id === productId) : null;
+            }
+        } catch(e) {
+            productInfo = cachedPPOB.data ? cachedPPOB.data.find(p => p.id === productId) : null;
+        }
         if (!productInfo) {
-            return res.json({ status: false, message: '❌ Produk sedang gangguan atau sudah tidak tersedia.' });
+            return res.json({ status: false, message: '❌ Produk sedang gangguan atau sudah tidak tersedia di Flowix.' });
         }
 
         const finalAmount = parseInt(displayPrice);
@@ -885,8 +1010,10 @@ app.post('/api/ppob-order', async (req, res) => {
             targetPhone: target,
             status: 'MENUNGGU_BAYAR',
             accountDetails: '-',
-            telegramChatId: user.chatId,
-            randomId: randomId||null,
+            telegramChatId: user?.chatId || null,
+            randomId: randomId || null,
+            deliveryEmail: email,
+            buyerEmail: email,
             type: 'FLOWIX',
             resellerProfit: 0,
             displayPrice: displayPrice,
@@ -898,11 +1025,21 @@ app.post('/api/ppob-order', async (req, res) => {
         const invoiceAmount = deposit.data.amount_total || finalAmount;
         const qrUrl = deposit.data.qr_image || deposit.data.pay_url || '';
 
-        if (bot && user.chatId && qrUrl) {
+        if (bot && user?.chatId && qrUrl) {
             bot.sendPhoto(user.chatId, qrUrl, {
                 caption: `📱 *ORDER PPOB BARU*\n\n📦 ${productName}\n🎯 Target: \`${target}\`\n💰 Total: *Rp ${invoiceAmount.toLocaleString('id-ID')}*\n🔖 Order ID: \`${flowixReffId}\`\n\nSilakan scan QRIS di atas. Setelah dibayar, saldo admin akan otomatis memproses pesananmu.`,
                 parse_mode: 'Markdown'
             }).catch(e => console.error('[QR] gagal kirim:', e.message));
+        }
+
+        // Kirim invoice ke email pembeli
+        if (email) {
+            try {
+                const invoiceHtml = buildPPOBPaymentEmail(cfg.storeName || 'Rullzye Store', {
+                    idDeposit: flowixReffId, productName, targetPhone: target, displayPrice: invoiceAmount, qrUrl
+                });
+                sendEmail(email, `Invoice Order — ${productName}`, invoiceHtml).catch(()=>{});
+            } catch(e) {}
         }
 
         res.json({
@@ -922,11 +1059,11 @@ app.post('/api/ppob-order', async (req, res) => {
 
 // ================= 10. RETRY ORDER (LANGSUNG TRANSAKSI) =================
 app.post('/api/ppob-retry', async (req, res) => {
-    const { productId, target, productName, displayPrice, randomId } = req.body;
+    const { productId, target, productName, displayPrice, randomId, email } = req.body;
     console.log('[RETRY]', { productId, target, productName, displayPrice, randomId });
     const cfg = getConfig();
-    const user = await checkRandomId(randomId);
-    if (!user) return res.json({ status: false, message: '❌ Random ID tidak valid.' });
+    const user = randomId ? await checkRandomId(randomId) : null;
+    if (randomId && !user) return res.json({ status: false, message: '❌ Random ID tidak valid.' });
     if (!cfg.flowixApiKey || !cfg.flowixMerchantId) return res.json({ status: false, message: '❌ PPOB belum dikonfigurasi.' });
 
     try {
@@ -946,7 +1083,9 @@ app.post('/api/ppob-retry', async (req, res) => {
                 targetPhone: target,
                 status: 'PROSES_PUSAT',
                 accountDetails: '-',
-                telegramChatId: user.chatId,
+                telegramChatId: user?.chatId || null,
+                deliveryEmail: email || null,
+                buyerEmail: email || null,
                 type: 'FLOWIX',
                 resellerProfit: 0,
                 displayPrice: displayPrice,
@@ -954,7 +1093,7 @@ app.post('/api/ppob-retry', async (req, res) => {
             });
             await saveOrders(orders);
 
-            if (bot && user.chatId) {
+            if (bot && user?.chatId) {
                 bot.sendMessage(user.chatId, `🔄 *RETRY BERHASIL*\n📦 ${productName}\n🎯 \`${target}\`\n🔖 ${buyRes.data.reff_id}\nStatus: *${buyRes.data.status || 'processing'}*`, { parse_mode: 'Markdown' }).catch(() => {});
             }
             res.json({ status: true, message: 'Transaksi retry dibuat', reff_id: buyRes.data.reff_id });
@@ -1187,7 +1326,8 @@ async function autoProc() {
                                 const productInfo = cachedPPOB.data ? cachedPPOB.data.find(p => p.id === o.productId) : null;
                                 if (!productInfo) {
                                     orders[i].status = 'GAGAL'; orders[i].accountDetails = 'Produk sudah tidak tersedia / gangguan.'; changed = true;
-                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *PRODUK GANGGUAN*\n\nMaaf, produk ${o.productName} sudah tidak tersedia. Hubungi CS untuk bantuan.`, { parse_mode: 'Markdown' }).catch(()=>{});
+                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *PRODUK GANGGUAN*\n\nMaaf, produk ${o.productName} sudah tidak tersedia. ${'Hubungi WA 0877-8890-1239 untuk refund.'}`, { parse_mode: 'Markdown' }).catch(()=>{});
+                                    sendPPOBRefund(orders[i], 'Produk sudah tidak tersedia di Flowix').catch(()=>{});
                                     continue;
                                 }
                                 const buy = await ppob.createTransaction(cfgFlowix.flowixApiKey, cfgFlowix.flowixMerchantId, o.productId, o.targetPhone);
@@ -1206,16 +1346,19 @@ async function autoProc() {
                                             if (idx !== -1) { cachedPPOB.data.splice(idx, 1); console.log(`[AUTO] Produk ${o.productId} dihapus dari cache.`); }
                                         }
                                     }
-                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *TRANSAKSI GAGAL*\n${errorMsg}`, { parse_mode: 'Markdown' }).catch(()=>{});
+                                    if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *TRANSAKSI GAGAL*\n${errorMsg}\n\n💰 Ajukan refund via WA *0877-8890-1239* dengan Order ID \`${o.idDeposit || '-'}\`.`, { parse_mode: 'Markdown' }).catch(()=>{});
+                                    sendPPOBRefund(orders[i], errorMsg).catch(()=>{});
                                 }
                             } else if (['failed','expired','canceled'].includes(ds)) {
                                 orders[i].status = 'GAGAL'; orders[i].accountDetails = `Deposit ${ds}`; changed = true;
-                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *DEPOSIT ${ds.toUpperCase()}*\n\nDeposit untuk ${o.productName} telah ${ds}. Silakan buat pesanan baru.`, { parse_mode: 'Markdown' }).catch(()=>{});
+                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *DEPOSIT ${ds.toUpperCase()}*\n\nDeposit untuk ${o.productName} telah ${ds}. ${'Jika sudah membayar, hubungi WA 0877-8890-1239 untuk refund.'}`, { parse_mode: 'Markdown' }).catch(()=>{});
+                                sendPPOBRefund(orders[i], `Deposit ${ds}`).catch(()=>{});
                             }
                         } else if (!cek.success && cek.code === 404) {
                             // Deposit tidak ditemukan di Flowix — tandai GAGAL permanen
                             orders[i].status = 'GAGAL'; orders[i].accountDetails = 'Deposit tidak ditemukan di server pusat'; changed = true;
-                            if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *DEPOSIT TIDAK DITEMUKAN*\n\nDeposit untuk ${o.productName} tidak ditemukan di server. Silakan hubungi CS.`, { parse_mode: 'Markdown' }).catch(()=>{});
+                            if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *DEPOSIT TIDAK DITEMUKAN*\n\nDeposit untuk ${o.productName} tidak ditemukan di server. Ajukan refund via WhatsApp 0877-8890-1239.`, { parse_mode: 'Markdown' }).catch(()=>{});
+                            sendPPOBRefund(orders[i], 'Deposit tidak ditemukan di server pusat').catch(()=>{});
                         }
                     } catch (e) {
                         // Network error — skip this cycle, will retry next cycle
@@ -1230,12 +1373,21 @@ async function autoProc() {
                                 orders[i].accountDetails = `SN: ${ts.data.sn || '-'} | ${ts.data.note || 'Berhasil'}`;
                                 orders[i].completedAt = new Date().toISOString();
                                 orders[i].buyerName = orders[i].buyerName || 'Pelanggan';
+                                orders[i].sn = ts.data.sn || '-';
                                 changed = true;
                                 try { if (orders[i].randomId) await axios.post(`http://localhost:${PORT}/api/reseller/commission/add`, { buyerRandomId: orders[i].randomId, orderAmount: orders[i].displayPrice || 0 }, { timeout: 3000 }); } catch(e) {}
                                 if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `🎉 *TRANSAKSI BERHASIL*\n📦 ${o.productName}\n🎯 \`${o.targetPhone || '-'}\`\n🔖 SN: \`${ts.data.sn || '-'}\`\n\nTerima kasih telah berbelanja! 🙏`, { parse_mode: 'Markdown' }).catch(()=>{});
+                                // Kirim struk/invoice ke email pembeli
+                                if (o.deliveryEmail) {
+                                    const cleanSn = (ts.data.sn || '-').replace(/\*|`|_|~/g, '').replace(/\n/g, '<br>');
+                                    const invOrder = { ...orders[i], accountDetails: cleanSn, sn: cleanSn };
+                                    sendEmail(o.deliveryEmail, `🧾 Struk Transaksi — ${o.productName}`, buildPPOBInvoiceHtml(cfgFlowix.storeName || 'Rullzye Store', invOrder)).catch(()=>{});
+                                }
+                                notifyGroupOrderSuccess(orders[i]).catch(()=>{});
                             } else if (trx === 'failed' || trx === 'error') {
                                 orders[i].status = 'GAGAL'; orders[i].accountDetails = ts.data.note || ts.data.message || 'Transaksi gagal'; changed = true;
-                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *TRANSAKSI GAGAL*\n${ts.data.note || ''}`, { parse_mode: 'Markdown' }).catch(()=>{});
+                                if (bot && o.telegramChatId) bot.sendMessage(o.telegramChatId, `❌ *TRANSAKSI GAGAL*\n${ts.data.note || ''}\n\n💰 Ajukan refund via WA *0877-8890-1239* dengan Order ID \`${o.idOrder || o.idDeposit || '-'}\`.`, { parse_mode: 'Markdown' }).catch(()=>{});
+                                sendPPOBRefund(orders[i], ts.data.note || ts.data.message || 'Transaksi gagal').catch(()=>{});
                             } else if (trx === 'processing') {
                                 if (o.accountDetails !== 'Status: processing') {
                                     orders[i].accountDetails = 'Status: processing';
@@ -1272,6 +1424,33 @@ async function autoProc() {
     } finally { isProcessing = false; }
 }
 setInterval(autoProc, 10000);
+
+// ================= SINKRONISASI PRODUK PPOB DENGAN FLOWIX (background) =================
+const syncPPOBProducts = async () => {
+    try {
+        const c = getConfig();
+        if (!c.flowixApiKey || !c.flowixMerchantId) return;
+        const result = await ppob.getProducts(c.flowixApiKey, c.flowixMerchantId, 'prepaid');
+        if (!result.success || !Array.isArray(result.data)) return;
+        const profit = parseInt(c.profit || 2000);
+        const products = result.data
+            .filter(p => p.status && p.status.toLowerCase() === 'aktif')
+            .map(p => {
+                const brand = p.brand || 'Umum';
+                const catProfit = c.ppobCategoryProfits?.[brand];
+                const pProfit = (catProfit !== null && catProfit !== undefined) ? parseInt(catProfit) : profit;
+                return { id: p.code, name: p.name, price: parseInt(p.price) + pProfit, basePrice: parseInt(p.price), stock: 9999, brand, category: brand };
+            });
+        const prevCount = cachedPPOB.data ? cachedPPOB.data.length : 0;
+        cachedPPOB = { data: products, time: Date.now(), ttl: 2 * 60 * 1000 };
+        if (products.length !== prevCount) {
+            console.log(`[SYNC-PPOB] Stok disinkronkan: ${prevCount} -> ${products.length} produk aktif.`);
+            if (typeof notifyGroupStockUpdate === 'function') notifyGroupStockUpdate(products).catch(()=>{});
+        }
+    } catch(e) { console.log('[SYNC-PPOB] Gagal sinkron:', e.message); }
+};
+setInterval(syncPPOBProducts, 5 * 60 * 1000);
+syncPPOBProducts().catch(()=>{});
 
 
 
@@ -1714,6 +1893,7 @@ async function initConfigFromFirebase() {
     sendBroadcast = botModule.sendBroadcast;
     notifyGroupOrderNew = botModule.notifyGroupOrderNew;
     notifyGroupOrderSuccess = botModule.notifyGroupOrderSuccess;
+    notifyGroupOrderRefund = botModule.notifyGroupOrderRefund;
     notifyGroupError = botModule.notifyGroupError;
     notifyGroupStockUpdate = botModule.notifyGroupStockUpdate;
     notifyGroupAdmin = botModule.notifyGroupAdmin;

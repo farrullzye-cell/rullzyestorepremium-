@@ -111,6 +111,9 @@ async function notifyGroupOrderNew(order) {
 async function notifyGroupOrderSuccess(order) {
     await sendToGroup('order', `✅ *ORDER SUKSES!*\n\n📦 *Produk:* ${order.productName}\n🎯 *Target:* \`${order.targetPhone || '-'}\`\n💰 *Harga:* Rp ${(order.displayPrice || 0).toLocaleString('id-ID')}\n📝 *Detail:* ${(order.accountDetails || 'Selesai').substring(0, 100)}\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')}\n\nAlhamdulillah, order berhasil ✅`);
 }
+async function notifyGroupOrderRefund(order, reason, storeName) {
+    await sendToGroup('order', `💸 *ORDER GAGAL - PERLU REFUND*\n\n📦 *Produk:* ${order.productName}\n🎯 *Target:* \`${order.targetPhone || '-'}\`\n💰 *Harga:* Rp ${(order.displayPrice || 0).toLocaleString('id-ID')}\n🔖 *Order ID:* \`${order.idDeposit || order.idOrder || '-'}\`\n⚠️ *Alasan:* ${reason || '-'}\n👤 *User:* \`${order.randomId || order.deliveryEmail || '-'}\`\n\n💰 Arahkan customer untuk refund via WhatsApp 0877-8890-1239 dengan membawa Order ID!`);
+}
 async function notifyGroupReport(message) {
     await sendToGroup('report', `📊 *LAPORAN*\n\n${message}`);
 }
@@ -365,6 +368,7 @@ module.exports = {
     sendToGroup,
     notifyGroupOrderNew,
     notifyGroupOrderSuccess,
+    notifyGroupOrderRefund,
     notifyGroupReport,
     notifyGroupError,
     notifyGroupPromo,
