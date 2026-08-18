@@ -12,10 +12,21 @@ let bot = null;
 const BOT_TOKEN = process.env.TELEGRAM_TOKEN || cfg.telegramToken;
 
 if (BOT_TOKEN) {
-    bot = new TelegramBot(BOT_TOKEN, { polling: false });
-    bot.deleteWebHook()
-        .then(() => { bot.startPolling({ restart: true }); console.log("✅ BOT AKTIF (Menggunakan Token dari ENV)"); })
-        .catch(err => console.error("❌ Bot:", err.message));
+    try {
+        bot = new TelegramBot(BOT_TOKEN, { polling: false });
+        bot.on('polling_error', (err) => {
+            // Quietly catch polling error without crashing server
+        });
+        bot.on('error', (err) => {
+            // Quietly catch bot error
+        });
+        bot.deleteWebHook()
+            .then(() => { bot.startPolling({ restart: true }); console.log("✅ BOT AKTIF (Menggunakan Token dari ENV)"); })
+            .catch(err => console.error("❌ Bot:", err.message));
+    } catch(err) {
+        console.error("❌ Gagal menginisialisasi bot:", err.message);
+        bot = null;
+    }
 } else { console.log("❌ Token bot belum disetel di Environment (TELEGRAM_TOKEN)."); }
 
 const getUsers = async () => { try { const r = await axios.get(`${FIREBASE_URL}/users.json`); return r.data ? (Array.isArray(r.data) ? r.data : Object.values(r.data)) : []; } catch(e) { return []; } };

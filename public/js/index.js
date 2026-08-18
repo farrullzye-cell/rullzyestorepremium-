@@ -559,8 +559,9 @@ window.submitTestimoni = async function() {
         });
         const d = await r.json();
         if (d.success) {
-            Swal.fire('Terima Kasih! 🎉', 'Testimoni kamu akan ditampilkan setelah diverifikasi admin.', 'success');
+            Swal.fire('Terima Kasih! 🎉', 'Testimoni kamu berhasil dikirim.', 'success');
             closeTestimoniForm();
+            loadTestimonials();
         } else {
             Swal.fire('Gagal', d.message||'Coba lagi nanti', 'error');
         }

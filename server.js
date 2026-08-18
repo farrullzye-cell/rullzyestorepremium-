@@ -1744,7 +1744,19 @@ app.post('/api/admin/panel/deliver/:id', async (req, res) => {
 // Testimoni CRUD endpoints
 app.get('/api/testimonials', async (req, res) => {
     try {
-        const testimonials = await getTestimonials();
+        let testimonials = await getTestimonials();
+        if (!testimonials || testimonials.length === 0) {
+            const defaults = [
+                { id: 'T-SEED-1', name: 'Rizky Pratama', service: 'Top Up Mobile Legends 86 DM', rating: 5, content: 'Beli diamond ML di sini udah 3 kali. Proses cepat banget, bayar QRIS langsung masuk. Recomended banget buat yang butuh top up game murah dan cepat!', screenshot: '', approved: true, createdAt: new Date(Date.now() - 86400000 * 2).toISOString() },
+                { id: 'T-SEED-2', name: 'Siti Nurhaliza', service: 'Netflix Premium 4K', rating: 5, content: 'Udah 2 bulan langganan Netflix dari sini. Akun masih aman, streaming lancar jaya. Admin fast respon juga pas tanya-tanya. Makasih RullzyeStore!', screenshot: '', approved: true, createdAt: new Date(Date.now() - 86400000 * 5).toISOString() },
+                { id: 'T-SEED-3', name: 'Dimas Ardiansyah', service: 'Paket Data Telkomsel 30GB', rating: 5, content: 'Butuh kuota darurat buat meeting, langsung order di sini. 1 menit langsung masuk. Gak nyangka semudah ini. Pasti bakal order lagi!', screenshot: '', approved: true, createdAt: new Date(Date.now() - 86400000 * 8).toISOString() },
+                { id: 'T-SEED-4', name: 'Ayu Lestari', service: 'Spotify Premium 1 Tahun', rating: 5, content: 'Dapat spotify premium setahun dengan harga murah banget. Prosesnya cepet, dikirim ke email. Udah rekomen ke temen-temen semua. Mantap!', screenshot: '', approved: true, createdAt: new Date(Date.now() - 86400000 * 12).toISOString() },
+                { id: 'T-SEED-5', name: 'Fajar Ramadhan', service: 'Free Fire 140 Diamonds', rating: 5, content: 'Top up FF lumayan sering di sini. Harganya bersaing sama yang lain, kadang lebih murah. Proses otomatis jadi gampang.', screenshot: '', approved: true, createdAt: new Date(Date.now() - 86400000 * 15).toISOString() },
+                { id: 'T-SEED-6', name: 'Dewi Sartika', service: 'Panel Pterodactyl 4GB', rating: 5, content: 'Beli panel server minecraft buat main bareng temen. Dapat akses panel lengkap, tinggal install server. Harganya juga murah meriah. Puas banget!', screenshot: '', approved: true, createdAt: new Date(Date.now() - 86400000 * 20).toISOString() }
+            ];
+            testimonials = defaults;
+            saveTestimonials(defaults).catch(()=>{});
+        }
         const filtered = testimonials.filter(t => t.approved !== false);
         res.json({ success: true, testimonials: filtered });
     } catch(e) {
@@ -1757,14 +1769,15 @@ app.post('/api/testimonials/submit', async (req, res) => {
         if (!name || !content || content.length < 10) return res.json({ success: false, message: 'Nama wajib diisi, testimoni minimal 10 karakter' });
         let testimonials = await getTestimonials();
         const id = 'T-' + Date.now().toString(36).toUpperCase();
+        const parsedRating = Math.min(Math.max(parseInt(rating) || 5, 1), 5);
         testimonials.push({
-            id, name: name.trim(), service: service||'Produk Digital',
-            rating: Math.min(parseInt(rating)||5,5), content: content.trim(),
-            approved: false, screenshot: '',
+            id, name: name.trim(), service: service || 'Produk Digital',
+            rating: parsedRating, content: content.trim(),
+            approved: true, screenshot: '',
             createdAt: new Date().toISOString()
         });
         await saveTestimonials(testimonials);
-        res.json({ success: true, message: 'Testimoni terkirim! Menunggu verifikasi admin.' });
+        res.json({ success: true, message: 'Testimoni kamu berhasil dikirim dan ditampilkan!' });
     } catch(e) { res.json({ success: false, message: e.message }); }
 });
 app.post('/api/admin/testimonials', async (req, res) => {

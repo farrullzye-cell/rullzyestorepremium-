@@ -1,0 +1,8 @@
+{
+  "name": "RullzyeStore Premium",
+  "description": "Platform digital terpercaya untuk top up game, pulsa, akun premium & PPOB di Indonesia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
